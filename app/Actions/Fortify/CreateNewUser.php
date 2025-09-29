@@ -22,7 +22,7 @@ class CreateNewUser implements CreatesNewUsers
     public function create(array $input): User
     {
         Validator::make($input, [
-            'role'       => ['required', 'in:teacher,student'],
+            // 'role'       => ['required', 'in:teacher,student'],
             'username'   => ['required','string','max:50','alpha_dash','unique:users,username'],
             'first_name' => ['required','string','max:100'],
             'last_name'  => ['required','string','max:100'],
@@ -53,12 +53,12 @@ class CreateNewUser implements CreatesNewUsers
         ]);
 
         // กำหนดบทบาท
-        $user->assignRole($input['role']);
+        $user->assignRole('student');
 
-        // ถ้าเป็นครู ผูกวิชาที่สอน
-        if ($input['role'] === 'teacher' && !empty($input['subject_ids'])) {
-            $user->subjects()->sync($input['subject_ids']);
-        }
+        // // ถ้าเป็นครู ผูกวิชาที่สอน
+        // if ($input['role'] === 'teacher' && !empty($input['subject_ids'])) {
+        //     $user->subjects()->sync($input['subject_ids']);
+        // }
 
         return $user;
     }

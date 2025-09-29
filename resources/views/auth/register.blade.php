@@ -93,16 +93,39 @@
                                 <form method="POST" action="{{ route('register') }}">
                                     @csrf
 
+                                     <!-- Single Form Start -->
+                                    <div class="single-form">
+                                        <input
+                                            type="text"
+                                            name="first_name"
+                                            placeholder="ชื่อจริง"
+                                            value="{{ old('first_name') }}"
+                                            required
+                                        >
+                                    </div>
+
+
+                                     <!-- Single Form Start -->
+                                    <div class="single-form">
+                                        <input
+                                            type="text"
+                                            name="last_name"
+                                            placeholder="นามสกุล"
+                                            value="{{ old('last_name') }}"
+                                            required
+                                        >
+                                    </div>
+
                                     <!-- Single Form Start -->
                                     <div class="single-form">
                                         <input
                                             type="text"
-                                            name="name"
-                                            placeholder="Name"
-                                            value="{{ old('name') }}"
+                                            name="username"
+                                            placeholder="ชื่อที่แสดง"
+                                            value="{{ old('username') }}"
                                             required
                                             autofocus
-                                            autocomplete="name"
+                                            autocomplete="username"
                                         >
                                     </div>
                                     <!-- Single Form End -->
@@ -112,7 +135,7 @@
                                         <input
                                             type="email"
                                             name="email"
-                                            placeholder="Email"
+                                            placeholder="อีเมล"
                                             value="{{ old('email') }}"
                                             required
                                             autocomplete="username"
@@ -125,7 +148,7 @@
                                         <input
                                             type="password"
                                             name="password"
-                                            placeholder="Password"
+                                            placeholder="รหัสผ่าน"
                                             required
                                             autocomplete="new-password"
                                         >
@@ -137,7 +160,7 @@
                                         <input
                                             type="password"
                                             name="password_confirmation"
-                                            placeholder="Confirm Password"
+                                            placeholder="ยืนยัน รหัสผ่าน"
                                             required
                                             autocomplete="new-password"
                                         >
