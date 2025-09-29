@@ -93,192 +93,62 @@
                                 <form method="POST" action="{{ route('register') }}">
                                     @csrf
 
-                                    <!-- Role -->
+                                    <!-- Single Form Start -->
                                     <div class="single-form">
-                                        <label for="role" class="form-label">{{ __('Role') }}</label>
-                                        <select
-                                            id="role"
-                                            name="role"
-                                            class="form-select"
+                                        <input
+                                            type="text"
+                                            name="name"
+                                            placeholder="Name"
+                                            value="{{ old('name') }}"
                                             required
                                             autofocus
+                                            autocomplete="name"
                                         >
-                                            <option value="" disabled {{ old('role') ? '' : 'selected' }}>{{ __('Select your role') }}</option>
-                                            <option value="student" {{ old('role') === 'student' ? 'selected' : '' }}>{{ __('Student') }}</option>
-                                            <option value="teacher" {{ old('role') === 'teacher' ? 'selected' : '' }}>{{ __('Teacher') }}</option>
-                                        </select>
                                     </div>
+                                    <!-- Single Form End -->
 
-                                    <!-- Username -->
+                                    <!-- Single Form Start -->
                                     <div class="single-form">
-                                        <label for="username" class="form-label">{{ __('Username') }}</label>
                                         <input
-                                            id="username"
-                                            type="text"
-                                            name="username"
-                                            class="form-control"
-                                            placeholder="{{ __('Choose a username') }}"
-                                            value="{{ old('username') }}"
+                                            type="email"
+                                            name="email"
+                                            placeholder="Email"
+                                            value="{{ old('email') }}"
                                             required
                                             autocomplete="username"
                                         >
                                     </div>
+                                    <!-- Single Form End -->
 
-                                    <!-- First Name -->
+                                    <!-- Single Form Start -->
                                     <div class="single-form">
-                                        <label for="first_name" class="form-label">{{ __('First name') }}</label>
                                         <input
-                                            id="first_name"
-                                            type="text"
-                                            name="first_name"
-                                            class="form-control"
-                                            placeholder="{{ __('Enter your first name') }}"
-                                            value="{{ old('first_name') }}"
-                                            required
-                                            autocomplete="given-name"
-                                        >
-                                    </div>
-
-                                <!-- Last Name -->
-                                    <div class="single-form">
-                                        <label for="last_name" class="form-label">{{ __('Last name') }}</label>
-                                        <input
-                                            id="last_name"
-                                            type="text"
-                                            name="last_name"
-                                            class="form-control"
-                                            placeholder="{{ __('Enter your last name') }}"
-                                            value="{{ old('last_name') }}"
-                                            required
-                                            autocomplete="family-name"
-                                        >
-                                    </div>
-
-                                    <!-- Email -->
-                                    <div class="single-form">
-                                        <label for="email" class="form-label">{{ __('Email address') }}</label>
-                                        <input
-                                            id="email"
-                                            type="email"
-                                            name="email"
-                                            class="form-control"
-                                            placeholder="{{ __('Enter your email') }}"
-                                            value="{{ old('email') }}"
-                                            required
-                                            autocomplete="email"
-                                        >
-                                    </div>
-
-                                    <!-- Birthdate -->
-                                    <div class="single-form">
-                                        <label for="birthdate" class="form-label">{{ __('Birthdate (optional)') }}</label>
-                                        <input
-                                            id="birthdate"
-                                            type="date"
-                                            name="birthdate"
-                                            class="form-control"
-                                            value="{{ old('birthdate') }}"
-                                            autocomplete="bday"
-                                        >
-                                    </div>
-
-                                    <!-- Phone -->
-                                    <div class="single-form">
-                                        <label for="phone" class="form-label">{{ __('Phone (optional)') }}</label>
-                                        <input
-                                            id="phone"
-                                            type="tel"
-                                            name="phone"
-                                            class="form-control"
-                                            placeholder="{{ __('Enter your phone number') }}"
-                                            value="{{ old('phone') }}"
-                                            autocomplete="tel"
-                                        >
-                                    </div>
-
-                                    <!-- Address -->
-                                    <div class="single-form">
-                                        <label for="address" class="form-label">{{ __('Address (optional)') }}</label>
-                                        <input
-                                            id="address"
-                                            type="text"
-                                            name="address"
-                                            class="form-control"
-                                            placeholder="{{ __('Enter your address') }}"
-                                            value="{{ old('address') }}"
-                                            autocomplete="street-address"
-                                        >
-                                    </div>
-
-                                    <!-- Line ID -->
-                                    <div class="single-form">
-                                        <label for="line_id" class="form-label">{{ __('LINE ID (optional)') }}</label>
-                                        <input
-                                            id="line_id"
-                                            type="text"
-                                            name="line_id"
-                                            class="form-control"
-                                            placeholder="{{ __('Enter your LINE ID') }}"
-                                            value="{{ old('line_id') }}"
-                                            autocomplete="off"
-                                        >
-                                    </div>
-
-                                    <!-- Subjects (Teacher only) -->
-                                    <div class="single-form" id="subject-wrapper" style="{{ old('role') === 'teacher' ? '' : 'display: none;' }}">
-                                        <label for="subject_ids" class="form-label">{{ __('Subjects you teach') }}</label>
-                                        @php
-                                            $selectedSubjects = old('subject_ids', []);
-                                            $selectedSubjects = is_array($selectedSubjects) ? $selectedSubjects : [$selectedSubjects];
-                                        @endphp
-                                        <select
-                                            id="subject_ids"
-                                            name="subject_ids[]"
-                                            class="form-select"
-                                            multiple
-                                        >
-                                            @foreach ($subjects ?? [] as $subject)
-                                                <option value="{{ $subject->id }}" {{ in_array($subject->id, $selectedSubjects) ? 'selected' : '' }}>
-                                                    {{ $subject->name }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                        <small class="form-text text-muted">{{ __('Select one or more subjects if you are registering as a teacher.') }}</small>
-                                    </div>
-
-                                    <!-- Password -->
-                                    <div class="single-form">
-                                        <label for="password" class="form-label">{{ __('Password') }}</label>
-                                        <input
-                                            id="password"
                                             type="password"
                                             name="password"
-                                            class="form-control"
-                                            placeholder="{{ __('Create a password') }}"
+                                            placeholder="Password"
                                             required
                                             autocomplete="new-password"
                                         >
                                     </div>
+                                    <!-- Single Form End -->
 
-                                    <!-- Confirm Password -->
+                                    <!-- Single Form Start -->
                                     <div class="single-form">
-                                        <label for="password_confirmation" class="form-label">{{ __('Confirm password') }}</label>
                                         <input
-                                            id="password_confirmation"
                                             type="password"
                                             name="password_confirmation"
-                                            class="form-control"
-                                            placeholder="{{ __('Re-enter your password') }}"
+                                            placeholder="Confirm Password"
                                             required
                                             autocomplete="new-password"
                                         >
                                     </div>
+                                    <!-- Single Form End -->
 
                                     {{-- Terms & Privacy ของ Jetstream (ถ้าเปิดฟีเจอร์นี้) --}}
                                     @if (Laravel\Jetstream\Jetstream::hasTermsAndPrivacyPolicyFeature())
                                         <div class="single-form">
                                             <label class="d-flex align-items-start gap-2">
-                                                <input type="checkbox" name="terms" value="1" {{ old('terms') ? 'checked' : '' }} required class="mt-1">
+                                                <input type="checkbox" name="terms" required class="mt-1">
                                                 <span>
                                                     {!! __('I agree to the :terms_of_service and :privacy_policy', [
                                                         'terms_of_service' => '<a target="_blank" href="'.route('terms.show').'" class="text-primary">'.__('Terms of Service').'</a>',
@@ -289,15 +159,16 @@
                                         </div>
                                     @endif
 
-                                    <!-- Submit -->
+                                    <!-- Single Form Start -->
                                     <div class="single-form">
                                         <button class="btn btn-primary btn-hover-dark w-100" type="submit">
-                                            {{ __('Create an account') }}
+                                            Create an account
                                         </button>
 
                                         {{-- ถ้าติดตั้ง Socialite/ตั้ง route แล้ว ค่อยปลดคอมเมนต์ปุ่มนี้ --}}
-                                        {{-- <a class="btn btn-secondary btn-outline w-100 mt-2" href="{{ route('social.redirect', 'google') }}">{{ __('Sign up with Google') }}</a> --}}
+                                        {{-- <a class="btn btn-secondary btn-outline w-100 mt-2" href="{{ route('social.redirect', 'google') }}">Sign up with Google</a> --}}
                                     </div>
+                                    <!-- Single Form End -->
                                 </form>
 
                                 <div class="mt-3 text-center">
@@ -317,27 +188,3 @@
     </div>
     <!-- Register & Login End -->
 @endsection
-
-@push('scripts')
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const roleSelect = document.getElementById('role');
-            const subjectWrapper = document.getElementById('subject-wrapper');
-
-            if (!roleSelect || !subjectWrapper) {
-                return;
-            }
-
-            const toggleSubjects = () => {
-                if (roleSelect.value === 'teacher') {
-                    subjectWrapper.style.display = '';
-                } else {
-                    subjectWrapper.style.display = 'none';
-                }
-            };
-
-            toggleSubjects();
-            roleSelect.addEventListener('change', toggleSubjects);
-        });
-    </script>
-@endpush
