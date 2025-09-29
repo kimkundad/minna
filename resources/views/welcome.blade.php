@@ -11,12 +11,11 @@
         </div>
 
         <div class="container">
-            {{-- Slider Content --}}
             <div class="slider-content">
-                <h4 class="sub-title">เริ่มหลักสูตรที่คุณชื่นชอบ</h4>
-                <h2 class="main-title">Now learning from anywhere, and build your <span>bright career.</span></h2>
-                <p>It has survived not only five centuries but also the leap into electronic typesetting.</p>
-                <a class="btn btn-primary btn-hover-dark" href="#">Start A Course</a>
+                <h4 class="sub-title">เริ่มต้นวันนี้ ไม่ต้องรอพรุ่งนี้</h4>
+                <h2 class="main-title">เรียน <span>ภาษาญี่ปุ่น จีน เยอรมัน</span> และอีกมากมาย</h2>
+                <p>ภาษาใหม่คือประตูสู่โอกาสใหม่ ทั้งการทำงาน การเรียน และการใช้ชีวิต</p>
+                <a class="btn btn-primary btn-hover-dark" href="#courses-top">สมัครเรียนเลย</a>
             </div>
         </div>
 
@@ -67,7 +66,7 @@
         <div class="container">
 
             {{-- All Courses Top --}}
-            <div class="courses-top">
+            <div class="courses-top" id="courses-top">
                 <div class="section-title shape-01">
                     <h2 class="main-title">All <span>Courses</span> of Edule</h2>
                 </div>
@@ -229,16 +228,19 @@
                 <div class="row align-items-center">
                     <div class="col-md-6">
                         <div class="section-title shape-02">
-                            <h5 class="sub-title">Become A Instructor</h5>
-                            <h2 class="main-title">You can join with Edule as <span>a instructor?</span></h2>
+                            <h5 class="sub-title">มาเป็นผู้สอนกับเรา</h5>
+                            <h2 class="main-title">เผยแพร่ความรู้ สร้างแรงบันดาลใจ <span>และเติบโตไปพร้อมกัน</span></h2>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="call-to-action-btn">
-                            <a class="btn btn-primary btn-hover-dark" href="#">Drop Information</a>
+                            <a class="btn btn-primary btn-hover-dark" href="">
+                                ลงทะเบียนเป็นผู้สอน
+                            </a>
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
     </div>
@@ -257,8 +259,8 @@
                     <img class="shape-1" src="{{ asset('assets/images/shape/shape-15.png') }}" alt="Shape">
                     <div class="work-icon"><i class="flaticon-transparency"></i></div>
                     <div class="work-content">
-                        <h3 class="title">Find Your Course</h3>
-                        <p>It has survived not only centurie also leap into electronic.</p>
+                        <h3 class="title">เรียนได้ทุกที่ ทุกเวลา</h3>
+                        <p>ไม่ต้องเสียเวลาเดินทาง แค่มีอินเทอร์เน็ตก็เริ่มเรียนภาษาได้ทันที</p>
                     </div>
                 </div>
 
@@ -270,8 +272,8 @@
                     <img class="shape-2" src="{{ asset('assets/images/shape/shape-15.png') }}" alt="Shape">
                     <div class="work-icon"><i class="flaticon-forms"></i></div>
                     <div class="work-content">
-                        <h3 class="title">Book A Seat</h3>
-                        <p>It has survived not only centurie also leap into electronic.</p>
+                        <h3 class="title">ทีมซัพพอร์ตดูแลใกล้ชิด</h3>
+                        <p>มีผู้สอนและทีมงานคอยตอบทุกข้อสงสัย ทำให้การเรียนราบรื่นตลอดทาง</p>
                     </div>
                 </div>
 
@@ -283,17 +285,19 @@
                     <img class="shape-3" src="{{ asset('assets/images/shape/shape-16.png') }}" alt="Shape">
                     <div class="work-icon"><i class="flaticon-badge"></i></div>
                     <div class="work-content">
-                        <h3 class="title">Get Certificate</h3>
-                        <p>It has survived not only centurie also leap into electronic.</p>
+                        <h3 class="title">ก้าวสู่เป้าหมายได้เร็วกว่า</h3>
+                        <p>หลักสูตรออกแบบมาให้เห็นผลไว ใช้ภาษาได้จริงทั้งเรียนต่อ ทำงาน และท่องเที่ยว</p>
                     </div>
                 </div>
             </div>
+
+
         </div>
     </div>
     {{-- How It Work End --}}
 
     {{-- Download App Start --}}
-    <div class="section section-padding download-section">
+    {{-- <div class="section section-padding download-section">
         <div class="app-shape-1"></div>
         <div class="app-shape-2"></div>
         <div class="app-shape-3"></div>
@@ -314,15 +318,15 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> --}}
     {{-- Download App End --}}
 
     {{-- Testimonial Start --}}
     <div class="section section-padding-02 mt-n1">
         <div class="container">
             <div class="section-title shape-03 text-center">
-                <h5 class="sub-title">Student Testimonial</h5>
-                <h2 class="main-title">Feedback From <span> Student</span></h2>
+                <h5 class="sub-title">เสียงตอบรับจากผู้เรียน</h5>
+                <h2 class="main-title">คอร์สเรียนออนไลน์ของ <span> FutureSkill</span></h2>
             </div>
 
             <div class="testimonial-wrapper testimonial-active">
@@ -338,9 +342,9 @@
                                 <span class="rating-star"><span class="rating-bar" style="width: 80%;"></span></span>
                             </div>
                             <div class="testimonial-content">
-                                <p>Lorem Ipsum has been the industry's standard dummy text since the 1500s...</p>
-                                <h4 class="name">Sara Alexander</h4>
-                                <span class="designation">Product Designer, USA</span>
+                                <p>“ตอนแรกกังวลว่าจะเรียนออนไลน์แล้วเข้าใจไหม แต่พอได้ลองเรียนภาษาญี่ปุ่นที่นี่ รู้สึกว่าหลักสูตรจัดเรียงดีมาก มีทั้งพื้นฐานและการฝึกพูดจริง ทำให้กล้าสื่อสารมากขึ้นทุกวันค่ะ”</p>
+                                <h4 class="name">พิมพ์ชนก ศรีสวัสดิ์</h4>
+                                <span class="designation">นักศึกษามหาวิทยาลัย</span>
                             </div>
                         </div>
 
@@ -354,9 +358,9 @@
                                 <span class="rating-star"><span class="rating-bar" style="width: 80%;"></span></span>
                             </div>
                             <div class="testimonial-content">
-                                <p>Lorem Ipsum has been the industry's standard dummy text since the 1500s...</p>
-                                <h4 class="name">Melissa Roberts</h4>
-                                <span class="designation">Product Designer, USA</span>
+                                <p>“ผมเลือกเรียนภาษาจีนเพราะอยากใช้ในการทำงาน คอร์สที่นี่ตอบโจทย์มาก อาจารย์สอนเข้าใจง่าย มีตัวอย่างการใช้งานจริง แถมยังมีแบบฝึกหัดให้ลองใช้ภาษาจริง ๆ รู้สึกว่าพัฒนาเร็วกว่าเรียนเองเยอะครับ”</p>
+                                <h4 class="name">ธนกฤต มณีโชติ</h4>
+                                <span class="designation">พนักงานบริษัทเอกชน</span>
                             </div>
                         </div>
 
@@ -370,9 +374,9 @@
                                 <span class="rating-star"><span class="rating-bar" style="width: 80%;"></span></span>
                             </div>
                             <div class="testimonial-content">
-                                <p>Lorem Ipsum has been the industry's standard dummy text since the 1500s...</p>
-                                <h4 class="name">Sara Alexander</h4>
-                                <span class="designation">Product Designer, USA</span>
+                                <p>“ดิฉันสนใจภาษาเยอรมันเพราะอยากไปเรียนต่อ พอมาเรียนกับที่นี่ รู้สึกว่าคอร์สมีโครงสร้างดีมาก สอนตั้งแต่พื้นฐานไปจนถึงการสนทนาในชีวิตจริง ช่วยสร้างความมั่นใจให้เยอะเลยค่ะ”</p>
+                                <h4 class="name">กานดา รัตนมณี</h4>
+                                <span class="designation">นักเรียนเตรียมเรียนต่อต่างประเทศ</span>
                             </div>
                         </div>
                     </div>
@@ -380,12 +384,13 @@
                     <div class="swiper-pagination"></div>
                 </div>
             </div>
+
         </div>
     </div>
     {{-- Testimonial End --}}
 
     {{-- Brand Logo Start --}}
-    <div class="section section-padding-02">
+    {{-- <div class="section section-padding-02">
         <div class="container">
             <div class="brand-logo-wrapper">
                 <img class="shape-1" src="{{ asset('assets/images/shape/shape-19.png') }}" alt="Shape">
@@ -421,7 +426,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> --}}
     {{-- Brand Logo End --}}
 
     {{-- Blog Start --}}

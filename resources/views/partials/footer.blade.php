@@ -17,8 +17,8 @@
                                 </div>
 
                                 <div class="widget-address">
-                                    <h4 class="footer-widget-title">Caribbean Ct</h4>
-                                    <p>Haymarket, Virginia (VA).</p>
+                                    <h4 class="footer-widget-title">แพลตฟอร์มการเรียนออนไลน์</h4>
+                                    <p>สำหรับทักษะแห่งอนาคต</p>
                                 </div>
 
                                 <ul class="widget-info">
@@ -47,15 +47,12 @@
 
                                 <!-- Footer Widget Start -->
                                 <div class="footer-widget">
-                                    <h4 class="footer-widget-title">Category</h4>
+                                    <h4 class="footer-widget-title">บริการทั้งหมด</h4>
 
                                     <ul class="widget-link">
-                                        <li><a href="#">Creative Writing</a></li>
-                                        <li><a href="#">Film & Video</a></li>
-                                        <li><a href="#">Graphic Design</a></li>
-                                        <li><a href="#">UI/UX Design</a></li>
-                                        <li><a href="#">Business Analytics</a></li>
-                                        <li><a href="#">Marketing</a></li>
+                                        <li><a href="#">คอร์สออนไลน์</a></li>
+                                        <li><a href="#">เกี่ยวกับเรา</a></li>
+                                        <li><a href="#">ติดต่อเรา</a></li>
                                     </ul>
 
                                 </div>
@@ -63,14 +60,11 @@
 
                                 <!-- Footer Widget Start -->
                                 <div class="footer-widget">
-                                    <h4 class="footer-widget-title">Quick Links</h4>
+                                    <h4 class="footer-widget-title">ร่วมงานกับเรา</h4>
 
                                     <ul class="widget-link">
-                                        <li><a href="#">Privacy Policy</a></li>
-                                        <li><a href="#">Discussion</a></li>
-                                        <li><a href="#">Terms & Conditions</a></li>
-                                        <li><a href="#">Customer Support</a></li>
-                                        <li><a href="#">Course FAQ’s</a></li>
+                                        <li><a href="#">สมัครเป็นผู้สอน</a></li>
+                                        <li><a href="#">คำถามที่พบบ่อย</a></li>
                                     </ul>
 
                                 </div>
@@ -85,14 +79,12 @@
                             <!-- Footer Widget Start -->
                             <div class="footer-widget">
                                 <h4 class="footer-widget-title">Subscribe</h4>
-
                                 <div class="widget-subscribe">
-                                    <p>Lorem Ipsum has been them an industry printer took a galley make book.</p>
-
+                                    <p>สมัครรับข่าวสารคอร์สใหม่ โปรโมชั่น และบทความภาษา ส่งตรงถึงอีเมลของคุณ</p>
                                     <div class="widget-form">
                                         <form action="#">
-                                            <input type="text" placeholder="Email here">
-                                            <button class="btn btn-primary btn-hover-dark">Subscribe Now</button>
+                                            <input type="text" placeholder="กรอกอีเมลของคุณ">
+                                            <button class="btn btn-primary btn-hover-dark">ติดตามเลย</button>
                                         </form>
                                     </div>
                                 </div>
@@ -117,8 +109,6 @@
                         <div class="copyright-link">
                             <a href="#">Terms of Service</a>
                             <a href="#">Privacy Policy</a>
-                            <a href="#">Sitemap</a>
-                            <a href="#">Security</a>
                         </div>
                         <div class="copyright-text">
                             <p>&copy; 2021 <span> Edule </span> Made with <i class="icofont-heart-alt"></i> by <a href="#">Codecarnival</a></p>
