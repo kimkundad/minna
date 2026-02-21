@@ -13,11 +13,36 @@
                     <a href="{{ route('admin.courses.create') }}" class="btn btn-primary">สร้างคอร์ส</a>
                 </div>
             </div>
+
             <div class="app-content flex-column-fluid">
                 <div class="app-container container-xxl">
                     @if (session('success'))
                         <div class="alert alert-success">{{ session('success') }}</div>
                     @endif
+
+                    <div class="card mb-6">
+                        <div class="card-body py-4">
+                            <form method="GET" action="{{ route('admin.courses.index') }}" class="row g-3">
+                                <div class="col-md-7">
+                                    <label class="form-label">ค้นหา</label>
+                                    <input type="text" name="q" class="form-control" value="{{ $q ?? '' }}"
+                                        placeholder="ค้นหาชื่อคอร์ส, หมวดหมู่, วิชา, ผู้สอน">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">สถานะ</label>
+                                    <select name="status" class="form-select">
+                                        <option value="">ทั้งหมด</option>
+                                        <option value="approved" @selected(($status ?? '') === 'approved')>approved</option>
+                                        <option value="pending" @selected(($status ?? '') === 'pending')>pending</option>
+                                        <option value="rejected" @selected(($status ?? '') === 'rejected')>rejected</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2 d-flex align-items-end">
+                                    <button class="btn btn-primary w-100">ค้นหา</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
 
                     <div class="card">
                         <div class="card-body py-3">
@@ -67,3 +92,4 @@
         </div>
     </div>
 @endsection
+

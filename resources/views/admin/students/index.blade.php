@@ -2,35 +2,42 @@
 
 @section('title')
     <title>รายชื่อนักเรียน</title>
-    <meta name="description" content="รายชื่อนักเรียนทั้งหมด">
 @stop
 
 @section('content')
     <div class="app-main flex-column flex-row-fluid" id="kt_app_main">
         <div class="d-flex flex-column flex-column-fluid">
-
-            <!-- Toolbar -->
-            <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
-                <div id="kt_app_toolbar_container" class="app-container container-xxl d-flex flex-stack">
-                    <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
-                        {{-- <h1 class="page-heading text-dark fw-bold fs-3 my-0">รายชื่อนักเรียน</h1>
-                        <ul class="breadcrumb fw-semibold fs-7 my-0 pt-1">
-                            <li class="breadcrumb-item text-muted">
-                                <a href="{{ route('admin.index') }}" class="text-muted text-hover-primary">Dashboard</a>
-                            </li>
-                            <li class="breadcrumb-item">
-                                <span class="bullet bg-gray-400 w-5px h-2px"></span>
-                            </li>
-                            <li class="breadcrumb-item text-muted">นักเรียน</li>
-                        </ul> --}}
-                    </div>
+            <div class="app-toolbar py-3 py-lg-6">
+                <div class="app-container container-xxl d-flex flex-stack">
+                    <h1 class="page-heading text-dark fw-bold fs-3 my-0">รายชื่อนักเรียน</h1>
                 </div>
             </div>
-            <!-- End Toolbar -->
 
-            <!-- Content -->
-            <div id="kt_app_content" class="app-content flex-column-fluid">
-                <div id="kt_app_content_container" class="app-container container-xxl">
+            <div class="app-content flex-column-fluid">
+                <div class="app-container container-xxl">
+                    @if (session('success'))
+                        <div class="alert alert-success">{{ session('success') }}</div>
+                    @endif
+
+                    <div class="card mb-6">
+                        <div class="card-body py-4">
+                            <form method="GET" action="{{ route('admin.students.index') }}" class="row g-3">
+                                <div class="col-md-10">
+                                    <label class="form-label">ค้นหา</label>
+                                    <input
+                                        type="text"
+                                        name="q"
+                                        class="form-control"
+                                        value="{{ $q }}"
+                                        placeholder="ค้นหาชื่อ, อีเมล หรือเบอร์โทร"
+                                    >
+                                </div>
+                                <div class="col-md-2 d-flex align-items-end">
+                                    <button class="btn btn-primary w-100">ค้นหา</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
 
                     <div class="card card-xl-stretch mb-5">
                         <div class="card-header border-0 pt-5">
@@ -58,47 +65,22 @@
                                                 <td>{{ $student->email }}</td>
                                                 <td>{{ $student->phone ?? '-' }}</td>
                                                 <td class="text-end">
-                                                    <!--begin::Action dropdown-->
-                                                    <a href="#" class="btn btn-light btn-active-light-primary btn-sm"
-                                                        data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">
-                                                        Actions
-                                                        <span class="svg-icon svg-icon-5 m-0">
-                                                            <svg width="24" height="24" viewBox="0 0 24 24"
-                                                                fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                                <path
-                                                                    d="M11.4343 12.7344L7.25 8.55005C6.83579 8.13583 6.16421 8.13584 5.75 8.55005C5.33579 8.96426 5.33579 9.63583 5.75 10.05L11.2929 15.5929C11.6834 15.9835 12.3166 15.9835 12.7071 15.5929L18.25 10.05C18.6642 9.63584 18.6642 8.96426 18.25 8.55005C17.8358 8.13584 17.1642 8.13584 16.75 8.55005L12.5657 12.7344C12.2533 13.0468 11.7467 13.0468 11.4343 12.7344Z"
-                                                                    fill="currentColor"></path>
-                                                            </svg>
-                                                        </span>
-                                                    </a>
-                                                    <!--begin::Menu-->
-                                                    <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-125px py-4"
-                                                        data-kt-menu="true">
-                                                        <div class="menu-item px-3">
-                                                            <a href="{{ route('admin.students.edit', $student->id) }}"
-                                                                class="menu-link px-3">Edit</a>
-                                                        </div>
-                                                        <div class="menu-item px-3">
-                                                            <form
-                                                                action="{{ route('admin.students.destroy', $student->id) }}"
-                                                                method="POST"
-                                                                onsubmit="return confirm('ต้องการลบข้อมูลนี้หรือไม่?');">
-                                                                @csrf
-                                                                @method('DELETE')
-                                                                <button type="submit"
-                                                                    class="menu-link px-3 border-0 bg-transparent text-danger">Delete</button>
-                                                            </form>
-                                                        </div>
-                                                    </div>
-                                                    <!--end::Menu-->
-                                                    <!--end::Action dropdown-->
+                                                    <a href="{{ route('admin.students.edit', $student->id) }}" class="btn btn-sm btn-light-warning">แก้ไข</a>
+                                                    <form
+                                                        action="{{ route('admin.students.destroy', $student->id) }}"
+                                                        method="POST"
+                                                        class="d-inline"
+                                                        onsubmit="return confirm('ต้องการลบข้อมูลนี้หรือไม่?');"
+                                                    >
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-sm btn-light-danger">ลบ</button>
+                                                    </form>
                                                 </td>
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="4" class="text-center text-muted py-5">
-                                                    ไม่มีข้อมูลนักเรียน
-                                                </td>
+                                                <td colspan="4" class="text-center text-muted py-5">ไม่มีข้อมูลนักเรียน</td>
                                             </tr>
                                         @endforelse
                                     </tbody>
@@ -110,11 +92,9 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
-            <!-- End Content -->
-
         </div>
     </div>
 @endsection
+

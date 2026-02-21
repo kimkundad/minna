@@ -3,6 +3,9 @@
 use App\Http\Controllers\Admin\CourseCategoryController as AdminCourseCategoryController;
 use App\Http\Controllers\Admin\CourseController as AdminCourseController;
 use App\Http\Controllers\Admin\CourseVideoController as AdminCourseVideoController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\EnrollmentController as AdminEnrollmentController;
+use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\Admin\SubjectController as AdminSubjectController;
 use App\Http\Controllers\Admin\SiteSettingController as AdminSiteSettingController;
@@ -101,7 +104,7 @@ Route::middleware(['auth'])->get('/courses', function () {
 
 // Admin Dashboard + Management Routes
 Route::middleware(['auth', 'role:admin'])->prefix('administrator')->as('admin.')->group(function () {
-    Route::view('/', 'admin.index')->name('index');
+    Route::get('/', [AdminDashboardController::class, 'index'])->name('index');
 
     Route::prefix('students')->as('students.')->group(function () {
         Route::get('/', [StudentController::class, 'index'])->name('index');
@@ -110,7 +113,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('administrator')->as('admin.')
     });
 
     Route::prefix('enrollments')->as('enrollments.')->group(function () {
-        Route::get('/', fn () => 'คอร์สที่ลงทะเบียน')->name('index');
+        Route::get('/', [AdminEnrollmentController::class, 'index'])->name('index');
     });
 
     Route::prefix('teacher_applications')->as('teacher_applications.')->group(function () {
@@ -154,7 +157,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('administrator')->as('admin.')
     });
 
     Route::prefix('orders')->as('orders.')->group(function () {
-        Route::get('/', fn () => 'คำสั่งซื้อ')->name('index');
+        Route::get('/', [AdminOrderController::class, 'index'])->name('index');
     });
 
     Route::prefix('settings')->as('settings.')->group(function () {
@@ -194,4 +197,6 @@ Route::middleware(['auth', 'role:student', 'privacy.accepted'])->group(function 
     Route::get('/student/password', [StudentDashboardController::class, 'editPassword'])->name('student.password.edit');
     Route::put('/student/password', [StudentDashboardController::class, 'updatePassword'])->name('student.password.update');
 });
+
+
 

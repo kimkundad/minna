@@ -21,14 +21,25 @@ class TeacherApplicationController extends Controller
         return view('admin.teacher_applications.index', compact('applications'));
     }
 
-    public function teachersIndex()
+    public function teachersIndex(Request $request)
     {
+        $q = trim((string) $request->query('q', ''));
+
         $applications = TeacherApplication::query()
             ->where('status', 'approved')
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('name', 'like', "%{$q}%")
+                        ->orWhere('email', 'like', "%{$q}%")
+                        ->orWhere('phone', 'like', "%{$q}%")
+                        ->orWhere('subject', 'like', "%{$q}%");
+                });
+            })
             ->latest()
-            ->paginate(15);
+            ->paginate(15)
+            ->withQueryString();
 
-        return view('admin.teachers.index', compact('applications'));
+        return view('admin.teachers.index', compact('applications', 'q'));
     }
 
     public function show(TeacherApplication $teacherApplication)

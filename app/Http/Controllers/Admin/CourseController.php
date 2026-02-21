@@ -13,14 +13,27 @@ use Illuminate\Support\Facades\Storage;
 
 class CourseController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $q = trim((string) $request->query('q', ''));
+        $status = trim((string) $request->query('status', ''));
+
         $courses = Course::query()
             ->with(['category', 'subject', 'teacher'])
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('title', 'like', "%{$q}%")
+                        ->orWhereHas('category', fn ($c) => $c->where('name', 'like', "%{$q}%"))
+                        ->orWhereHas('subject', fn ($s) => $s->where('name', 'like', "%{$q}%"))
+                        ->orWhereHas('teacher', fn ($t) => $t->where('name', 'like', "%{$q}%"));
+                });
+            })
+            ->when($status !== '', fn ($query) => $query->where('status', $status))
             ->latest()
-            ->paginate(15);
+            ->paginate(15)
+            ->withQueryString();
 
-        return view('admin.courses.index', compact('courses'));
+        return view('admin.courses.index', compact('courses', 'q', 'status'));
     }
 
     public function create()

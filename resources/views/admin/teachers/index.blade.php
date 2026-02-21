@@ -2,31 +2,34 @@
 
 @section('title')
     <title>รายชื่อผู้สอน</title>
-    <meta name="description" content="รายชื่อผู้สอนที่ได้รับการอนุมัติ">
 @stop
 
 @section('content')
     <div class="app-main flex-column flex-row-fluid" id="kt_app_main">
         <div class="d-flex flex-column flex-column-fluid">
-            <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
-                <div id="kt_app_toolbar_container" class="app-container container-xxl d-flex flex-stack">
-                    <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
-                        <h1 class="page-heading text-dark fw-bold fs-3 my-0">รายชื่อผู้สอน</h1>
-                        <ul class="breadcrumb fw-semibold fs-7 my-0 pt-1">
-                            <li class="breadcrumb-item text-muted">
-                                <a href="{{ route('admin.index') }}" class="text-muted text-hover-primary">Dashboard</a>
-                            </li>
-                            <li class="breadcrumb-item">
-                                <span class="bullet bg-gray-400 w-5px h-2px"></span>
-                            </li>
-                            <li class="breadcrumb-item text-muted">รายชื่อผู้สอน</li>
-                        </ul>
-                    </div>
+            <div class="app-toolbar py-3 py-lg-6">
+                <div class="app-container container-xxl d-flex flex-stack">
+                    <h1 class="page-heading text-dark fw-bold fs-3 my-0">รายชื่อผู้สอน</h1>
                 </div>
             </div>
 
-            <div id="kt_app_content" class="app-content flex-column-fluid">
-                <div id="kt_app_content_container" class="app-container container-xxl">
+            <div class="app-content flex-column-fluid">
+                <div class="app-container container-xxl">
+                    <div class="card mb-6">
+                        <div class="card-body py-4">
+                            <form method="GET" action="{{ route('admin.teachers.index') }}" class="row g-3">
+                                <div class="col-md-10">
+                                    <label class="form-label">ค้นหา</label>
+                                    <input type="text" name="q" class="form-control" value="{{ $q ?? '' }}"
+                                        placeholder="ค้นหาชื่อ, อีเมล, โทรศัพท์, หัวข้อที่ต้องการสอน">
+                                </div>
+                                <div class="col-md-2 d-flex align-items-end">
+                                    <button class="btn btn-primary w-100">ค้นหา</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
                     <div class="card card-xl-stretch mb-5">
                         <div class="card-header border-0 pt-5">
                             <h3 class="card-title align-items-start flex-column">
@@ -65,10 +68,8 @@
                                                 </td>
                                                 <td>{{ $application->approved_at?->format('d/m/Y H:i') ?? '-' }}</td>
                                                 <td class="text-end">
-                                                    <a href="{{ route('admin.teacher_applications.show', $application) }}"
-                                                        class="btn btn-sm btn-light-primary me-2">ดูข้อมูล</a>
-                                                    <a href="{{ route('admin.teacher_applications.edit', $application) }}"
-                                                        class="btn btn-sm btn-light-warning">แก้ไข</a>
+                                                    <a href="{{ route('admin.teacher_applications.show', $application) }}" class="btn btn-sm btn-light-primary me-2">ดูข้อมูล</a>
+                                                    <a href="{{ route('admin.teacher_applications.edit', $application) }}" class="btn btn-sm btn-light-warning">แก้ไข</a>
                                                 </td>
                                             </tr>
                                         @empty
@@ -90,3 +91,4 @@
         </div>
     </div>
 @endsection
+
