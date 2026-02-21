@@ -32,11 +32,15 @@ class User extends Authenticatable
         'username',
         'first_name',
         'last_name',
+        'gender',
         'name',
         'birthdate',
         'phone',
+        'phone_country_code',
+        'phone_national',
         'address',
         'line_id',
+        'profile_photo_path',
         'email',
         'password',
     ];
@@ -72,6 +76,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'birthdate' => 'date',
+            'privacy_accepted_at' => 'datetime',
             'password' => 'hashed',
         ];
     }

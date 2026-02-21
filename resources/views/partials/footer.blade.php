@@ -1,127 +1,107 @@
-{{-- resources/views/partials/footer.blade.php --}}
+@php
+    $phone = $siteSettings['contact_phone'] ?? '(970) 262-1413';
+    $phoneHref = preg_replace('/\D+/', '', $phone);
+    $email = $siteSettings['contact_email'] ?? 'address@gmail.com';
+@endphp
+
 <div class="section footer-section">
+    <div class="footer-widget-section">
+        <img class="shape-1 animation-down" src="{{ url('assets/images/shape/shape-21.png') }}" alt="Shape">
 
-            <!-- Footer Widget Section Start -->
-            <div class="footer-widget-section">
-
-                <img class="shape-1 animation-down" src="assets/images/shape/shape-21.png" alt="Shape">
-
-                <div class="container">
-                    <div class="row">
-                        <div class="col-lg-3 col-md-6 order-md-1 order-lg-1">
-
-                            <!-- Footer Widget Start -->
-                            <div class="footer-widget">
-                                <div class="widget-logo">
-                                    <a href="#"><img src="assets/images/logo.png" alt="Logo"></a>
-                                </div>
-
-                                <div class="widget-address">
-                                    <h4 class="footer-widget-title">แพลตฟอร์มการเรียนออนไลน์</h4>
-                                    <p>สำหรับทักษะแห่งอนาคต</p>
-                                </div>
-
-                                <ul class="widget-info">
-                                    <li>
-                                        <p> <i class="flaticon-email"></i> <a href="mailto:address@gmail.com">address@gmail.com</a> </p>
-                                    </li>
-                                    <li>
-                                        <p> <i class="flaticon-phone-call"></i> <a href="tel:9702621413">(970) 262-1413</a> </p>
-                                    </li>
-                                </ul>
-
-                                <ul class="widget-social">
-                                    <li><a href="#"><i class="flaticon-facebook"></i></a></li>
-                                    <li><a href="#"><i class="flaticon-twitter"></i></a></li>
-                                    <li><a href="#"><i class="flaticon-skype"></i></a></li>
-                                    <li><a href="#"><i class="flaticon-instagram"></i></a></li>
-                                </ul>
-                            </div>
-                            <!-- Footer Widget End -->
-
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-3 col-md-6 order-md-1 order-lg-1">
+                    <div class="footer-widget">
+                        <div class="widget-logo">
+                            <a href="{{ url('/') }}"><img src="{{ url('assets/images/logo.png') }}" alt="Logo"></a>
                         </div>
-                        <div class="col-lg-6 order-md-3 order-lg-2">
 
-                            <!-- Footer Widget Link Start -->
-                            <div class="footer-widget-link">
-
-                                <!-- Footer Widget Start -->
-                                <div class="footer-widget">
-                                    <h4 class="footer-widget-title">บริการทั้งหมด</h4>
-
-                                    <ul class="widget-link">
-                                        <li><a href="#">คอร์สออนไลน์</a></li>
-                                        <li><a href="#">เกี่ยวกับเรา</a></li>
-                                        <li><a href="#">ติดต่อเรา</a></li>
-                                    </ul>
-
-                                </div>
-                                <!-- Footer Widget End -->
-
-                                <!-- Footer Widget Start -->
-                                <div class="footer-widget">
-                                    <h4 class="footer-widget-title">ร่วมงานกับเรา</h4>
-
-                                    <ul class="widget-link">
-                                        <li><a href="#">สมัครเป็นผู้สอน</a></li>
-                                        <li><a href="#">คำถามที่พบบ่อย</a></li>
-                                    </ul>
-
-                                </div>
-                                <!-- Footer Widget End -->
-
-                            </div>
-                            <!-- Footer Widget Link End -->
-
+                        <div class="widget-address">
+                            <h4 class="footer-widget-title">แพลตฟอร์มการเรียนออนไลน์</h4>
+                            <p>สำหรับทักษะแห่งอนาคต</p>
                         </div>
-                        <div class="col-lg-3 col-md-6 order-md-2 order-lg-3">
 
-                            <!-- Footer Widget Start -->
-                            <div class="footer-widget">
-                                <h4 class="footer-widget-title">Subscribe</h4>
-                                <div class="widget-subscribe">
-                                    <p>สมัครรับข่าวสารคอร์สใหม่ โปรโมชั่น และบทความภาษา ส่งตรงถึงอีเมลของคุณ</p>
-                                    <div class="widget-form">
-                                        <form action="#">
-                                            <input type="text" placeholder="กรอกอีเมลของคุณ">
-                                            <button class="btn btn-primary btn-hover-dark">ติดตามเลย</button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Footer Widget End -->
+                        <ul class="widget-info">
+                            <li><p><i class="flaticon-email"></i> <a href="mailto:{{ $email }}">{{ $email }}</a></p></li>
+                            <li><p><i class="flaticon-phone-call"></i> <a href="tel:{{ $phoneHref }}">{{ $phone }}</a></p></li>
+                        </ul>
 
+                        <ul class="widget-social">
+                            <li><a href="{{ $siteSettings['facebook_url'] ?? '#' }}" target="_blank" rel="noopener"><i class="flaticon-facebook"></i></a></li>
+                            <li><a href="{{ $siteSettings['twitter_url'] ?? '#' }}" target="_blank" rel="noopener"><i class="flaticon-twitter"></i></a></li>
+                            <li><a href="{{ $siteSettings['skype_url'] ?? '#' }}" target="_blank" rel="noopener"><i class="flaticon-skype"></i></a></li>
+                            <li><a href="{{ $siteSettings['instagram_url'] ?? '#' }}" target="_blank" rel="noopener"><i class="flaticon-instagram"></i></a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="col-lg-6 order-md-3 order-lg-2">
+                    <div class="footer-widget-link">
+                        <div class="footer-widget">
+                            <h4 class="footer-widget-title">บริการทั้งหมด</h4>
+                            <ul class="widget-link">
+                                <li><a href="{{ url('/course') }}">คอร์สออนไลน์</a></li>
+                                <li><a href="#">เกี่ยวกับเรา</a></li>
+                                <li><a href="#">ติดต่อเรา</a></li>
+                            </ul>
+                        </div>
+
+                        <div class="footer-widget">
+                            <h4 class="footer-widget-title">ร่วมงานกับเรา</h4>
+                            <ul class="widget-link">
+                                <li><a href="{{ route('teacher.apply') }}">สมัครเป็นผู้สอน</a></li>
+                                <li><a href="#">คำถามที่พบบ่อย</a></li>
+                            </ul>
                         </div>
                     </div>
                 </div>
 
-                <img class="shape-2 animation-left" src="assets/images/shape/shape-22.png" alt="Shape">
+                <div class="col-lg-3 col-md-6 order-md-2 order-lg-3">
+                    <div class="footer-widget">
+                        <h4 class="footer-widget-title">Subscribe</h4>
+                        <div class="widget-subscribe">
+                            <p>สมัครรับข่าวสารคอร์สใหม่ โปรโมชั่น และบทความภาษา ส่งตรงถึงอีเมลของคุณ</p>
 
-            </div>
-            <!-- Footer Widget Section End -->
+                            @if (session('subscribe_success'))
+                                <div class="alert alert-success py-2 px-3 mb-3">{{ session('subscribe_success') }}</div>
+                            @endif
 
-            <!-- Footer Copyright Start -->
-            <div class="footer-copyright">
-                <div class="container">
+                            @error('email')
+                                <div class="alert alert-danger py-2 px-3 mb-3">{{ $message }}</div>
+                            @enderror
 
-                    <!-- Footer Copyright Start -->
-                    <div class="copyright-wrapper">
-                        <div class="copyright-link">
-                            <a href="#">Terms of Service</a>
-                            <a href="#">Privacy Policy</a>
-                        </div>
-                        <div class="copyright-text">
-                            <p>&copy; 2021 <span> Edule </span> Made with <i class="icofont-heart-alt"></i> by <a href="#">Codecarnival</a></p>
+                            <div class="widget-form">
+                                <form action="{{ route('subscribe.store') }}" method="POST">
+                                    @csrf
+                                    <input type="email" name="email" value="{{ old('email') }}" placeholder="กรอกอีเมลของคุณ" required>
+                                    <button class="btn btn-primary btn-hover-dark" type="submit">ติดตามเลย</button>
+                                </form>
+                            </div>
                         </div>
                     </div>
-                    <!-- Footer Copyright End -->
-
                 </div>
             </div>
-            <!-- Footer Copyright End -->
-
         </div>
+
+        <img class="shape-2 animation-left" src="{{ url('assets/images/shape/shape-22.png') }}" alt="Shape">
+    </div>
+
+    <div class="footer-copyright">
+        <div class="container">
+            <div class="copyright-wrapper">
+                <div class="copyright-link">
+                    <a href="#">Terms of Service</a>
+                    <a href="#">Privacy Policy</a>
+                </div>
+                <div class="copyright-text">
+                    <p>&copy; 2021 <span> Edule </span> Made with <i class="icofont-heart-alt"></i> by <a href="#">Codecarnival</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <a href="#" class="back-to-top">
     <i class="icofont-simple-up"></i>
 </a>
+

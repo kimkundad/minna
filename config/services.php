@@ -35,4 +35,19 @@ return [
         ],
     ],
 
+    'recaptcha' => [
+        'site_key' => env('RECAPTCHA_SITE_KEY'),
+        'secret_key' => env('RECAPTCHA_SECRET_KEY'),
+    ],
+
+    'quickpay_2c2p' => [
+        'endpoint' => env('TWOC2P_ENDPOINT', 'https://coreapi.2c2p.com/core-api/api/2.0'),
+        'merchant_id' => env('TWOC2P_MERCHANT_ID'),
+        'secret_key' => env('TWOC2P_SECRET_KEY'),
+        'version' => env('TWOC2P_VERSION', '2.4'),
+        'currency' => env('TWOC2P_CURRENCY', 'THB'),
+        'payment_option' => env('TWOC2P_PAYMENT_OPTION', ''),
+        'payment_channel' => env('TWOC2P_PAYMENT_CHANNEL', ''),
+    ],
+
 ];

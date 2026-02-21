@@ -1,4 +1,4 @@
-{{-- resources/views/welcome.blade.php --}}
+﻿{{-- resources/views/welcome.blade.php --}}
 @extends('layouts.auth')
 
 @section('content')
@@ -15,7 +15,7 @@
                 <h4 class="sub-title">เริ่มต้นวันนี้ ไม่ต้องรอพรุ่งนี้</h4>
                 <h2 class="main-title">เรียน <span>ภาษาญี่ปุ่น จีน เยอรมัน</span> และอีกมากมาย</h2>
                 <p>ภาษาใหม่คือประตูสู่โอกาสใหม่ ทั้งการทำงาน การเรียน และการใช้ชีวิต</p>
-                <a class="btn btn-primary btn-hover-dark" href="#courses-top">สมัครเรียนเลย</a>
+                <a class="btn btn-primary btn-hover-dark" href="{{ url('register') }}">สมัครเรียนเลย</a>
             </div>
         </div>
 
@@ -83,139 +83,92 @@
             <div class="courses-tabs-menu courses-active">
                 <div class="swiper-container">
                     <ul class="swiper-wrapper nav">
-                        <li class="swiper-slide"><button class="active" data-bs-toggle="tab" data-bs-target="#tabs1">UI/UX Design</button></li>
-                        <li class="swiper-slide"><button data-bs-toggle="tab" data-bs-target="#tabs2">Development</button></li>
-                        <li class="swiper-slide"><button data-bs-toggle="tab" data-bs-target="#tabs3">Data Science</button></li>
-                        <li class="swiper-slide"><button data-bs-toggle="tab" data-bs-target="#tabs4">Business</button></li>
-                        <li class="swiper-slide"><button data-bs-toggle="tab" data-bs-target="#tabs5">Financial</button></li>
-                        <li class="swiper-slide"><button data-bs-toggle="tab" data-bs-target="#tabs6">Marketing</button></li>
-                        <li class="swiper-slide"><button data-bs-toggle="tab" data-bs-target="#tabs7">Design</button></li>
+                        @forelse ($subjects as $subject)
+                            <li class="swiper-slide">
+                                <button class="{{ $loop->first ? 'active' : '' }}" data-bs-toggle="tab" data-bs-target="#tabs{{ $subject->id }}">
+                                    {{ $subject->name }}
+                                </button>
+                            </li>
+                        @empty
+                            <li class="swiper-slide">
+                                <button class="active" data-bs-toggle="tab" data-bs-target="#tabs-empty">คอร์สทั้งหมด</button>
+                            </li>
+                        @endforelse
                     </ul>
                 </div>
                 <div class="swiper-button-next"><i class="icofont-rounded-right"></i></div>
                 <div class="swiper-button-prev"><i class="icofont-rounded-left"></i></div>
             </div>
 
-            {{-- Tabs Content (แสดงตัวอย่างแท็บแรก) --}}
+            {{-- Tabs Content --}}
             <div class="tab-content courses-tab-content">
-                <div class="tab-pane fade show active" id="tabs1">
-                    <div class="courses-wrapper">
-                        <div class="row">
-                            {{-- Card 1 --}}
-                            <div class="col-lg-4 col-md-6">
-                                <div class="single-courses">
-                                    <div class="courses-images">
-                                        <a href="#"><img src="{{ asset('assets/images/courses/courses-01.jpg') }}" alt="Courses"></a>
-                                    </div>
-                                    <div class="courses-content">
-                                        <div class="courses-author">
-                                            <div class="author">
-                                                <div class="author-thumb">
-                                                    <a href="#"><img src="{{ asset('assets/images/author/author-01.jpg') }}" alt="Author"></a>
+                @forelse ($subjects as $subject)
+                    <div class="tab-pane fade {{ $loop->first ? 'show active' : '' }}" id="tabs{{ $subject->id }}">
+                        <div class="courses-wrapper">
+                            <div class="row">
+                                @forelse ($subject->courses as $course)
+                                    <div class="col-lg-4 col-md-6">
+                                        <div class="single-courses">
+                                            <div class="courses-images">
+                                                @php
+                                                    $thumbnailUrl = $course->thumbnail_path
+                                                        ? \Illuminate\Support\Facades\Storage::disk('spaces')->url($course->thumbnail_path)
+                                                        : asset('assets/images/courses/courses-01.jpg');
+                                                @endphp
+                                                <a href="{{ route('courses.show', $course) }}"><img src="{{ $thumbnailUrl }}" alt="{{ $course->title }}"></a>
+                                            </div>
+                                            <div class="courses-content">
+                                                <div class="courses-author">
+                                                    <div class="author">
+                                                        <div class="author-thumb">
+                                                            <a href="#"><img src="{{ asset('assets/images/author/author-01.jpg') }}" alt="Author"></a>
+                                                        </div>
+                                                        <div class="author-name"><a class="name" href="{{ route('courses.show', $course) }}">{{ $course->teacher->name ?? 'ผู้สอน' }}</a></div>
+                                                    </div>
+                                                    <div class="tag"><a href="#">{{ $subject->name }}</a></div>
                                                 </div>
-                                                <div class="author-name"><a class="name" href="#">Jason Williams</a></div>
-                                            </div>
-                                            <div class="tag"><a href="#">Science</a></div>
-                                        </div>
-                                        <h4 class="title"><a href="#">Data Science and Machine Learning with Python - Hands On!</a></h4>
-                                        <div class="courses-meta">
-                                            <span><i class="icofont-clock-time"></i> 08 hr 15 mins</span>
-                                            <span><i class="icofont-read-book"></i> 29 Lectures</span>
-                                        </div>
-                                        <div class="courses-price-review">
-                                            <div class="courses-price">
-                                                <span class="sale-parice">$385.00</span>
-                                                <span class="old-parice">$440.00</span>
-                                            </div>
-                                            <div class="courses-review">
-                                                <span class="rating-count">4.9</span>
-                                                <span class="rating-star"><span class="rating-bar" style="width: 80%;"></span></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- Card 2 --}}
-                            <div class="col-lg-4 col-md-6">
-                                <div class="single-courses">
-                                    <div class="courses-images">
-                                        <a href="#"><img src="{{ asset('assets/images/courses/courses-02.jpg') }}" alt="Courses"></a>
-                                    </div>
-                                    <div class="courses-content">
-                                        <div class="courses-author">
-                                            <div class="author">
-                                                <div class="author-thumb">
-                                                    <a href="#"><img src="{{ asset('assets/images/author/author-02.jpg') }}" alt="Author"></a>
+                                                <h4 class="title"><a href="{{ route('courses.show', $course) }}">{{ \Illuminate\Support\Str::limit($course->title, 65) }}</a></h4>
+                                                <div class="courses-meta">
+                                                    <span><i class="icofont-clock-time"></i> อัปเดต {{ $course->created_at?->format('d/m/Y') }}</span>
+                                                    <span><i class="icofont-read-book"></i> {{ $course->videos_count ?? 0 }} บทเรียน</span>
                                                 </div>
-                                                <div class="author-name"><a class="name" href="#">Pamela Foster</a></div>
-                                            </div>
-                                            <div class="tag"><a href="#">Science</a></div>
-                                        </div>
-                                        <h4 class="title"><a href="#">Create Amazing Color Schemes for Your UX Design Projects</a></h4>
-                                        <div class="courses-meta">
-                                            <span><i class="icofont-clock-time"></i> 08 hr 15 mins</span>
-                                            <span><i class="icofont-read-book"></i> 29 Lectures</span>
-                                        </div>
-                                        <div class="courses-price-review">
-                                            <div class="courses-price"><span class="sale-parice">$420.00</span></div>
-                                            <div class="courses-review">
-                                                <span class="rating-count">4.9</span>
-                                                <span class="rating-star"><span class="rating-bar" style="width: 80%;"></span></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- Card 3 --}}
-                            <div class="col-lg-4 col-md-6">
-                                <div class="single-courses">
-                                    <div class="courses-images">
-                                        <a href="#"><img src="{{ asset('assets/images/courses/courses-03.jpg') }}" alt="Courses"></a>
-                                    </div>
-                                    <div class="courses-content">
-                                        <div class="courses-author">
-                                            <div class="author">
-                                                <div class="author-thumb">
-                                                    <a href="#"><img src="{{ asset('assets/images/author/author-03.jpg') }}" alt="Author"></a>
+                                                <div class="courses-price-review">
+                                                    <div class="courses-price">
+                                                        <span class="sale-parice">{{ number_format((float) $course->price, 2) }} บาท</span>
+                                                    </div>
                                                 </div>
-                                                <div class="author-name"><a class="name" href="#">Rose Simmons</a></div>
-                                            </div>
-                                            <div class="tag"><a href="#">Science</a></div>
-                                        </div>
-                                        <h4 class="title"><a href="#">Culture & Leadership: Strategies for a Successful Business</a></h4>
-                                        <div class="courses-meta">
-                                            <span><i class="icofont-clock-time"></i> 08 hr 15 mins</span>
-                                            <span><i class="icofont-read-book"></i> 29 Lectures</span>
-                                        </div>
-                                        <div class="courses-price-review">
-                                            <div class="courses-price">
-                                                <span class="sale-parice">$295.00</span>
-                                                <span class="old-parice">$340.00</span>
-                                            </div>
-                                            <div class="courses-review">
-                                                <span class="rating-count">4.9</span>
-                                                <span class="rating-star"><span class="rating-bar" style="width: 80%;"></span></span>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                @empty
+                                    <div class="col-12">
+                                        <div class="alert alert-light border">ยังไม่มีคอร์สในวิชานี้</div>
+                                    </div>
+                                @endforelse
                             </div>
-
-                            {{-- หมายเหตุ: เพิ่มการ์ดอื่น ๆ ต่อได้ตามต้องการ --}}
                         </div>
                     </div>
-                </div>
+                @empty
+                    <div class="tab-pane fade show active" id="tabs-empty">
+                        <div class="courses-wrapper">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="alert alert-light border">ยังไม่มีข้อมูลวิชาหรือคอร์สที่อนุมัติ</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endforelse
             </div>
 
-            {{-- ปุ่มดูคอร์สเพิ่มเติม --}}
             <div class="courses-btn text-center">
                 <a href="#" class="btn btn-secondary btn-hover-primary">Other Course</a>
             </div>
         </div>
     </div>
     {{-- All Courses End --}}
+
+
 
     {{-- Call to Action Start --}}
     <div class="section section-padding-02">
@@ -326,7 +279,7 @@
         <div class="container">
             <div class="section-title shape-03 text-center">
                 <h5 class="sub-title">เสียงตอบรับจากผู้เรียน</h5>
-                <h2 class="main-title">คอร์สเรียนออนไลน์ของ <span> FutureSkill</span></h2>
+                <h2 class="main-title">คอร์สเรียนออนไลน์ของ <span>Minna</span></h2>
             </div>
 
             <div class="testimonial-wrapper testimonial-active">
@@ -342,7 +295,7 @@
                                 <span class="rating-star"><span class="rating-bar" style="width: 80%;"></span></span>
                             </div>
                             <div class="testimonial-content">
-                                <p>“ตอนแรกกังวลว่าจะเรียนออนไลน์แล้วเข้าใจไหม แต่พอได้ลองเรียนภาษาญี่ปุ่นที่นี่ รู้สึกว่าหลักสูตรจัดเรียงดีมาก มีทั้งพื้นฐานและการฝึกพูดจริง ทำให้กล้าสื่อสารมากขึ้นทุกวันค่ะ”</p>
+                                <p>“ตอนแรกกังวลว่าจะเรียนออนไลน์แล้วจะเข้าใจไหม แต่พอลองเรียนแล้วบทเรียนเรียงลำดับดีมาก ทำให้กล้าสื่อสารมากขึ้นทุกวัน”</p>
                                 <h4 class="name">พิมพ์ชนก ศรีสวัสดิ์</h4>
                                 <span class="designation">นักศึกษามหาวิทยาลัย</span>
                             </div>
@@ -358,7 +311,7 @@
                                 <span class="rating-star"><span class="rating-bar" style="width: 80%;"></span></span>
                             </div>
                             <div class="testimonial-content">
-                                <p>“ผมเลือกเรียนภาษาจีนเพราะอยากใช้ในการทำงาน คอร์สที่นี่ตอบโจทย์มาก อาจารย์สอนเข้าใจง่าย มีตัวอย่างการใช้งานจริง แถมยังมีแบบฝึกหัดให้ลองใช้ภาษาจริง ๆ รู้สึกว่าพัฒนาเร็วกว่าเรียนเองเยอะครับ”</p>
+                                <p>“ผมเลือกเรียนภาษาจีนเพื่อใช้ในการทำงาน คอร์สเข้าใจง่าย มีตัวอย่างการใช้งานจริง และมีแบบฝึกหัดครบ”</p>
                                 <h4 class="name">ธนกฤต มณีโชติ</h4>
                                 <span class="designation">พนักงานบริษัทเอกชน</span>
                             </div>
@@ -374,7 +327,7 @@
                                 <span class="rating-star"><span class="rating-bar" style="width: 80%;"></span></span>
                             </div>
                             <div class="testimonial-content">
-                                <p>“ดิฉันสนใจภาษาเยอรมันเพราะอยากไปเรียนต่อ พอมาเรียนกับที่นี่ รู้สึกว่าคอร์สมีโครงสร้างดีมาก สอนตั้งแต่พื้นฐานไปจนถึงการสนทนาในชีวิตจริง ช่วยสร้างความมั่นใจให้เยอะเลยค่ะ”</p>
+                                <p>“สนใจภาษาเยอรมันเพื่อเรียนต่อ พอมาเรียนที่นี่รู้สึกว่าคอร์สมีโครงสร้างดีมากและช่วยสร้างความมั่นใจได้เยอะ”</p>
                                 <h4 class="name">กานดา รัตนมณี</h4>
                                 <span class="designation">นักเรียนเตรียมเรียนต่อต่างประเทศ</span>
                             </div>
