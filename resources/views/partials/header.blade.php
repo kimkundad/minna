@@ -1,4 +1,4 @@
-@php
+﻿@php
     $phone = $siteSettings['contact_phone'] ?? '(970) 262-1413';
     $phoneHref = preg_replace('/\D+/', '', $phone);
     $email = $siteSettings['contact_email'] ?? 'address@gmail.com';
@@ -40,7 +40,7 @@
                     <ul class="nav-menu">
                         <li><a href="{{ url('/') }}">หน้าแรก</a></li>
                         <li><a href="{{ url('/course') }}">คอร์สออนไลน์</a></li>
-                        <li><a href="#">บทความ</a></li>
+                        <li><a href="{{ route('posts.index') }}">บทความ</a></li>
                         <li><a href="{{ url('/apply-teacher') }}">สมัครเป็นผู้สอน</a></li>
                     </ul>
                 </div>
@@ -95,7 +95,8 @@
         <ul class="nav-menu">
             <li><a href="{{ url('/') }}">หน้าแรก</a></li>
             <li><a href="{{ url('/course') }}">คอร์สออนไลน์</a></li>
-            <li><a href="#">บทความ</a></li>
+            <li><a href="{{ route('posts.index') }}">บทความ</a></li>
+                        <li><a href="{{ route('contact') }}">ติดต่อเรา</a></li>
             <li><a href="{{ url('/apply-teacher') }}">สมัครเป็นผู้สอน</a></li>
         </ul>
     </div>

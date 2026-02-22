@@ -4,18 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\CourseOrder;
-use App\Services\TwoC2PQuickPayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class PaymentController extends Controller
 {
-    public function __construct(private readonly TwoC2PQuickPayService $quickPay)
-    {
-    }
-
     public function show(Course $course)
     {
         abort_unless($course->status === 'approved', 404);
@@ -35,9 +31,16 @@ class PaymentController extends Controller
     {
         abort_unless($course->status === 'approved', 404);
 
-        if (!$this->quickPay->isConfigured()) {
-            return back()->with('error', 'ยังไม่ได้ตั้งค่า 2C2P API ในไฟล์ .env');
+        if (!$this->stripeConfigured()) {
+            return back()->with('error', 'ยังไม่ได้ตั้งค่า Stripe API ในไฟล์ .env');
         }
+
+        $validated = $request->validate([
+            'payment_channel' => ['required', 'in:card,promptpay'],
+        ]);
+
+        $paymentChannel = (string) $validated['payment_channel'];
+        $stripeMethod = $paymentChannel === 'promptpay' ? 'promptpay' : 'card';
 
         $user = $request->user();
 
@@ -46,48 +49,76 @@ class PaymentController extends Controller
             'user_id' => $user->id,
             'course_id' => $course->id,
             'amount' => $course->price,
-            'currency' => config('services.quickpay_2c2p.currency', 'THB'),
+            'currency' => strtoupper((string) config('services.stripe.currency', 'THB')),
             'status' => 'creating',
+            'access_type' => $course->access_type ?: 'lifetime',
+            'access_duration_months' => $course->access_type === 'time_limited'
+                ? $course->access_duration_months
+                : null,
+            'access_expires_at' => null,
         ]);
 
         try {
-            $returnUrl = route('payments.2c2p.return');
-            $backendUrl = route('payments.2c2p.webhook');
+            $response = Http::asForm()
+                ->withToken((string) config('services.stripe.secret'))
+                ->post('https://api.stripe.com/v1/checkout/sessions', [
+                    'mode' => 'payment',
+                    'success_url' => route('payments.stripe.success', ['order' => $order->id]) . '?session_id={CHECKOUT_SESSION_ID}',
+                    'cancel_url' => route('payments.stripe.cancel', ['order' => $order->id]),
+                    'customer_email' => (string) $user->email,
+                    'client_reference_id' => $order->order_no,
+                    'metadata[order_id]' => (string) $order->id,
+                    'metadata[order_no]' => (string) $order->order_no,
+                    'metadata[user_id]' => (string) $user->id,
+                    'metadata[course_id]' => (string) $course->id,
+                    'metadata[payment_channel]' => $paymentChannel,
+                    'payment_method_types[0]' => $stripeMethod,
+                    'line_items[0][quantity]' => 1,
+                    'line_items[0][price_data][currency]' => strtolower((string) config('services.stripe.currency', 'THB')),
+                    'line_items[0][price_data][unit_amount]' => $this->toStripeAmount((float) $course->price),
+                    'line_items[0][price_data][product_data][name]' => Str::limit((string) $course->title, 120),
+                    'line_items[0][price_data][product_data][description]' => Str::limit((string) $course->description, 200),
+                ]);
 
-            $response = $this->quickPay->generatePaymentLink($order, [
-                'name' => trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: $user->name,
-                'email' => (string) $user->email,
-                'mobile' => preg_replace('/\D+/', '', (string) ($user->phone ?? $user->phone_national ?? '')),
-                'description' => Str::limit((string) $course->title, 120),
-            ], $returnUrl, $backendUrl);
+            if ($response->failed()) {
+                $order->update([
+                    'status' => 'failed',
+                    'res_code' => 'stripe_api_error',
+                    'res_desc' => $this->shortText((string) $response->body(), 2000),
+                    'provider_payload' => ['status' => $response->status(), 'body' => $response->json()],
+                ]);
 
-            $data = $response['GenerateAndSendQPRes'] ?? [];
-            $resCode = (string) ($data['resCode'] ?? '');
-            $paymentUrl = $data['shortURL'] ?? $data['qpURL'] ?? $data['paymentURL'] ?? null;
-            $qpId = $data['qpID'] ?? null;
+                return back()->with('error', 'สร้าง Stripe Checkout ไม่สำเร็จ กรุณาตรวจสอบการเปิดใช้งานช่องทางที่เลือกใน Stripe');
+            }
+
+            $data = $response->json();
+            $sessionId = (string) ($data['id'] ?? '');
+            $paymentUrl = $data['url'] ?? null;
 
             $order->update([
-                'status' => $resCode === '0000' ? 'pending' : 'failed',
-                'res_code' => $resCode ?: null,
-                'res_desc' => $data['resDesc'] ?? null,
+                'status' => $paymentUrl ? 'pending' : 'failed',
+                'res_code' => $paymentUrl ? 'session_open' : 'session_error',
+                'res_desc' => $paymentUrl ? null : 'Stripe session url missing',
                 'payment_url' => $paymentUrl,
-                'qp_id' => $qpId,
-                'provider_payload' => $response,
+                'qp_id' => $this->shortText($sessionId, 191),
+                'provider_payload' => $data,
             ]);
 
-            if ($resCode !== '0000' || empty($paymentUrl)) {
-                return back()->with('error', 'สร้างลิงก์ชำระเงินไม่สำเร็จ: ' . ($data['resDesc'] ?? 'Unknown error'));
+            if (empty($paymentUrl)) {
+                return back()->with('error', 'สร้าง Stripe Checkout ไม่สำเร็จ');
             }
 
             return redirect()->away($paymentUrl);
         } catch (\Throwable $e) {
             $order->update([
                 'status' => 'failed',
-                'res_desc' => $e->getMessage(),
+                'res_code' => 'exception',
+                'res_desc' => $this->shortText($e->getMessage(), 2000),
             ]);
 
-            Log::error('2C2P generate link failed', [
+            Log::error('Stripe checkout create failed', [
                 'order_id' => $order->id,
+                'payment_channel' => $paymentChannel,
                 'message' => $e->getMessage(),
             ]);
 
@@ -95,109 +126,188 @@ class PaymentController extends Controller
         }
     }
 
-    public function callback(Request $request)
+    public function success(Request $request, CourseOrder $order)
     {
-        $orderNo = (string) ($request->input('orderIdPrefix') ?? $request->input('order_no') ?? '');
-        $qpId = (string) ($request->input('qpID') ?? $request->input('qpId') ?? '');
+        abort_unless((int) $order->user_id === (int) $request->user()->id, 403);
 
-        $order = CourseOrder::query()
-            ->when($orderNo !== '', fn ($q) => $q->where('order_no', $orderNo))
-            ->when($orderNo === '' && $qpId !== '', fn ($q) => $q->where('qp_id', $qpId))
-            ->latest()
-            ->first();
-
-        if (!$order) {
-            return redirect()->route('course')->with('error', 'ไม่พบรายการชำระเงิน');
+        $sessionId = (string) $request->query('session_id', '');
+        if ($sessionId === '') {
+            return redirect()->route('courses.payment', $order->course_id)->with('error', 'ไม่พบ Stripe session');
         }
 
-        $this->syncOrderByQuery($order, $qpId ?: (string) $order->qp_id);
+        $response = Http::withToken((string) config('services.stripe.secret'))
+            ->get("https://api.stripe.com/v1/checkout/sessions/{$sessionId}");
 
-        if ($order->fresh()->status === 'paid') {
+        if ($response->failed()) {
+            return redirect()->route('courses.payment', $order->course_id)->with('error', 'ตรวจสอบสถานะการชำระเงินไม่สำเร็จ');
+        }
+
+        $session = $response->json();
+        $paid = (($session['payment_status'] ?? '') === 'paid');
+
+        $paidAt = $paid ? ($order->paid_at ?? Carbon::now()) : $order->paid_at;
+        $order->update([
+            'status' => $paid ? 'paid' : $order->status,
+            'res_code' => (string) ($session['status'] ?? $order->res_code),
+            'res_desc' => $this->shortText((string) ($session['payment_status'] ?? $order->res_desc), 2000),
+            'provider_payload' => $session,
+            'paid_at' => $paidAt,
+            'access_expires_at' => $paid
+                ? $this->computeAccessExpiresAt($paidAt, (string) $order->access_type, $order->access_duration_months)
+                : $order->access_expires_at,
+            'qp_id' => $this->shortText((string) ($session['id'] ?? $order->qp_id), 191),
+        ]);
+
+        if ($paid) {
             return redirect()->route('student.courses')->with('success', 'ชำระเงินสำเร็จแล้ว');
         }
 
-        return redirect()->route('courses.payment', $order->course_id)
-            ->with('error', 'ยังไม่พบสถานะชำระเงินสำเร็จ กรุณาตรวจสอบอีกครั้ง');
+        return redirect()->route('courses.payment', $order->course_id)->with('error', 'ยังไม่พบสถานะชำระเงินสำเร็จ');
+    }
+
+    public function cancel(Request $request, CourseOrder $order)
+    {
+        abort_unless((int) $order->user_id === (int) $request->user()->id, 403);
+
+        if (in_array($order->status, ['creating', 'pending'], true)) {
+            $order->update(['status' => 'canceled']);
+        }
+
+        return redirect()->route('courses.payment', $order->course_id)->with('error', 'ยกเลิกการชำระเงินแล้ว');
     }
 
     public function webhook(Request $request)
     {
-        $payload = $this->parseWebhookPayload($request);
+        $payload = (string) $request->getContent();
+        $sigHeader = (string) $request->header('Stripe-Signature', '');
+        $secret = (string) config('services.stripe.webhook_secret');
 
-        $orderNo = (string) data_get($payload, 'orderIdPrefix', data_get($payload, 'order_no', ''));
-        $qpId = (string) data_get($payload, 'qpID', data_get($payload, 'qpId', ''));
+        if (!$this->verifyStripeSignature($payload, $sigHeader, $secret)) {
+            return response()->json(['error' => 'Invalid signature'], 400);
+        }
+
+        $event = json_decode($payload, true);
+        if (!is_array($event)) {
+            return response()->json(['error' => 'Invalid payload'], 400);
+        }
+
+        $type = (string) ($event['type'] ?? '');
+        $session = $event['data']['object'] ?? [];
+        $orderId = (int) ($session['metadata']['order_id'] ?? 0);
+        $orderNo = (string) ($session['metadata']['order_no'] ?? '');
 
         $order = CourseOrder::query()
-            ->when($orderNo !== '', fn ($q) => $q->where('order_no', $orderNo))
-            ->when($orderNo === '' && $qpId !== '', fn ($q) => $q->where('qp_id', $qpId))
+            ->when($orderId > 0, fn ($q) => $q->whereKey($orderId))
+            ->when($orderId === 0 && $orderNo !== '', fn ($q) => $q->where('order_no', $orderNo))
             ->latest()
             ->first();
 
-        if ($order) {
-            $this->syncOrderByQuery($order, $qpId ?: (string) $order->qp_id);
-        } else {
-            Log::warning('2C2P webhook: order not found', ['payload' => $payload]);
+        if (!$order) {
+            Log::warning('Stripe webhook: order not found', ['event' => $event]);
+            return response()->json(['ok' => true]);
+        }
+
+        if (in_array($type, ['checkout.session.completed', 'checkout.session.async_payment_succeeded'], true)) {
+            $paidAt = $order->paid_at ?? Carbon::now();
+            $order->update([
+                'status' => 'paid',
+                'res_code' => (string) ($session['status'] ?? $order->res_code),
+                'res_desc' => $this->shortText((string) ($session['payment_status'] ?? 'paid'), 2000),
+                'qp_id' => $this->shortText((string) ($session['id'] ?? $order->qp_id), 191),
+                'provider_payload' => $event,
+                'paid_at' => $paidAt,
+                'access_expires_at' => $this->computeAccessExpiresAt(
+                    $paidAt,
+                    (string) $order->access_type,
+                    $order->access_duration_months
+                ),
+            ]);
+        }
+
+        if (in_array($type, ['checkout.session.expired', 'checkout.session.async_payment_failed'], true)) {
+            $order->update([
+                'status' => 'failed',
+                'res_code' => (string) ($session['status'] ?? $order->res_code),
+                'res_desc' => $this->shortText((string) ($session['payment_status'] ?? 'failed'), 2000),
+                'qp_id' => $this->shortText((string) ($session['id'] ?? $order->qp_id), 191),
+                'provider_payload' => $event,
+            ]);
         }
 
         return response()->json(['ok' => true]);
     }
 
-    private function syncOrderByQuery(CourseOrder $order, string $qpId): void
+    private function stripeConfigured(): bool
     {
-        if ($qpId === '') {
-            return;
-        }
-
-        try {
-            $response = $this->quickPay->queryByQpId($qpId);
-            $data = $response['QPQueryRes'] ?? [];
-            $resCode = (string) ($data['resCode'] ?? '');
-            $approvedCount = (int) ($data['currentApproved'] ?? 0);
-            $isPaid = $resCode === '0000' && $approvedCount > 0;
-
-            $order->update([
-                'qp_id' => $qpId,
-                'status' => $isPaid ? 'paid' : ($order->status === 'paid' ? 'paid' : 'pending'),
-                'res_code' => $resCode ?: null,
-                'res_desc' => $data['resDesc'] ?? $order->res_desc,
-                'provider_payload' => $response,
-                'paid_at' => $isPaid ? ($order->paid_at ?? Carbon::now()) : $order->paid_at,
-            ]);
-        } catch (\Throwable $e) {
-            Log::error('2C2P query failed', [
-                'order_id' => $order->id,
-                'qp_id' => $qpId,
-                'message' => $e->getMessage(),
-            ]);
-        }
+        return !empty(config('services.stripe.secret')) && !empty(config('services.stripe.key'));
     }
 
-    private function parseWebhookPayload(Request $request): array
+    private function toStripeAmount(float $amount): int
     {
-        $json = $request->json()->all();
-        if (!empty($json)) {
-            return $json;
+        return max(1, (int) round($amount * 100));
+    }
+
+    private function verifyStripeSignature(string $payload, string $header, string $secret): bool
+    {
+        if ($payload === '' || $header === '' || $secret === '') {
+            return false;
         }
 
-        $raw = trim((string) $request->getContent());
-        if ($raw === '') {
-            return [];
-        }
-
-        $decodedBase64 = base64_decode($raw, true);
-        if ($decodedBase64 !== false) {
-            $decodedJson = json_decode($decodedBase64, true);
-            if (is_array($decodedJson)) {
-                return $decodedJson;
+        $parts = [];
+        foreach (explode(',', $header) as $item) {
+            [$k, $v] = array_pad(explode('=', trim($item), 2), 2, null);
+            if ($k && $v) {
+                $parts[$k][] = $v;
             }
         }
 
-        $decodedJson = json_decode($raw, true);
-        return is_array($decodedJson) ? $decodedJson : [];
+        $timestamp = isset($parts['t'][0]) ? (int) $parts['t'][0] : 0;
+        $signatures = $parts['v1'] ?? [];
+
+        if ($timestamp <= 0 || empty($signatures)) {
+            return false;
+        }
+
+        if (abs(time() - $timestamp) > 300) {
+            return false;
+        }
+
+        $signedPayload = $timestamp . '.' . $payload;
+        $expected = hash_hmac('sha256', $signedPayload, $secret);
+
+        foreach ($signatures as $signature) {
+            if (hash_equals($expected, $signature)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function newOrderNo(): string
     {
         return 'CRS' . now()->format('YmdHis') . Str::upper(Str::random(5));
+    }
+
+    private function shortText(?string $value, int $max = 255): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        return mb_substr($value, 0, $max);
+    }
+
+    private function computeAccessExpiresAt(?Carbon $paidAt, string $accessType, ?int $durationMonths): ?Carbon
+    {
+        if ($accessType !== 'time_limited') {
+            return null;
+        }
+
+        if (!$paidAt || !$durationMonths || $durationMonths <= 0) {
+            return null;
+        }
+
+        return $paidAt->copy()->addMonthsNoOverflow($durationMonths);
     }
 }

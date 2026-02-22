@@ -10,6 +10,7 @@ use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class CourseController extends Controller
 {
@@ -83,7 +84,7 @@ class CourseController extends Controller
 
     public function update(Request $request, Course $course)
     {
-        $validated = $this->validateCourse($request);
+        $validated = $this->validateCourse($request, true);
 
         if ($request->hasFile('thumbnail')) {
             if ($course->thumbnail_path) {
@@ -99,9 +100,13 @@ class CourseController extends Controller
             $validated['sample_video_path'] = $request->file('sample_video')->store('courses/sample_videos', 'spaces');
         }
 
-        $validated['status'] = 'approved';
-        $validated['approved_at'] = now();
-        $validated['approved_by'] = $request->user()->id;
+        if (($validated['status'] ?? null) === 'approved') {
+            $validated['approved_at'] = now();
+            $validated['approved_by'] = $request->user()->id;
+        } else {
+            $validated['approved_at'] = null;
+            $validated['approved_by'] = null;
+        }
 
         $course->update($validated);
         $this->storeDocuments($request, $course);
@@ -109,12 +114,14 @@ class CourseController extends Controller
         return redirect()->route('admin.courses.index')->with('success', 'แก้ไขคอร์สเรียบร้อยแล้ว');
     }
 
-    private function validateCourse(Request $request): array
+    private function validateCourse(Request $request, bool $allowStatus = false): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'price' => 'required|numeric|min:0',
+            'access_type' => 'required|in:lifetime,time_limited',
+            'access_duration_months' => 'nullable|integer|in:1,2,3,6,12,24',
             'course_category_id' => 'required|exists:course_categories,id',
             'subject_id' => 'required|exists:subjects,id',
             'teacher_id' => [
@@ -130,7 +137,20 @@ class CourseController extends Controller
             'sample_video' => 'nullable|file|mimes:mp4,mov,avi,webm,mkv|max:51200',
             'documents' => 'nullable|array',
             'documents.*' => 'file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,rar,jpg,jpeg,png,webp,gif|max:20480',
+            'status' => ($allowStatus ? 'required' : 'nullable') . '|in:pending,approved,rejected',
         ]);
+
+        if (($validated['access_type'] ?? 'lifetime') === 'lifetime') {
+            $validated['access_duration_months'] = null;
+        }
+
+        if (($validated['access_type'] ?? null) === 'time_limited' && empty($validated['access_duration_months'])) {
+            throw ValidationException::withMessages([
+                'access_duration_months' => 'กรุณาเลือกระยะเวลาสิทธิ์การเข้าถึง',
+            ]);
+        }
+
+        return $validated;
     }
 
     private function storeDocuments(Request $request, Course $course): void

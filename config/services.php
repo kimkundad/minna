@@ -40,6 +40,13 @@ return [
         'secret_key' => env('RECAPTCHA_SECRET_KEY'),
     ],
 
+    'stripe' => [
+        'key' => env('STRIPE_KEY'),
+        'secret' => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        'currency' => env('STRIPE_CURRENCY', 'THB'),
+    ],
+
     'quickpay_2c2p' => [
         'endpoint' => env('TWOC2P_ENDPOINT', 'https://coreapi.2c2p.com/core-api/api/2.0'),
         'merchant_id' => env('TWOC2P_MERCHANT_ID'),

@@ -187,7 +187,7 @@
                     </div>
                     <div class="col-md-6">
                         <div class="call-to-action-btn">
-                            <a class="btn btn-primary btn-hover-dark" href="">
+                            <a class="btn btn-primary btn-hover-dark" href="{{ url('/apply-teacher') }}">
                                 ลงทะเบียนเป็นผู้สอน
                             </a>
                         </div>
@@ -285,53 +285,44 @@
             <div class="testimonial-wrapper testimonial-active">
                 <div class="swiper-container">
                     <div class="swiper-wrapper">
-                        {{-- Testimonial 1 --}}
-                        <div class="single-testimonial swiper-slide">
-                            <div class="testimonial-author">
-                                <div class="author-thumb">
-                                    <img src="{{ asset('assets/images/author/author-06.jpg') }}" alt="Author">
-                                    <i class="icofont-quote-left"></i>
+                        @forelse (($testimonials ?? collect()) as $item)
+                            @php
+                                $avatar = $item->avatar_path
+                                    ? \Illuminate\Support\Facades\Storage::disk('spaces')->url($item->avatar_path)
+                                    : asset('assets/images/author/author-06.jpg');
+                                $ratingWidth = max(0, min(100, ((int) $item->rating * 20)));
+                            @endphp
+                            <div class="single-testimonial swiper-slide">
+                                <div class="testimonial-author">
+                                    <div class="author-thumb">
+                                        <img src="{{ $avatar }}" alt="{{ $item->name }}">
+                                        <i class="icofont-quote-left"></i>
+                                    </div>
+                                    <span class="rating-star"><span class="rating-bar"
+                                            style="width: {{ $ratingWidth }}%;"></span></span>
                                 </div>
-                                <span class="rating-star"><span class="rating-bar" style="width: 80%;"></span></span>
-                            </div>
-                            <div class="testimonial-content">
-                                <p>“ตอนแรกกังวลว่าจะเรียนออนไลน์แล้วจะเข้าใจไหม แต่พอลองเรียนแล้วบทเรียนเรียงลำดับดีมาก ทำให้กล้าสื่อสารมากขึ้นทุกวัน”</p>
-                                <h4 class="name">พิมพ์ชนก ศรีสวัสดิ์</h4>
-                                <span class="designation">นักศึกษามหาวิทยาลัย</span>
-                            </div>
-                        </div>
-
-                        {{-- Testimonial 2 --}}
-                        <div class="single-testimonial swiper-slide">
-                            <div class="testimonial-author">
-                                <div class="author-thumb">
-                                    <img src="{{ asset('assets/images/author/author-07.jpg') }}" alt="Author">
-                                    <i class="icofont-quote-left"></i>
+                                <div class="testimonial-content">
+                                    <p>“{{ $item->content }}”</p>
+                                    <h4 class="name">{{ $item->name }}</h4>
+                                    <span class="designation">{{ $item->designation ?: 'ผู้เรียน' }}</span>
                                 </div>
-                                <span class="rating-star"><span class="rating-bar" style="width: 80%;"></span></span>
                             </div>
-                            <div class="testimonial-content">
-                                <p>“ผมเลือกเรียนภาษาจีนเพื่อใช้ในการทำงาน คอร์สเข้าใจง่าย มีตัวอย่างการใช้งานจริง และมีแบบฝึกหัดครบ”</p>
-                                <h4 class="name">ธนกฤต มณีโชติ</h4>
-                                <span class="designation">พนักงานบริษัทเอกชน</span>
-                            </div>
-                        </div>
-
-                        {{-- Testimonial 3 --}}
-                        <div class="single-testimonial swiper-slide">
-                            <div class="testimonial-author">
-                                <div class="author-thumb">
-                                    <img src="{{ asset('assets/images/author/author-03.jpg') }}" alt="Author">
-                                    <i class="icofont-quote-left"></i>
+                        @empty
+                            <div class="single-testimonial swiper-slide">
+                                <div class="testimonial-author">
+                                    <div class="author-thumb">
+                                        <img src="{{ asset('assets/images/author/author-06.jpg') }}" alt="Author">
+                                        <i class="icofont-quote-left"></i>
+                                    </div>
+                                    <span class="rating-star"><span class="rating-bar" style="width: 80%;"></span></span>
                                 </div>
-                                <span class="rating-star"><span class="rating-bar" style="width: 80%;"></span></span>
+                                <div class="testimonial-content">
+                                    <p>“เริ่มเพิ่มเสียงตอบรับจากผู้เรียนได้ที่หลังบ้านเมนู เสียงตอบรับ”</p>
+                                    <h4 class="name">ยังไม่มีข้อมูล</h4>
+                                    <span class="designation">ระบบ</span>
+                                </div>
                             </div>
-                            <div class="testimonial-content">
-                                <p>“สนใจภาษาเยอรมันเพื่อเรียนต่อ พอมาเรียนที่นี่รู้สึกว่าคอร์สมีโครงสร้างดีมากและช่วยสร้างความมั่นใจได้เยอะ”</p>
-                                <h4 class="name">กานดา รัตนมณี</h4>
-                                <span class="designation">นักเรียนเตรียมเรียนต่อต่างประเทศ</span>
-                            </div>
-                        </div>
+                        @endforelse
                     </div>
                     {{-- Pagination --}}
                     <div class="swiper-pagination"></div>
@@ -383,7 +374,7 @@
     {{-- Brand Logo End --}}
 
     {{-- Blog Start --}}
-    <div class="section section-padding mt-n1">
+    <div class="section section-padding mt-n1" id="blog-section">
         <div class="container">
             <div class="section-title shape-03 text-center">
                 <h5 class="sub-title">Latest News</h5>
@@ -392,86 +383,48 @@
 
             <div class="blog-wrapper">
                 <div class="row">
-                    {{-- Blog 1 --}}
-                    <div class="col-lg-4 col-md-6">
-                        <div class="single-blog">
-                            <div class="blog-image">
-                                <a href="#"><img src="{{ asset('assets/images/blog/blog-01.jpg') }}" alt="Blog"></a>
-                            </div>
-                            <div class="blog-content">
-                                <div class="blog-author">
-                                    <div class="author">
-                                        <div class="author-thumb">
-                                            <a href="#"><img src="{{ asset('assets/images/author/author-01.jpg') }}" alt="Author"></a>
+                    @forelse (($posts ?? collect()) as $post)
+                        @php
+                            $coverUrl = $post->cover_path
+                                ? \Illuminate\Support\Facades\Storage::disk('spaces')->url($post->cover_path)
+                                : asset('assets/images/blog/blog-01.jpg');
+                        @endphp
+                        <div class="col-lg-4 col-md-6">
+                            <div class="single-blog">
+                                <div class="blog-image">
+                                    <a href="{{ route('posts.show', $post) }}"><img src="{{ $coverUrl }}" alt="{{ $post->title }}"></a>
+                                </div>
+                                <div class="blog-content">
+                                    <div class="blog-author">
+                                        <div class="author">
+                                            <div class="author-thumb">
+                                                <a href="{{ route('posts.show', $post) }}"><img
+                                                        src="{{ asset('assets/images/author/author-01.jpg') }}" alt="Author"></a>
+                                            </div>
+                                            <div class="author-name"><a class="name"
+                                                    href="{{ route('posts.show', $post) }}">{{ $post->author?->name ?? 'Admin' }}</a>
+                                            </div>
                                         </div>
-                                        <div class="author-name"><a class="name" href="#">Jason Williams</a></div>
+                                        <div class="tag"><a href="javascript:void(0)">บทความ</a></div>
                                     </div>
-                                    <div class="tag"><a href="#">Science</a></div>
-                                </div>
 
-                                <h4 class="title"><a href="#">Data Science and Machine Learning with Python - Hands On!</a></h4>
-                                <div class="blog-meta">
-                                    <span><i class="icofont-calendar"></i> 21 March, 2021</span>
-                                    <span><i class="icofont-heart"></i> 2,568+</span>
+                                    <h4 class="title"><a
+                                            href="{{ route('posts.show', $post) }}">{{ \Illuminate\Support\Str::limit($post->title, 75) }}</a>
+                                    </h4>
+                                    <div class="blog-meta">
+                                        <span><i class="icofont-calendar"></i>
+                                            {{ $post->published_at?->format('d/m/Y') }}</span>
+                                    </div>
+                                    <a href="{{ route('posts.show', $post) }}" class="btn btn-secondary btn-hover-primary">Read
+                                        More</a>
                                 </div>
-                                <a href="#" class="btn btn-secondary btn-hover-primary">Read More</a>
                             </div>
                         </div>
-                    </div>
-
-                    {{-- Blog 2 --}}
-                    <div class="col-lg-4 col-md-6">
-                        <div class="single-blog">
-                            <div class="blog-image">
-                                <a href="#"><img src="{{ asset('assets/images/blog/blog-02.jpg') }}" alt="Blog"></a>
-                            </div>
-                            <div class="blog-content">
-                                <div class="blog-author">
-                                    <div class="author">
-                                        <div class="author-thumb">
-                                            <a href="#"><img src="{{ asset('assets/images/author/author-02.jpg') }}" alt="Author"></a>
-                                        </div>
-                                        <div class="author-name"><a class="name" href="#">Pamela Foster</a></div>
-                                    </div>
-                                    <div class="tag"><a href="#">UX Design</a></div>
-                                </div>
-
-                                <h4 class="title"><a href="#">Create Amazing Color Schemes for Your UX Design Projects</a></h4>
-                                <div class="blog-meta">
-                                    <span><i class="icofont-calendar"></i> 21 March, 2021</span>
-                                    <span><i class="icofont-heart"></i> 2,568+</span>
-                                </div>
-                                <a href="#" class="btn btn-secondary btn-hover-primary">Read More</a>
-                            </div>
+                    @empty
+                        <div class="col-12">
+                            <div class="alert alert-light border">ยังไม่มีบทความ</div>
                         </div>
-                    </div>
-
-                    {{-- Blog 3 --}}
-                    <div class="col-lg-4 col-md-6">
-                        <div class="single-blog">
-                            <div class="blog-image">
-                                <a href="#"><img src="{{ asset('assets/images/blog/blog-03.jpg') }}" alt="Blog"></a>
-                            </div>
-                            <div class="blog-content">
-                                <div class="blog-author">
-                                    <div class="author">
-                                        <div class="author-thumb">
-                                            <a href="#"><img src="{{ asset('assets/images/author/author-03.jpg') }}" alt="Author"></a>
-                                        </div>
-                                        <div class="author-name"><a class="name" href="#">Patricia Collins</a></div>
-                                    </div>
-                                    <div class="tag"><a href="#">Business</a></div>
-                                </div>
-
-                                <h4 class="title"><a href="#">Culture & Leadership: Strategies for a Successful Business</a></h4>
-                                <div class="blog-meta">
-                                    <span><i class="icofont-calendar"></i> 21 March, 2021</span>
-                                    <span><i class="icofont-heart"></i> 2,568+</span>
-                                </div>
-                                <a href="#" class="btn btn-secondary btn-hover-primary">Read More</a>
-                            </div>
-                        </div>
-                    </div>
+                    @endforelse
                 </div> {{-- row --}}
             </div>
         </div>

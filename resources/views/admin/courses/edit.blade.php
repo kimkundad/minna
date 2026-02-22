@@ -1,4 +1,4 @@
-@extends('admin.layouts.template')
+﻿@extends('admin.layouts.template')
 
 @section('title')
     <title>แก้ไขคอร์สเรียน</title>
@@ -62,7 +62,6 @@
                                 <div class="mb-4">
                                     <label class="form-label">ผู้สอน</label>
                                     <select name="teacher_id" class="form-select" required>
-                                        <option value="">เลือกผู้สอน</option>
                                         @foreach ($teachers as $teacher)
                                             <option value="{{ $teacher->id }}" @selected(old('teacher_id', $course->teacher_id) == $teacher->id)>
                                                 {{ $teacher->name }} ({{ $teacher->email }})
@@ -71,62 +70,74 @@
                                     </select>
                                 </div>
 
-                                <div class="mb-4">
-                                    <label class="form-label">ราคา</label>
-                                    <input type="number" name="price" class="form-control" min="0" step="0.01"
-                                        value="{{ old('price', $course->price) }}" required>
+                                <div class="row g-4 mb-4">
+                                    <div class="col-md-6">
+                                        <label class="form-label">ราคา</label>
+                                        <input type="number" name="price" class="form-control" min="0" step="0.01" value="{{ old('price', $course->price) }}" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">รูปคอร์ส (อัปโหลดใหม่เพื่อแทนที่)</label>
+                                        <input type="file" name="thumbnail" class="form-control" accept="image/*">
+                                    </div>
                                 </div>
 
                                 <div class="mb-4">
-                                    <label class="form-label">รูปคอร์ส (อัปโหลดใหม่เพื่อแทนที่)</label>
-                                    <input type="file" name="thumbnail" class="form-control" accept="image/*">
-                                    @if ($course->thumbnail_path)
-                                        <small class="text-muted d-block mt-2">
-                                            ไฟล์ปัจจุบัน:
-                                            <a href="{{ \Illuminate\Support\Facades\Storage::disk('spaces')->url($course->thumbnail_path) }}" target="_blank" rel="noopener">
-                                                เปิดรูปคอร์ส
-                                            </a>
-                                        </small>
-                                        <div class="mt-3">
-                                            <img
-                                                src="{{ \Illuminate\Support\Facades\Storage::disk('spaces')->url($course->thumbnail_path) }}"
-                                                alt="รูปคอร์ส"
-                                                class="img-fluid rounded border"
-                                                style="max-height: 240px;"
-                                            >
-                                        </div>
-                                    @endif
+                                    <label class="form-label">สถานะคอร์ส</label>
+                                    <select name="status" class="form-select" required>
+                                        <option value="pending" @selected(old('status', $course->status) === 'pending')>pending</option>
+                                        <option value="approved" @selected(old('status', $course->status) === 'approved')>approved</option>
+                                        <option value="rejected" @selected(old('status', $course->status) === 'rejected')>rejected</option>
+                                    </select>
                                 </div>
+
+                                <div class="row g-4 mb-4">
+                                    <div class="col-md-6">
+                                        <label class="form-label">สิทธิ์การเข้าถึงคอร์ส</label>
+                                        <select name="access_type" id="access_type" class="form-select" required>
+                                            <option value="lifetime" @selected(old('access_type', $course->access_type ?? 'lifetime') === 'lifetime')>Lifetime access</option>
+                                            <option value="time_limited" @selected(old('access_type', $course->access_type) === 'time_limited')>Time-limited access</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6" id="duration_months_wrap" style="display:none;">
+                                        <label class="form-label">ระยะเวลาเข้าถึงหลังชำระเงิน</label>
+                                        <select name="access_duration_months" id="access_duration_months" class="form-select">
+                                            <option value="">เลือกระยะเวลา</option>
+                                            <option value="1" @selected((string) old('access_duration_months', $course->access_duration_months) === '1')>1 เดือน</option>
+                                            <option value="2" @selected((string) old('access_duration_months', $course->access_duration_months) === '2')>2 เดือน</option>
+                                            <option value="3" @selected((string) old('access_duration_months', $course->access_duration_months) === '3')>3 เดือน</option>
+                                            <option value="6" @selected((string) old('access_duration_months', $course->access_duration_months) === '6')>6 เดือน</option>
+                                            <option value="12" @selected((string) old('access_duration_months', $course->access_duration_months) === '12')>1 ปี</option>
+                                            <option value="24" @selected((string) old('access_duration_months', $course->access_duration_months) === '24')>2 ปี</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                @if ($course->thumbnail_path)
+                                    <div class="mb-4">
+                                        <small class="text-muted">รูปปัจจุบัน:</small>
+                                        <div class="mt-2">
+                                            <img src="{{ \Illuminate\Support\Facades\Storage::disk('spaces')->url($course->thumbnail_path) }}" alt="รูปคอร์ส" class="img-fluid rounded border" style="max-height: 220px;">
+                                        </div>
+                                    </div>
+                                @endif
 
                                 <div class="mb-4">
                                     <label class="form-label">Video ตัวอย่าง (ไม่เกิน 50MB)</label>
                                     <input type="file" name="sample_video" class="form-control" accept=".mp4,.mov,.avi,.webm,.mkv,video/*">
-                                    @if ($course->sample_video_path)
-                                        <small class="text-muted d-block mt-2">
-                                            ไฟล์ปัจจุบัน:
-                                            <a href="{{ \Illuminate\Support\Facades\Storage::disk('spaces')->url($course->sample_video_path) }}" target="_blank" rel="noopener">
-                                                เปิดวิดีโอตัวอย่าง
-                                            </a>
-                                        </small>
-                                    @endif
-                                    <small class="text-muted d-block mt-2">
-                                        วิดีโอคอร์สจริง (สูงสุด 1GB และหลายไฟล์) จัดการได้ที่ปุ่ม "จัดการวิดีโอคอร์ส" ด้านล่าง
-                                    </small>
                                 </div>
 
                                 <div class="mb-4">
                                     <label class="form-label">เอกสารใหม่สำหรับดาวน์โหลด (เพิ่มได้หลายไฟล์)</label>
                                     <input type="file" name="documents[]" class="form-control" multiple
                                         accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.jpg,.jpeg,.png,.webp,.gif,image/*">
+
                                     @if ($course->documents->isNotEmpty())
                                         <div class="mt-2">
                                             <small class="text-muted d-block mb-1">เอกสารที่มีอยู่:</small>
                                             @foreach ($course->documents as $document)
                                                 <div>
                                                     <small>
-                                                        <a href="{{ \Illuminate\Support\Facades\Storage::disk('spaces')->url($document->file_path) }}" target="_blank" rel="noopener">
-                                                            {{ $document->file_name }}
-                                                        </a>
+                                                        <a href="{{ \Illuminate\Support\Facades\Storage::disk('spaces')->url($document->file_path) }}" target="_blank" rel="noopener">{{ $document->file_name }}</a>
                                                     </small>
                                                 </div>
                                             @endforeach
@@ -146,4 +157,26 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var accessType = document.getElementById('access_type');
+            var wrap = document.getElementById('duration_months_wrap');
+            var duration = document.getElementById('access_duration_months');
+
+            function toggleDuration() {
+                var isTimeLimited = accessType && accessType.value === 'time_limited';
+                wrap.style.display = isTimeLimited ? '' : 'none';
+                if (duration) {
+                    duration.required = isTimeLimited;
+                    if (!isTimeLimited) duration.value = '';
+                }
+            }
+
+            if (accessType) {
+                accessType.addEventListener('change', toggleDuration);
+                toggleDuration();
+            }
+        });
+    </script>
 @endsection

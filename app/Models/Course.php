@@ -15,6 +15,8 @@ class Course extends Model
         'subject_id',
         'teacher_id',
         'price',
+        'access_type',
+        'access_duration_months',
         'status',
         'created_by',
         'approved_by',
@@ -24,6 +26,7 @@ class Course extends Model
     protected $casts = [
         'approved_at' => 'datetime',
         'price' => 'decimal:2',
+        'access_duration_months' => 'integer',
     ];
 
     public function category()
@@ -48,7 +51,12 @@ class Course extends Model
 
     public function videos()
     {
-        return $this->hasMany(CourseVideo::class);
+        return $this->hasMany(CourseVideo::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function sections()
+    {
+        return $this->hasMany(CourseSection::class)->orderBy('sort_order')->orderBy('id');
     }
 
     public function creator()

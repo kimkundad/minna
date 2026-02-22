@@ -230,6 +230,66 @@
                     </a>
                 </div>
 
+                <!-- Contact Messages -->
+                <div class="menu-item">
+                    <a class="menu-link" href="{{ route('admin.contact_messages.index') }}">
+                        <span class="menu-icon">
+                            <span class="svg-icon svg-icon-2">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path opacity="0.3"
+                                        d="M3 5C3 3.9 3.9 3 5 3H19C20.1 3 21 3.9 21 5V19C21 20.1 20.1 21 19 21H5C3.9 21 3 20.1 3 19V5Z"
+                                        fill="currentColor" />
+                                    <path
+                                        d="M6 7C5.4 7 5 7.4 5 8C5 8.6 5.4 9 6 9H18C18.6 9 19 8.6 19 8C19 7.4 18.6 7 18 7H6ZM6 11C5.4 11 5 11.4 5 12C5 12.6 5.4 13 6 13H14C14.6 13 15 12.6 15 12C15 11.4 14.6 11 14 11H6ZM6 15C5.4 15 5 15.4 5 16C5 16.6 5.4 17 6 17H12C12.6 17 13 16.6 13 16C13 15.4 12.6 15 12 15H6Z"
+                                        fill="currentColor" />
+                                </svg>
+                            </span>
+                        </span>
+                        <span class="menu-title">ข้อความติดต่อ</span>
+                    </a>
+                </div>
+
+                <!-- Posts -->
+                <div class="menu-item">
+                    <a class="menu-link" href="{{ route('admin.posts.index') }}">
+                        <span class="menu-icon">
+                            <span class="svg-icon svg-icon-2">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path opacity="0.3"
+                                        d="M4 3C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H20C21.1 21 22 20.1 22 19V8.4C22 7.9 21.8 7.4 21.4 7L18 3.6C17.6 3.2 17.1 3 16.6 3H4Z"
+                                        fill="currentColor" />
+                                    <path
+                                        d="M8 10H16C16.6 10 17 10.4 17 11C17 11.6 16.6 12 16 12H8C7.4 12 7 11.6 7 11C7 10.4 7.4 10 8 10ZM8 14H14C14.6 14 15 14.4 15 15C15 15.6 14.6 16 14 16H8C7.4 16 7 15.6 7 15C7 14.4 7.4 14 8 14Z"
+                                        fill="currentColor" />
+                                </svg>
+                            </span>
+                        </span>
+                        <span class="menu-title">บทความ</span>
+                    </a>
+                </div>
+
+                <!-- Testimonials -->
+                <div class="menu-item">
+                    <a class="menu-link" href="{{ route('admin.testimonials.index') }}">
+                        <span class="menu-icon">
+                            <span class="svg-icon svg-icon-2">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path opacity="0.3"
+                                        d="M4 4C2.9 4 2 4.9 2 6V14C2 15.1 2.9 16 4 16H8L11 20V16H20C21.1 16 22 15.1 22 14V6C22 4.9 21.1 4 20 4H4Z"
+                                        fill="currentColor" />
+                                    <path
+                                        d="M7 9C7 8.4 7.4 8 8 8H16C16.6 8 17 8.4 17 9C17 9.6 16.6 10 16 10H8C7.4 10 7 9.6 7 9ZM8 12H13C13.6 12 14 12.4 14 13C14 13.6 13.6 14 13 14H8C7.4 14 7 13.6 7 13C7 12.4 7.4 12 8 12Z"
+                                        fill="currentColor" />
+                                </svg>
+                            </span>
+                        </span>
+                        <span class="menu-title">เสียงตอบรับ</span>
+                    </a>
+                </div>
+
                 <!-- Settings -->
                 <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
                     <span class="menu-link">

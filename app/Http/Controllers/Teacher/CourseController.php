@@ -9,6 +9,7 @@ use App\Models\CourseDocument;
 use App\Models\Subject;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class CourseController extends Controller
 {
@@ -104,10 +105,12 @@ class CourseController extends Controller
 
     private function validateCourse(Request $request): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'price' => 'required|numeric|min:0',
+            'access_type' => 'required|in:lifetime,time_limited',
+            'access_duration_months' => 'nullable|integer|in:1,2,3,6,12,24',
             'course_category_id' => 'required|exists:course_categories,id',
             'subject_id' => 'required|exists:subjects,id',
             'thumbnail' => 'nullable|image|max:5120',
@@ -115,6 +118,18 @@ class CourseController extends Controller
             'documents' => 'nullable|array',
             'documents.*' => 'file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,rar,jpg,jpeg,png,webp,gif|max:20480',
         ]);
+
+        if (($validated['access_type'] ?? 'lifetime') === 'lifetime') {
+            $validated['access_duration_months'] = null;
+        }
+
+        if (($validated['access_type'] ?? null) === 'time_limited' && empty($validated['access_duration_months'])) {
+            throw ValidationException::withMessages([
+                'access_duration_months' => 'กรุณาเลือกระยะเวลาสิทธิ์การเข้าถึง',
+            ]);
+        }
+
+        return $validated;
     }
 
     private function storeDocuments(Request $request, Course $course): void

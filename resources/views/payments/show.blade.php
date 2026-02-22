@@ -18,7 +18,7 @@
                     <li><a href="{{ route('courses.show', $course) }}">Course</a></li>
                     <li class="active">Payment</li>
                 </ul>
-                <h2 class="title">Payment</h2>
+                <h2 class="title">Stripe Checkout</h2>
             </div>
         </div>
         <div class="shape-icon-box">
@@ -41,6 +41,12 @@
                     <div class="alert alert-success mb-4">{{ session('success') }}</div>
                 @endif
 
+                @if ($latestOrder)
+                    <div class="alert alert-info mb-4">
+                        ออเดอร์ล่าสุด: {{ $latestOrder->order_no }} | สถานะ: <strong>{{ $latestOrder->status }}</strong>
+                    </div>
+                @endif
+
                 <div class="row g-4">
                     <div class="col-lg-6">
                         <div class="payment-card">
@@ -57,7 +63,6 @@
                                 <div><span>รายการสั่งซื้อ</span><span>{{ $course->title }}</span></div>
                                 <div><span>ประเภท</span><span>คอร์สออนไลน์</span></div>
                                 <div><span>ราคา</span><span>{{ number_format((float) $course->price, 2) }} บาท</span></div>
-                                {{-- <div><span>รหัสส่วนลด</span><span><input type="text" placeholder="กรอกรหัสส่วนลด" disabled></span></div> --}}
                                 <div class="total"><span>ราคาสุทธิ (รวม VAT)</span><span>{{ number_format((float) $course->price, 2) }} บาท</span></div>
                             </div>
                         </div>
@@ -66,26 +71,38 @@
                     <div class="col-lg-6">
                         <div class="payment-card">
                             <h3 class="payment-title">เลือกช่องทางชำระเงิน</h3>
-                            <div class="pay-method active">
-                                <div class="pay-method-content">
-                                    <div class="pay-method-name">QR Code พร้อมเพย์</div>
-                                    <div class="promptpay-badge">PromptPay</div>
-                                </div>
-                                <i class="icofont-rounded-right"></i>
-                            </div>
 
-                            <div class="qr-area">
-                                <div class="qr-placeholder">
-                                    <i class="icofont-qr-code"></i>
-                                    <p>QR พร้อมเพย์ (ตัวอย่าง)</p>
-                                </div>
+                            <div class="pay-option">
                                 <form method="POST" action="{{ route('courses.payment.generate', $course) }}">
                                     @csrf
-                                    <button type="submit" class="btn btn-primary btn-hover-dark w-100 mt-3">
-                                        ยืนยันการชำระเงิน
+                                    <input type="hidden" name="payment_channel" value="card">
+                                    <button type="submit" class="pay-method pay-method-button">
+                                        <div class="pay-method-content">
+                                            <div class="pay-method-name">ชำระผ่านบัตรเครดิต</div>
+                                            <div class="stripe-badge">VISA / Mastercard / JCB</div>
+                                        </div>
+                                        <i class="icofont-rounded-right"></i>
                                     </button>
                                 </form>
                             </div>
+
+                            <div class="pay-option">
+                                <form method="POST" action="{{ route('courses.payment.generate', $course) }}">
+                                    @csrf
+                                    <input type="hidden" name="payment_channel" value="promptpay">
+                                    <button type="submit" class="pay-method pay-method-button">
+                                        <div class="pay-method-content">
+                                            <div class="pay-method-name">QR Payment พร้อมเพย์</div>
+                                            <div class="stripe-badge">PromptPay QR</div>
+                                        </div>
+                                        <i class="icofont-rounded-right"></i>
+                                    </button>
+                                </form>
+                            </div>
+
+                            <p class="text-muted small mt-3 mb-0">
+                                หากช่องทางใดไม่ขึ้นในหน้า Stripe แปลว่ายังไม่ได้เปิดใช้งานช่องทางนั้นในบัญชี Stripe
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -145,15 +162,6 @@
             color: #212832;
         }
 
-        .order-summary input {
-            border: 1px solid #d8d8d8;
-            border-radius: 4px;
-            font-size: 14px;
-            padding: 2px 8px;
-            width: 160px;
-            background: #fafafa;
-        }
-
         .order-summary .total {
             border-top: 1px solid #ececec;
             padding-top: 12px;
@@ -163,67 +171,54 @@
             font-size: 20px;
         }
 
+        .pay-option + .pay-option {
+            margin-top: 16px;
+        }
+
         .pay-method {
             border: 1px solid #ececec;
             border-radius: 8px;
-            padding: 18px 20px;
+            padding: 16px 18px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
         }
 
-        .pay-method.active {
+        .pay-method-button {
+            width: 100%;
+            text-align: left;
+            background: #fff;
+            color: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .pay-method-button:hover {
             border-color: #309255;
             box-shadow: 0 0 0 2px rgba(48, 146, 85, 0.08);
         }
 
         .pay-method-name {
-            font-size: 32px;
+            font-size: 24px;
             font-weight: 600;
             line-height: 1.2;
         }
 
-        .promptpay-badge {
+        .stripe-badge {
             display: inline-block;
             margin-top: 6px;
-            background: #f1f5ff;
-            color: #2048aa;
+            background: #edf3ff;
+            color: #2343b5;
             border: 1px solid #d9e2ff;
             border-radius: 4px;
             padding: 2px 8px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
         }
 
         .pay-method i {
             font-size: 22px;
             color: #309255;
-        }
-
-        .qr-area {
-            border: 1px dashed #d8d8d8;
-            border-radius: 8px;
-            padding: 16px;
-            background: #fcfcfc;
-        }
-
-        .qr-placeholder {
-            background: #fff;
-            border: 1px solid #ececec;
-            border-radius: 8px;
-            min-height: 230px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #4f4f4f;
-        }
-
-        .qr-placeholder i {
-            font-size: 68px;
-            color: #309255;
-            margin-bottom: 10px;
         }
 
         @media (max-width: 767px) {
@@ -240,7 +235,7 @@
             }
 
             .pay-method-name {
-                font-size: 24px;
+                font-size: 20px;
             }
         }
     </style>

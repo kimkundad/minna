@@ -41,8 +41,9 @@
                             <h4 class="footer-widget-title">บริการทั้งหมด</h4>
                             <ul class="widget-link">
                                 <li><a href="{{ url('/course') }}">คอร์สออนไลน์</a></li>
-                                <li><a href="#">เกี่ยวกับเรา</a></li>
-                                <li><a href="#">ติดต่อเรา</a></li>
+                                <li><a href="{{ route('posts.index') }}">บทความ</a></li>
+                                <li><a href="{{ route('about') }}">เกี่ยวกับเรา</a></li>
+                                <li><a href="{{ route('contact') }}">ติดต่อเรา</a></li>
                             </ul>
                         </div>
 
@@ -90,11 +91,10 @@
         <div class="container">
             <div class="copyright-wrapper">
                 <div class="copyright-link">
-                    <a href="#">Terms of Service</a>
-                    <a href="#">Privacy Policy</a>
+                    <a href="{{ route('privacy.policy') }}">นโยบายคุ้มครองข้อมูลส่วนบุคคล</a>
                 </div>
                 <div class="copyright-text">
-                    <p>&copy; 2021 <span> Edule </span> Made with <i class="icofont-heart-alt"></i> by <a href="#">Codecarnival</a></p>
+                    <p>&copy; 2026 <span>Edule</span> Made with <i class="icofont-heart-alt"></i> by <a href="#">Kim</a></p>
                 </div>
             </div>
         </div>
@@ -104,4 +104,3 @@
 <a href="#" class="back-to-top">
     <i class="icofont-simple-up"></i>
 </a>
-

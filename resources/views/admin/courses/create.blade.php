@@ -1,4 +1,4 @@
-@extends('admin.layouts.template')
+﻿@extends('admin.layouts.template')
 
 @section('title')
     <title>สร้างคอร์สเรียน</title>
@@ -75,8 +75,7 @@
                                 <div class="row g-4 mb-4">
                                     <div class="col-md-6">
                                         <label class="form-label">ราคา</label>
-                                        <input type="number" name="price" class="form-control" min="0" step="0.01"
-                                            value="{{ old('price', 0) }}" required>
+                                        <input type="number" name="price" class="form-control" min="0" step="0.01" value="{{ old('price', 0) }}" required>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">รูปคอร์ส</label>
@@ -84,12 +83,31 @@
                                     </div>
                                 </div>
 
+                                <div class="row g-4 mb-4">
+                                    <div class="col-md-6">
+                                        <label class="form-label">สิทธิ์การเข้าถึงคอร์ส</label>
+                                        <select name="access_type" id="access_type" class="form-select" required>
+                                            <option value="lifetime" @selected(old('access_type', 'lifetime') === 'lifetime')>Lifetime access</option>
+                                            <option value="time_limited" @selected(old('access_type') === 'time_limited')>Time-limited access</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6" id="duration_months_wrap" style="display:none;">
+                                        <label class="form-label">ระยะเวลาเข้าถึงหลังชำระเงิน</label>
+                                        <select name="access_duration_months" id="access_duration_months" class="form-select">
+                                            <option value="">เลือกระยะเวลา</option>
+                                            <option value="1" @selected((string) old('access_duration_months') === '1')>1 เดือน</option>
+                                            <option value="2" @selected((string) old('access_duration_months') === '2')>2 เดือน</option>
+                                            <option value="3" @selected((string) old('access_duration_months') === '3')>3 เดือน</option>
+                                            <option value="6" @selected((string) old('access_duration_months') === '6')>6 เดือน</option>
+                                            <option value="12" @selected((string) old('access_duration_months') === '12')>1 ปี</option>
+                                            <option value="24" @selected((string) old('access_duration_months') === '24')>2 ปี</option>
+                                        </select>
+                                    </div>
+                                </div>
+
                                 <div class="mb-4">
                                     <label class="form-label">Video ตัวอย่าง (ไม่เกิน 50MB)</label>
                                     <input type="file" name="sample_video" class="form-control" accept=".mp4,.mov,.avi,.webm,.mkv,video/*">
-                                    <small class="text-muted d-block mt-2">
-                                        วิดีโอเนื้อหาคอร์สจริง (สูงสุด 1GB และหลายไฟล์) ให้อัปโหลดหลังจากสร้างคอร์สเรียบร้อยแล้ว
-                                    </small>
                                 </div>
 
                                 <div class="mb-4">
@@ -109,4 +127,26 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var accessType = document.getElementById('access_type');
+            var wrap = document.getElementById('duration_months_wrap');
+            var duration = document.getElementById('access_duration_months');
+
+            function toggleDuration() {
+                var isTimeLimited = accessType && accessType.value === 'time_limited';
+                wrap.style.display = isTimeLimited ? '' : 'none';
+                if (duration) {
+                    duration.required = isTimeLimited;
+                    if (!isTimeLimited) duration.value = '';
+                }
+            }
+
+            if (accessType) {
+                accessType.addEventListener('change', toggleDuration);
+                toggleDuration();
+            }
+        });
+    </script>
 @endsection

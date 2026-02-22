@@ -13,6 +13,9 @@ class CourseOrder extends Model
         'amount',
         'currency',
         'status',
+        'access_type',
+        'access_duration_months',
+        'access_expires_at',
         'qp_id',
         'payment_url',
         'res_code',
@@ -25,6 +28,8 @@ class CourseOrder extends Model
         'amount' => 'decimal:2',
         'provider_payload' => 'array',
         'paid_at' => 'datetime',
+        'access_duration_months' => 'integer',
+        'access_expires_at' => 'datetime',
     ];
 
     public function user()
