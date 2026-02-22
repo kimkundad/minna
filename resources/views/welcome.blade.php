@@ -68,7 +68,7 @@
             {{-- All Courses Top --}}
             <div class="courses-top" id="courses-top">
                 <div class="section-title shape-01">
-                    <h2 class="main-title">All <span>Courses</span> of Edule</h2>
+                    <h2 class="main-title">All <span>Courses</span> of Edule 1</h2>
                 </div>
 
                 <div class="courses-search">
