@@ -162,7 +162,7 @@
             </div>
 
             <div class="courses-btn text-center">
-                <a href="#" class="btn btn-secondary btn-hover-primary">Other Course</a>
+                <a href="{{ url('/course') }}" class="btn btn-secondary btn-hover-primary">Other Course</a>
             </div>
         </div>
     </div>

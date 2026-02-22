@@ -16632,6 +16632,11 @@ img {
 .courses-tabs-menu .nav {
   flex-wrap: nowrap;
 }
+.courses-tabs-menu .swiper-container,
+.courses-tabs-menu .swiper-wrapper,
+.courses-tabs-menu .swiper-slide {
+  height: auto;
+}
 .courses-tabs-menu .nav li button {
   width: 100%;
   height: 60px;
