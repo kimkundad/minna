@@ -27,7 +27,7 @@
 <link rel="stylesheet" href="{{ asset('assets/css/plugins/jqvmap.min.css') }}">
 
 {{-- Main Theme CSS --}}
-<link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/css/style.css') }}?v{{time()}}">
 
 {{-- ▼▼ Vite assets (ให้ไฟล์ของเรา override ธีมได้) ▼▼ --}}
 @vite(['resources/css/app.css', 'resources/js/app.js'])
