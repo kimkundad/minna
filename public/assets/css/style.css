@@ -17507,6 +17507,11 @@ img {
 .testimonial-wrapper {
   padding-top: 50px;
 }
+.testimonial-active .swiper-container,
+.testimonial-active .swiper-wrapper,
+.testimonial-active .swiper-slide {
+  height: auto;
+}
 
 .single-testimonial {
   text-align: center;
