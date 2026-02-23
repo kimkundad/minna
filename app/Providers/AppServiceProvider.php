@@ -6,6 +6,7 @@ use App\Models\SiteSetting;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -40,5 +41,9 @@ class AppServiceProvider extends ServiceProvider
             $settings = SiteSetting::query()->pluck('value', 'key')->toArray();
             $view->with('siteSettings', array_merge($defaults, $settings));
         });
+
+        if (config('app.env') !== 'local') { // ใช้เฉพาะ production หรือ staging
+            URL::forceScheme('https');
+        }
     }
 }
