@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Testimonial extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'name',
         'designation',
@@ -34,4 +37,3 @@ class Testimonial extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 }
-

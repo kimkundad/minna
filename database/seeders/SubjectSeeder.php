@@ -2,16 +2,16 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Subject;
+use Illuminate\Database\Seeder;
 
 class SubjectSeeder extends Seeder
 {
     public function run(): void
     {
-        $subjects = ['ญี่ปุ่น', 'English', 'จีน', 'เยอรมัน'];
-        foreach ($subjects as $name) {
+        foreach (['ญี่ปุ่น', 'English', 'จีน', 'เยอรมัน'] as $name) {
             Subject::firstOrCreate(['name' => $name]);
         }
     }
 }
+

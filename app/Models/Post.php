@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 
 class Post extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'title',
         'slug',
@@ -35,4 +38,3 @@ class Post extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 }
-
