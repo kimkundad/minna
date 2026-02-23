@@ -10,7 +10,7 @@ class LoginResponse implements LoginResponseContract
     public function toResponse($request)
     {
         $user = $request->user();
-
+      //  dd($user && $user->roles()->where('name', 'admin')->exists());
         if ($user && $user->roles()->where('name', 'admin')->exists()) {
             return redirect()->route('admin.index');
         }

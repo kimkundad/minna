@@ -1,4 +1,4 @@
-﻿@php
+@php
     $phone = $siteSettings['contact_phone'] ?? '(970) 262-1413';
     $phoneHref = preg_replace('/\D+/', '', $phone);
     $email = $siteSettings['contact_email'] ?? 'address@gmail.com';

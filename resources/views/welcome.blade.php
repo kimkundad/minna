@@ -1,4 +1,4 @@
-﻿{{-- resources/views/welcome.blade.php --}}
+{{-- resources/views/welcome.blade.php --}}
 @extends('layouts.auth')
 
 @section('content')

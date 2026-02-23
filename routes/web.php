@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Http\Controllers\Admin\CourseCategoryController as AdminCourseCategoryController;
 use App\Http\Controllers\Admin\CourseController as AdminCourseController;
@@ -191,7 +191,7 @@ Route::get('/register', function () {
     ]);
 })->middleware(['guest'])->name('register');
 
-// à¸«à¸™à¹‰à¸² dashboard à¸ˆà¸° redirect à¸•à¸²à¸¡ role à¸‚à¸­à¸‡à¸œà¸¹à¹‰à¹ƒà¸Šà¹‰
+// Dashboard redirect by user role
 Route::middleware(['auth'])->get('/dashboard', RedirectController::class)->name('dashboard');
 
 Route::middleware(['auth'])->group(function () {
@@ -199,12 +199,12 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/privacy/accept', [PrivacyConsentController::class, 'accept'])->name('privacy.accept.submit');
 });
 
-// à¸«à¸™à¹‰à¸² course à¸•à¸±à¸§à¸­à¸¢à¹ˆà¸²à¸‡à¸ªà¸³à¸«à¸£à¸±à¸šà¸œà¸¹à¹‰à¹ƒà¸Šà¹‰à¸—à¸µà¹ˆà¸¥à¹‡à¸­à¸à¸­à¸´à¸™à¹à¸¥à¹‰à¸§
+// Sample course page for authenticated users
 Route::middleware(['auth'])->get('/courses', function () {
     $courses = [
-        ['id' => 1, 'name' => 'à¸„à¸­à¸£à¹Œà¸ªà¸ à¸²à¸©à¸²à¸à¸µà¹ˆà¸›à¸¸à¹ˆà¸™à¹€à¸šà¸·à¹‰à¸­à¸‡à¸•à¹‰à¸™', 'teacher' => 'à¸­à¸²à¸ˆà¸²à¸£à¸¢à¹Œ A'],
-        ['id' => 2, 'name' => 'à¸„à¸­à¸£à¹Œà¸ªà¸ à¸²à¸©à¸²à¸­à¸±à¸‡à¸à¸¤à¸©à¹€à¸žà¸·à¹ˆà¸­à¸˜à¸¸à¸£à¸à¸´à¸ˆ', 'teacher' => 'à¸­à¸²à¸ˆà¸²à¸£à¸¢à¹Œ B'],
-        ['id' => 3, 'name' => 'à¸„à¸­à¸£à¹Œà¸ªà¸ à¸²à¸©à¸²à¸ˆà¸µà¸™à¸£à¸°à¸”à¸±à¸šà¸à¸¥à¸²à¸‡', 'teacher' => 'à¸­à¸²à¸ˆà¸²à¸£à¸¢à¹Œ C'],
+        ['id' => 1, 'name' => 'คอร์สภาษาญี่ปุ่นเบื้องต้น', 'teacher' => 'อาจารย์ A'],
+        ['id' => 2, 'name' => 'คอร์สภาษาอังกฤษเพื่อธุรกิจ', 'teacher' => 'อาจารย์ B'],
+        ['id' => 3, 'name' => 'คอร์สภาษาจีนระดับกลาง', 'teacher' => 'อาจารย์ C'],
     ];
 
     return view('courses.index', compact('courses'));
@@ -212,6 +212,7 @@ Route::middleware(['auth'])->get('/courses', function () {
 
 // Admin Dashboard + Management Routes
 Route::middleware(['auth', 'role:admin'])->prefix('administrator')->as('admin.')->group(function () {
+    
     Route::get('/', [AdminDashboardController::class, 'index'])->name('index');
 
     Route::prefix('students')->as('students.')->group(function () {
@@ -295,7 +296,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('administrator')->as('admin.')
     Route::prefix('settings')->as('settings.')->group(function () {
         Route::get('/general', [AdminSiteSettingController::class, 'edit'])->name('general');
         Route::put('/general', [AdminSiteSettingController::class, 'update'])->name('general.update');
-        Route::get('/payments', fn () => 'à¸Šà¹ˆà¸­à¸‡à¸—à¸²à¸‡à¸Šà¸³à¸£à¸°à¹€à¸‡à¸´à¸™')->name('payments');
+        Route::get('/payments', fn () => 'ช่องทางชำระเงิน')->name('payments');
     });
 });
 
@@ -337,7 +338,6 @@ Route::middleware(['auth', 'role:student', 'privacy.accepted'])->group(function 
     Route::get('/student/password', [StudentDashboardController::class, 'editPassword'])->name('student.password.edit');
     Route::put('/student/password', [StudentDashboardController::class, 'updatePassword'])->name('student.password.update');
 });
-
 
 
 

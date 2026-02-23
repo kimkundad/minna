@@ -10,7 +10,7 @@ class RedirectController extends Controller
     public function __invoke()
     {
         $user = Auth::user();
-       // dd($user->hasRole('admin'));
+        
         if (! $user) {
             return redirect()->route('login');
         }

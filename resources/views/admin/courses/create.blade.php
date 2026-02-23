@@ -1,4 +1,4 @@
-﻿@extends('admin.layouts.template')
+@extends('admin.layouts.template')
 
 @section('title')
     <title>สร้างคอร์สเรียน</title>
