@@ -59,7 +59,8 @@
                             @endif
 
                             @if ($errors->any())
-                                <div class="mb-4 text-danger">
+                                <div class="alert alert-danger mb-4" role="alert">
+                                    <div class="fw-semibold mb-1">ไม่สามารถเข้าสู่ระบบได้</div>
                                     <ul class="m-0 ps-3">
                                         @foreach ($errors->all() as $error)
                                             <li>{{ $error }}</li>
@@ -74,13 +75,16 @@
                                     {{-- Email --}}
                                     <div class="single-form">
                                         <input
-                                            type="email"
+                                            type="text"
                                             name="email"
                                             value="{{ old('email') }}"
                                             placeholder="Username or Email"
                                             required
                                             autofocus
                                         >
+                                        @error('email')
+                                            <div class="text-danger mt-1">{{ $message }}</div>
+                                        @enderror
                                     </div>
 
                                     {{-- Password --}}
@@ -92,6 +96,9 @@
                                             required
                                             autocomplete="current-password"
                                         >
+                                        @error('password')
+                                            <div class="text-danger mt-1">{{ $message }}</div>
+                                        @enderror
                                     </div>
 
                                     {{-- Remember + Forgot --}}

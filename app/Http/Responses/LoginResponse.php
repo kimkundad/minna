@@ -2,7 +2,7 @@
 
 namespace App\Http\Responses;
 
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 
 class LoginResponse implements LoginResponseContract
@@ -11,15 +11,15 @@ class LoginResponse implements LoginResponseContract
     {
         $user = $request->user();
 
-        if ($user?->hasRole('admin')) {
+        if ($user && $user->roles()->where('name', 'admin')->exists()) {
             return redirect()->route('admin.index');
         }
 
-        if ($user?->hasRole('teacher')) {
+        if ($user && $user->roles()->where('name', 'teacher')->exists()) {
             return redirect()->route('teacher.index');
         }
 
-        if ($user?->hasRole('student')) {
+        if ($user && $user->roles()->where('name', 'student')->exists()) {
             if (! $user->privacy_accepted_at) {
                 return redirect()->route('privacy.accept.show');
             }
@@ -27,6 +27,13 @@ class LoginResponse implements LoginResponseContract
             return redirect()->route('student.index');
         }
 
-        return redirect(config('fortify.home'));
+        // No role assigned -> prevent redirect loop to /dashboard
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login')->withErrors([
+            'email' => 'บัญชีนี้ยังไม่ได้รับสิทธิ์เข้าใช้งานระบบ กรุณาติดต่อผู้ดูแลระบบ',
+        ]);
     }
 }

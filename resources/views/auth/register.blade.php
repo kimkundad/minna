@@ -165,7 +165,7 @@
                                     <span>
                                         {!! __('ฉันยอมรับ :terms_of_service และ :privacy_policy', [
                                             'terms_of_service' => '<a target="_blank" href="'.route('terms.show').'">เงื่อนไขการใช้งาน</a>',
-                                            'privacy_policy' => '<a target="_blank" href="'.route('policy.show').'">นโยบายความเป็นส่วนตัว</a>',
+                                            'privacy_policy' => '<a target="_blank" href="'.route('privacy.policy').'">นโยบายความเป็นส่วนตัว</a>',
                                         ]) !!}
                                     </span>
                                 </label>
