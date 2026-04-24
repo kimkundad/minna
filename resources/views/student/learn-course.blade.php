@@ -118,7 +118,7 @@
             <div class="courses-video-player">
                 <div class="vidcontainer">
                     @if ($firstVideoUrl)
-                        <video id="myvid" controls style="width:100%;height:auto;" preload="metadata">
+                        <video id="myvid" controls controlsList="nodownload" oncontextmenu="return false;" style="width:100%;height:auto;" preload="metadata">
                             <source src="{{ $firstVideoUrl }}">
                         </video>
                     @else
