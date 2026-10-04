@@ -30,15 +30,16 @@ const firstName = ref('')
 const lastName = ref('')
 
 /**
- * Birthdate is collected in the Buddhist year Thai people actually write, in
- * three plain fields rather than a date picker: a picker that opens on the
- * current year makes someone born in 2538 scroll through four decades, and a
- * native date input would show Gregorian years in a form everything else keeps
- * in BE. The conversion happens once, on submit.
+ * Birthdate goes in as three plain fields rather than a date picker: a picker
+ * opens on the current year and makes someone born in 1995 scroll back three
+ * decades to reach their own birthday.
+ *
+ * The year is Gregorian, which is also what the column stores, so nothing is
+ * converted on the way in or out.
  */
 const birthDay = ref('')
 const birthMonth = ref('')
-const birthYearBe = ref('')
+const birthYear = ref('')
 
 const phoneCountryCode = ref('+66')
 const phoneNational = ref('')
@@ -60,30 +61,28 @@ const DIAL_CODES = [
   { code: '+95', name: 'မြန်မာ' },
 ]
 
-const BE_OFFSET = 543
-const thisYearBe = new Date().getFullYear() + BE_OFFSET
+const thisYear = new Date().getFullYear()
 
 /**
- * Returns the Gregorian date, or null when nothing was entered, or the string
- * 'invalid' when something was entered but does not describe a real day — so
- * the caller can tell "left blank" from "typed 31 February".
+ * Returns YYYY-MM-DD, or null when nothing was entered, or 'invalid' when
+ * something was entered that does not describe a real day — so the caller can
+ * tell "left blank" from "typed 31 February" and only complain about the second.
  */
-function gregorianBirthdate(): string | null | 'invalid' {
-  const parts = [birthDay.value, birthMonth.value, birthYearBe.value]
+function birthdateValue(): string | null | 'invalid' {
+  const parts = [birthDay.value, birthMonth.value, birthYear.value]
   if (parts.every((p) => !p.trim())) return null
   if (parts.some((p) => !p.trim())) return 'invalid'
 
   const d = Number(birthDay.value)
   const m = Number(birthMonth.value)
-  const yearBe = Number(birthYearBe.value)
-  if (!Number.isInteger(d) || !Number.isInteger(m) || !Number.isInteger(yearBe)) return 'invalid'
+  const year = Number(birthYear.value)
+  if (!Number.isInteger(d) || !Number.isInteger(m) || !Number.isInteger(year)) return 'invalid'
   if (m < 1 || m > 12 || d < 1 || d > 31) return 'invalid'
-  if (yearBe < thisYearBe - 120 || yearBe > thisYearBe) return 'invalid'
+  if (year < thisYear - 120 || year > thisYear) return 'invalid'
 
-  const year = yearBe - BE_OFFSET
+  // Builds the date and reads it back: this is what rejects 31 April and
+  // 29 February in a year that has no 29th, which the range checks let through.
   const date = new Date(Date.UTC(year, m - 1, d))
-  // Rejects 31 April and 29 February outside a leap year, which the range
-  // checks above let through.
   if (date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return 'invalid'
 
   const pad = (n: number) => String(n).padStart(2, '0')
@@ -135,7 +134,7 @@ async function submit() {
     if (step.value === 'login') {
       await auth.login(email.value.trim(), password.value)
     } else {
-      const birthdate = gregorianBirthdate()
+      const birthdate = birthdateValue()
       if (birthdate === 'invalid') {
         fieldErrors.value = { birthdate: t('auth.birthdateInvalid') }
         return
@@ -342,16 +341,16 @@ onBeforeUnmount(() => {
                     :aria-invalid="fieldErrors.birthdate ? 'true' : undefined"
                   />
                   <input
-                    v-model="birthYearBe"
+                    v-model="birthYear"
                     class="input"
                     inputmode="numeric"
                     maxlength="4"
-                    :placeholder="t('auth.yearBe')"
-                    :aria-label="t('auth.yearBe')"
+                    :placeholder="t('auth.year')"
+                    :aria-label="t('auth.year')"
                     :aria-invalid="fieldErrors.birthdate ? 'true' : undefined"
                   />
                 </div>
-                <span class="field-help">{{ t('auth.birthdateHelp', { year: thisYearBe - 25 }) }}</span>
+                <span class="field-help">{{ t('auth.birthdateHelp', { year: thisYear - 25 }) }}</span>
                 <span v-if="fieldErrors.birthdate" class="field-error">
                   <AppIcon name="alert-circle" :size="16" />{{ fieldErrors.birthdate }}
                 </span>
