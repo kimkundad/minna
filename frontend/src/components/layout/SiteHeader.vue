@@ -4,7 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { data, store } from '@/vendor'
-import logoUrl from '@/assets/img/logo.svg'
+import logoUrl from '@/assets/img/logo.png'
 
 /**
  * Markup mirrors the prototype's `U.renderHeader` solid variant exactly —
@@ -76,7 +76,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
         </button>
 
         <RouterLink class="brand" :to="path('')" :aria-label="t('header.brandHome')">
-          <img class="brand-logo" :src="logoUrl" width="87" height="35" alt="" decoding="async" />
+          <img class="brand-logo" :src="logoUrl" width="85" height="35" alt="" decoding="async" />
         </RouterLink>
 
         <nav class="nav-pill" :aria-label="t('header.mainMenu')">

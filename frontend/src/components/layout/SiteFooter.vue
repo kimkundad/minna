@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import logoUrl from '@/assets/img/logo.svg'
+import logoUrl from '@/assets/img/logo.png'
 
 /**
  * Same structure as the prototype's `U.renderFooter` — .ft-top, .ft-grid with
@@ -26,7 +26,7 @@ const year = new Date().getFullYear()
     <div class="container">
       <div class="ft-top">
         <RouterLink class="brand" :to="path('')" :aria-label="t('header.brandHome')">
-          <img class="brand-logo" :src="logoUrl" width="87" height="35" alt="" decoding="async" />
+          <img class="brand-logo" :src="logoUrl" width="85" height="35" alt="" decoding="async" />
         </RouterLink>
       </div>
 
