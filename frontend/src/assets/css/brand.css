@@ -116,3 +116,12 @@
    reference, which has no footer on either page. */
 .page-learn > .site-footer,
 .page-quiz > .site-footer { display: none; }
+
+/* The compact bar's title takes its colour by inheritance in the reference,
+   where the header is a child of <body> and Focus Mode's palette is set on
+   <body> itself. Ours sits inside <main>, two elements further in, and the
+   colour it inherits is the light one. `.hdr-back` and `.hdr-title small`
+   already name `--ink-primary` / `--ink-secondary`, which Focus Mode remaps on
+   the header, so the title reads the same token rather than relying on where
+   the bar happens to sit. */
+.site-header--compact .hdr-title { color: var(--ink-primary); }

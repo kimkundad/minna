@@ -55,3 +55,6 @@ dist/
 # Rendered DOM of the reference pages, produced by frontend/scripts/dump-reference.mjs.
 # Regenerate with: npm run ref:dump
 /frontend/.reference-dom/
+
+# Scratch pages used to seed the prototype session for screenshots. Dev only.
+/frontend/public/__seed*.html
