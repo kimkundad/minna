@@ -1,12 +1,13 @@
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppAvatar from '@/components/ui/AppAvatar.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { data, store } from '@/vendor'
 import logoUrl from '@/assets/img/logo.png'
+import { useHeaderHeight } from './learning'
 
 /**
  * The compact page chrome the learning room, the quiz and the result page use
@@ -29,6 +30,8 @@ const props = defineProps<{
   backLabel: string
   title: string
   sub?: string
+  /** The custom property this bar's measured height is published as. */
+  heightVar: string
 }>()
 
 const { t } = useI18n()
@@ -41,10 +44,13 @@ const s = store as unknown as {
 }
 
 const user = computed(() => s.user())
+
+const root = ref<HTMLElement | null>(null)
+useHeaderHeight(props.heightVar, root)
 </script>
 
 <template>
-  <header class="site-header site-header--compact">
+  <header ref="root" class="site-header site-header--compact">
     <div class="hdr">
       <div class="container hdr-inner">
         <RouterLink class="hdr-back" :to="props.backTo">

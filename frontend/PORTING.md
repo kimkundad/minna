@@ -31,7 +31,11 @@ FLAGS="--headless=new --disable-gpu --hide-scrollbars --force-prefers-reduced-mo
 Always pass `--force-prefers-reduced-motion`. Without it the hero carousel and
 section animations are mid-flight when the shutter opens and nothing lines up.
 
-4. `npx vue-tsc --noEmit` has to pass before the page is done.
+4. `npm run typecheck` has to pass before the page is done.
+
+> Use the script, not `vue-tsc --noEmit`. This project uses a solution-style
+> tsconfig, and `--noEmit` walks none of its references: it exits 0 on code that
+> does not compile. The script runs `--build`, which actually checks.
 
 ### Pages that need a session
 

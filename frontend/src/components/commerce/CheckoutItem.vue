@@ -9,7 +9,7 @@ import CoAccessNote from './CoAccessNote.vue'
 import CoCouponApplied from './CoCouponApplied.vue'
 import CoCouponChip from './CoCouponChip.vue'
 import { assetUrl, call, protoHref } from './useCommerce'
-import { data } from '@/vendor'
+import { data, store } from '@/vendor'
 import type { AccessNote, CommerceCategory, Coupon, TotalsLine } from './types'
 import { num } from '@/lib/format'
 
@@ -84,7 +84,7 @@ function submit() {
 /** Lesson count stands where the reference showed CE units, which Minna does
  *  not award. */
 const lessonCount = computed(
-  () => (store as unknown as { lessons: (c: unknown) => unknown[] }).lessons(props.course).length,
+  () => (store as unknown as { lessons: (c: unknown) => unknown[] }).lessons(props.line.course).length,
 )
 </script>
 

@@ -41,7 +41,13 @@ const props = defineProps<{
   guest: boolean
 }>()
 
-const emit = defineEmits<{ done: []; tracked: [fraction: number] }>()
+const emit = defineEmits<{
+  done: []
+  tracked: [fraction: number]
+  /** Whole seconds only: the notes tab's timestamp button reads this, and it
+   *  has no use for a position four times a second. */
+  move: [seconds: number]
+}>()
 
 const { t } = useI18n()
 
@@ -79,9 +85,16 @@ let keyTimer = 0
 const posPct = computed(() => `${((pos.value / total.value) * 100).toFixed(3)}%`)
 const maxPct = computed(() => `${((max.value / total.value) * 100).toFixed(3)}%`)
 
+let lastWholeSecond = -1
+
 function setPos(v: number) {
   pos.value = Math.max(0, Math.min(total.value, v))
   if (pos.value > max.value) max.value = pos.value
+  const whole = Math.floor(pos.value)
+  if (whole !== lastWholeSecond) {
+    lastWholeSecond = whole
+    emit('move', whole)
+  }
 }
 
 function track() {
@@ -304,6 +317,7 @@ function onMediaClick() {
 
 onMounted(() => {
   document.addEventListener('fullscreenchange', onFullscreenChange)
+  emit('move', Math.floor(pos.value))
 })
 
 onBeforeUnmount(() => {

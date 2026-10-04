@@ -21,7 +21,9 @@ const props = withDefaults(
     help?: string
     placeholder?: string
     autocomplete?: string
-    inputmode?: string
+    /** Narrowed to the values the attribute accepts, so a typo is caught here
+     *  rather than silently giving a phone the wrong keyboard. */
+    inputmode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search'
     /** Fixed digit count: adds a counter and strips anything that is not a digit. */
     max?: number
     textarea?: boolean

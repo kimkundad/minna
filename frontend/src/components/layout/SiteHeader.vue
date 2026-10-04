@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '@/components/ui/AppIcon.vue'
@@ -82,11 +82,39 @@ function onScroll() {
   stuck.value = window.scrollY > 8
 }
 
+/**
+ * The category panel closes the way people expect a menu to: on Escape, on a
+ * click outside it, and on navigating away. Without the last one it stays open
+ * over the page you just asked it for.
+ */
+function onDocumentClick(e: MouseEvent) {
+  if (!megaOpen.value) return
+  const target = e.target as HTMLElement | null
+  if (target?.closest('#mega-cat') || target?.closest('[aria-controls="mega-cat"]')) return
+  megaOpen.value = false
+}
+
+function onKeydown(e: KeyboardEvent) {
+  if (e.key !== 'Escape' || !megaOpen.value) return
+  megaOpen.value = false
+  megaTrigger.value?.focus()
+}
+
+const megaTrigger = ref<HTMLButtonElement | null>(null)
+
+watch(() => route.fullPath, () => { megaOpen.value = false })
+
 onMounted(() => {
   onScroll()
   window.addEventListener('scroll', onScroll, { passive: true })
+  document.addEventListener('click', onDocumentClick)
+  document.addEventListener('keydown', onKeydown)
 })
-onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', onScroll)
+  document.removeEventListener('click', onDocumentClick)
+  document.removeEventListener('keydown', onKeydown)
+})
 </script>
 
 <template>

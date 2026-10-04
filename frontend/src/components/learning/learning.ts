@@ -62,9 +62,7 @@ export function toSec(stamp: string): number {
  * a two-line title makes the bar taller and the sticky offsets wrong. So it is
  * measured from the element rather than assumed.
  */
-export function useHeaderHeight(cssVar: string): Ref<HTMLElement | null> {
-  const el = ref<HTMLElement | null>(null)
-
+export function useHeaderHeight(cssVar: string, el: Ref<HTMLElement | null>): void {
   function measure() {
     const h = el.value?.offsetHeight
     if (h) document.documentElement.style.setProperty(cssVar, `${h}px`)
@@ -87,8 +85,6 @@ export function useHeaderHeight(cssVar: string): Ref<HTMLElement | null> {
     window.removeEventListener('resize', onResize)
     document.documentElement.style.removeProperty(cssVar)
   })
-
-  return el
 }
 
 /**
@@ -118,12 +114,12 @@ export function useBodyClass(className: string, active: () => boolean = () => tr
  * `lp-dark` goes on `<html>` so the scrollbars and the page behind a rubber-band
  * scroll turn dark too.
  */
-export function useFocusMode(root: Ref<HTMLElement | null>) {
+export function useFocusMode() {
   const s = store as unknown as { focus: () => boolean; setFocus: (v: boolean) => void }
   const on = ref(s.focus())
 
   function appRoot(): HTMLElement | null {
-    return root.value?.closest('.app-root') ?? document.querySelector('.app-root')
+    return document.querySelector('.app-root')
   }
 
   function apply() {

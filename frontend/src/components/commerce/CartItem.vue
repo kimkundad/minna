@@ -6,7 +6,7 @@ import AppIcon from '@/components/ui/AppIcon.vue'
 import CourseImage from '@/components/course/CourseImage.vue'
 import InstructorLine from '@/components/course/InstructorLine.vue'
 import CoAccessNote from './CoAccessNote.vue'
-import { courseView } from '@/vendor'
+import { courseView, store } from '@/vendor'
 import { assetUrl, call, protoHref } from './useCommerce'
 import type { AccessNote, CommerceCategory, CommerceCourse } from './types'
 import { num } from '@/lib/format'
@@ -123,7 +123,7 @@ const note = computed<AccessNote>(() => {
 /** Lesson count stands where the reference showed CE units, which Minna does
  *  not award. */
 const lessonCount = computed(
-  () => (store as unknown as { lessons: (c: unknown) => unknown[] }).lessons(props.course).length,
+  () => (store as unknown as { lessons: (c: unknown) => unknown[] }).lessons(course.value).length,
 )
 </script>
 

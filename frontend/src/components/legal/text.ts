@@ -44,8 +44,15 @@ export function useLegalText() {
   return { t, strings, rows, grid }
 }
 
-/** A bullet that opens with a bold run, which is most of them. */
+/**
+ * A bullet that opens with a bold run, which is most of them.
+ *
+ * The index signature is what lets `rows<LeadItem>()` accept it: the helper is
+ * constrained to objects of strings, and an interface without one does not
+ * satisfy that even when every declared field is a string.
+ */
 export interface LeadItem {
+  [key: string]: string | undefined
   /** Bold lead-in. */
   b: string
   /** The rest of the sentence, including its own leading separator. */

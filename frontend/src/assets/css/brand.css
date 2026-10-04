@@ -94,3 +94,25 @@
   .acct-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .acct-fact:nth-child(3) { grid-column: 1 / -1; }
 }
+
+/* --------------------------------------------------------------------------
+   Learning — the compact header, and what Minna does not issue
+
+   The learning room, the quiz and the result page replace the site nav with a
+   compact bar: one way back, the mark, what you are looking at. `SiteHeader`
+   implements `solid` and `overlay` only, so for now each of those three pages
+   renders the bar itself and the site header is hidden on them. The selector
+   is a child one on purpose — it reaches the header App.vue renders beside
+   <main> and not the page's own bar, which lives inside it.
+
+   When SiteHeader learns the compact variant this rule and
+   components/learning/CompactHeader.vue both go.
+   -------------------------------------------------------------------------- */
+.page-learn > .site-header,
+.page-quiz > .site-header,
+.page-result > .site-header { display: none; }
+
+/* The learning room and the quiz run to the bottom of the window in the
+   reference, which has no footer on either page. */
+.page-learn > .site-footer,
+.page-quiz > .site-footer { display: none; }

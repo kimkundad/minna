@@ -39,6 +39,29 @@ const router = createRouter({
           meta: { headerActive: 'courses', bodyClass: 'page-course' },
         },
 
+        // The learning group. All three replace the site nav with a compact
+        // bar, which SiteHeader does not implement yet — `headerVariant`
+        // records the intent, and until then each page renders the bar itself
+        // and brand.css hides the site header on these three body classes.
+        {
+          path: 'learn/:id',
+          name: 'learn',
+          component: () => import('@/pages/LearnPage.vue'),
+          meta: { headerVariant: 'compact', bodyClass: 'page-learn' },
+        },
+        {
+          path: 'quiz/:id',
+          name: 'quiz',
+          component: () => import('@/pages/QuizPage.vue'),
+          meta: { headerVariant: 'compact', bodyClass: 'page-quiz' },
+        },
+        {
+          path: 'result/:id',
+          name: 'result',
+          component: () => import('@/pages/ResultPage.vue'),
+          meta: { headerVariant: 'compact', bodyClass: 'page-result' },
+        },
+
         // The account section. All five share one shell, so they share a
         // parent path rather than each spelling the prefix out.
         {

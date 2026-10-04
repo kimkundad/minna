@@ -76,7 +76,6 @@ interface SuccessLine {
   title: string
   href: string
   category: string
-  ce: number
   image: { src?: string; id?: string; alt?: string; fp?: string } | null
   artIcon?: string
   artPalette?: number
