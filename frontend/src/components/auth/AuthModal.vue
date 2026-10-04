@@ -29,6 +29,67 @@ const password = ref('')
 const firstName = ref('')
 const lastName = ref('')
 
+/**
+ * Birthdate is collected in the Buddhist year Thai people actually write, in
+ * three plain fields rather than a date picker: a picker that opens on the
+ * current year makes someone born in 2538 scroll through four decades, and a
+ * native date input would show Gregorian years in a form everything else keeps
+ * in BE. The conversion happens once, on submit.
+ */
+const birthDay = ref('')
+const birthMonth = ref('')
+const birthYearBe = ref('')
+
+const phoneCountryCode = ref('+66')
+const phoneNational = ref('')
+
+/** The dialling codes a Thai-, English-, Japanese- and Vietnamese-speaking
+ *  audience actually needs, rather than all two hundred. */
+const DIAL_CODES = [
+  { code: '+66', name: 'ไทย' },
+  { code: '+81', name: '日本' },
+  { code: '+84', name: 'Việt Nam' },
+  { code: '+44', name: 'United Kingdom' },
+  { code: '+1', name: 'USA / Canada' },
+  { code: '+86', name: '中国' },
+  { code: '+82', name: '한국' },
+  { code: '+65', name: 'Singapore' },
+  { code: '+60', name: 'Malaysia' },
+  { code: '+856', name: 'ລາວ' },
+  { code: '+855', name: 'កម្ពុជា' },
+  { code: '+95', name: 'မြန်မာ' },
+]
+
+const BE_OFFSET = 543
+const thisYearBe = new Date().getFullYear() + BE_OFFSET
+
+/**
+ * Returns the Gregorian date, or null when nothing was entered, or the string
+ * 'invalid' when something was entered but does not describe a real day — so
+ * the caller can tell "left blank" from "typed 31 February".
+ */
+function gregorianBirthdate(): string | null | 'invalid' {
+  const parts = [birthDay.value, birthMonth.value, birthYearBe.value]
+  if (parts.every((p) => !p.trim())) return null
+  if (parts.some((p) => !p.trim())) return 'invalid'
+
+  const d = Number(birthDay.value)
+  const m = Number(birthMonth.value)
+  const yearBe = Number(birthYearBe.value)
+  if (!Number.isInteger(d) || !Number.isInteger(m) || !Number.isInteger(yearBe)) return 'invalid'
+  if (m < 1 || m > 12 || d < 1 || d > 31) return 'invalid'
+  if (yearBe < thisYearBe - 120 || yearBe > thisYearBe) return 'invalid'
+
+  const year = yearBe - BE_OFFSET
+  const date = new Date(Date.UTC(year, m - 1, d))
+  // Rejects 31 April and 29 February outside a leap year, which the range
+  // checks above let through.
+  if (date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return 'invalid'
+
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${year}-${pad(m)}-${pad(d)}`
+}
+
 /** Server-side messages, keyed by field, shown under the input that caused them. */
 const fieldErrors = ref<Record<string, string>>({})
 const formError = ref('')
@@ -74,11 +135,20 @@ async function submit() {
     if (step.value === 'login') {
       await auth.login(email.value.trim(), password.value)
     } else {
+      const birthdate = gregorianBirthdate()
+      if (birthdate === 'invalid') {
+        fieldErrors.value = { birthdate: t('auth.birthdateInvalid') }
+        return
+      }
+
+      const phone = phoneNational.value.replace(/\D/g, '')
       await auth.register({
         email: email.value.trim(),
         password: password.value,
         firstName: firstName.value.trim(),
         lastName: lastName.value.trim(),
+        ...(birthdate ? { birthdate } : {}),
+        ...(phone ? { phoneCountryCode: phoneCountryCode.value, phoneNational: phone } : {}),
       })
     }
     closeAuth()
@@ -247,6 +317,77 @@ onBeforeUnmount(() => {
               </span>
             </div>
 
+            <template v-if="step === 'register'">
+              <div class="field">
+                <span class="label" id="auth-birth-label">
+                  {{ t('auth.birthdate') }} <span class="opt">{{ t('auth.optional') }}</span>
+                </span>
+                <div class="auth-birth" role="group" aria-labelledby="auth-birth-label">
+                  <input
+                    v-model="birthDay"
+                    class="input"
+                    inputmode="numeric"
+                    maxlength="2"
+                    :placeholder="t('auth.day')"
+                    :aria-label="t('auth.day')"
+                    :aria-invalid="fieldErrors.birthdate ? 'true' : undefined"
+                  />
+                  <input
+                    v-model="birthMonth"
+                    class="input"
+                    inputmode="numeric"
+                    maxlength="2"
+                    :placeholder="t('auth.month')"
+                    :aria-label="t('auth.month')"
+                    :aria-invalid="fieldErrors.birthdate ? 'true' : undefined"
+                  />
+                  <input
+                    v-model="birthYearBe"
+                    class="input"
+                    inputmode="numeric"
+                    maxlength="4"
+                    :placeholder="t('auth.yearBe')"
+                    :aria-label="t('auth.yearBe')"
+                    :aria-invalid="fieldErrors.birthdate ? 'true' : undefined"
+                  />
+                </div>
+                <span class="field-help">{{ t('auth.birthdateHelp', { year: thisYearBe - 25 }) }}</span>
+                <span v-if="fieldErrors.birthdate" class="field-error">
+                  <AppIcon name="alert-circle" :size="16" />{{ fieldErrors.birthdate }}
+                </span>
+              </div>
+
+              <div class="field">
+                <label class="label" for="auth-phone">
+                  {{ t('auth.phone') }} <span class="opt">{{ t('auth.optional') }}</span>
+                </label>
+                <div class="auth-phone">
+                  <select
+                    v-model="phoneCountryCode"
+                    class="input"
+                    :aria-label="t('auth.dialCode')"
+                  >
+                    <option v-for="c in DIAL_CODES" :key="c.code" :value="c.code">
+                      {{ c.code }} · {{ c.name }}
+                    </option>
+                  </select>
+                  <input
+                    id="auth-phone"
+                    v-model="phoneNational"
+                    class="input"
+                    type="tel"
+                    inputmode="tel"
+                    autocomplete="tel-national"
+                    :placeholder="t('auth.phonePlaceholder')"
+                    :aria-invalid="fieldErrors.phoneNational ? 'true' : undefined"
+                  />
+                </div>
+                <span v-if="fieldErrors.phoneNational" class="field-error">
+                  <AppIcon name="alert-circle" :size="16" />{{ fieldErrors.phoneNational }}
+                </span>
+              </div>
+            </template>
+
             <button type="submit" class="btn btn--primary btn--block btn--lg" :disabled="auth.busy">
               <AppIcon :name="step === 'login' ? 'log-in' : 'user'" />
               {{ auth.busy ? t('auth.working') : step === 'login' ? t('common.login') : t('common.register') }}
@@ -272,3 +413,28 @@ onBeforeUnmount(() => {
     </div>
   </Teleport>
 </template>
+
+<style scoped>
+/* Day / month / year sit on one row, with the year wider because it holds four
+   digits. Below 420px they stack rather than squeeze to unusable widths. */
+.auth-birth {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.4fr;
+  gap: 10px;
+}
+
+/* The dialling code is as narrow as its longest entry needs; the number takes
+   the rest. */
+.auth-phone {
+  display: grid;
+  grid-template-columns: minmax(0, 11rem) minmax(0, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 420px) {
+  .auth-birth,
+  .auth-phone {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+</style>

@@ -1,6 +1,13 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { api, ApiError, refresh, setAccessToken, type SessionUser } from '@/lib/api'
+import {
+  api,
+  ApiError,
+  refresh,
+  setAccessToken,
+  type RegisterInput,
+  type SessionUser,
+} from '@/lib/api'
 import { store as fixtures } from '@/vendor'
 
 /**
@@ -76,13 +83,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function register(input: {
-    email: string
-    password: string
-    firstName: string
-    lastName: string
-    locale?: string
-  }): Promise<void> {
+  async function register(input: RegisterInput): Promise<void> {
     busy.value = true
     try {
       adopt(await api.register(input))

@@ -101,6 +101,19 @@ interface SessionResponse {
   refreshToken: string
 }
 
+export interface RegisterInput {
+  email: string
+  password: string
+  firstName: string
+  lastName: string
+  /** Gregorian, YYYY-MM-DD. The form collects a Buddhist year and converts. */
+  birthdate?: string
+  /** Dialling code with its plus, e.g. "+66". */
+  phoneCountryCode?: string
+  phoneNational?: string
+  locale?: string
+}
+
 /**
  * Trades the refresh cookie for a new access token. Returns false rather than
  * throwing when there is no session: on first load that is the normal case, not
@@ -128,13 +141,8 @@ export const api = {
       body: { email, password, ...(deviceLabel ? { deviceLabel } : {}) },
     }),
 
-  register: (input: {
-    email: string
-    password: string
-    firstName: string
-    lastName: string
-    locale?: string
-  }) => send<SessionResponse>('/auth/register', { method: 'POST', body: input }),
+  register: (input: RegisterInput) =>
+    send<SessionResponse>('/auth/register', { method: 'POST', body: input }),
 
   logout: () => send<void>('/auth/logout', { method: 'POST', body: {} }),
 
