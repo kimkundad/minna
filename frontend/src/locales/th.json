@@ -2241,12 +2241,11 @@
     "birthdate": "วันเกิด",
     "day": "วัน",
     "month": "เดือน",
-    "birthdateHelp": "กรอกปีเป็น ค.ศ. เช่น {year}",
-    "birthdateInvalid": "วันเกิดไม่ถูกต้อง ตรวจวัน เดือน และปีอีกครั้ง",
     "phone": "เบอร์โทรศัพท์",
     "dialCode": "รหัสประเทศ",
     "phonePlaceholder": "0812345678",
     "optional": "(ไม่บังคับ)",
-    "year": "ปี ค.ศ."
+    "year": "ปี ค.ศ.",
+    "birthdateRequired": "กรุณาเลือกวันเกิดให้ครบ"
   }
 }

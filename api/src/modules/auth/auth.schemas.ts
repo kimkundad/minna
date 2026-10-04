@@ -14,8 +14,24 @@ export const registerBody = z.object({
   password,
   firstName: z.string().min(1, 'Enter your first name.').max(100),
   lastName: z.string().min(1, 'Enter your last name.').max(100),
-  /** Gregorian, YYYY-MM-DD. The Buddhist year is converted in the UI. */
-  birthdate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use the format YYYY-MM-DD.').optional(),
+  /**
+   * Gregorian, YYYY-MM-DD. Required: it is how a course meant for adults can
+   * tell who it is dealing with, and asking later is harder than asking once.
+   * The regex only shapes the string; `refine` is what rejects 2026-02-31.
+   */
+  birthdate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use the format YYYY-MM-DD.')
+    .refine((value) => {
+      const [y, m, d] = value.split('-').map(Number) as [number, number, number]
+      const date = new Date(Date.UTC(y, m - 1, d))
+      return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d
+    }, 'That date does not exist.')
+    .refine((value) => {
+      const year = Number(value.slice(0, 4))
+      const now = new Date().getUTCFullYear()
+      return year >= now - 120 && year <= now
+    }, 'Enter a realistic year of birth.'),
   phoneCountryCode: z.string().max(8).optional(),
   phoneNational: z.string().max(32).optional(),
   locale: z.enum(LOCALES).default('th'),

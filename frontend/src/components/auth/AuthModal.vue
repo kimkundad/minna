@@ -17,7 +17,13 @@ import { authRequest, closeAuth, type AuthStep } from './authChannel'
  * backdrop, grabber, head, body and foot, because the slide-up-sheet behaviour
  * at ≤767px comes out of that nesting.
  */
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+/** `jp` and `vn` are our own URL spellings; Intl wants real language tags. */
+const localeTag = computed(
+  () =>
+    ({ th: 'th-TH', en: 'en-GB', jp: 'ja-JP', vn: 'vi-VN' })[locale.value as string] ?? 'th-TH',
+)
 const auth = useAuthStore()
 
 const step = ref<AuthStep>('login')
@@ -63,31 +69,47 @@ const DIAL_CODES = [
 
 const thisYear = new Date().getFullYear()
 
-/**
- * Returns YYYY-MM-DD, or null when nothing was entered, or 'invalid' when
- * something was entered that does not describe a real day — so the caller can
- * tell "left blank" from "typed 31 February" and only complain about the second.
- */
-function birthdateValue(): string | null | 'invalid' {
-  const parts = [birthDay.value, birthMonth.value, birthYear.value]
-  if (parts.every((p) => !p.trim())) return null
-  if (parts.some((p) => !p.trim())) return 'invalid'
+/** Newest first: most people signing up were born recently, not in 1905. */
+const years = Array.from({ length: 121 }, (_, i) => thisYear - i)
 
+/** Month names in whatever language the page is in, rather than a second list
+ *  to translate and keep in step. */
+const months = computed(() => {
+  const fmt = new Intl.DateTimeFormat(localeTag.value, { month: 'long' })
+  return Array.from({ length: 12 }, (_, i) => ({
+    value: i + 1,
+    label: fmt.format(new Date(Date.UTC(2001, i, 1))),
+  }))
+})
+
+/**
+ * How many days the chosen month actually has, so 31 February is not on the
+ * list at all. Day 0 of the next month is the last day of this one.
+ */
+const daysInMonth = computed(() => {
+  const m = Number(birthMonth.value)
+  const y = Number(birthYear.value)
+  if (!m) return 31
+  return new Date(Date.UTC(y || 2000, m, 0)).getUTCDate()
+})
+
+const days = computed(() => Array.from({ length: daysInMonth.value }, (_, i) => i + 1))
+
+// Picking February after choosing the 31st would otherwise leave a day the
+// month does not have still selected.
+watch(daysInMonth, (count) => {
+  if (Number(birthDay.value) > count) birthDay.value = ''
+})
+
+/** YYYY-MM-DD, or null when any part is still unchosen. */
+const birthdateValue = computed<string | null>(() => {
   const d = Number(birthDay.value)
   const m = Number(birthMonth.value)
-  const year = Number(birthYear.value)
-  if (!Number.isInteger(d) || !Number.isInteger(m) || !Number.isInteger(year)) return 'invalid'
-  if (m < 1 || m > 12 || d < 1 || d > 31) return 'invalid'
-  if (year < thisYear - 120 || year > thisYear) return 'invalid'
-
-  // Builds the date and reads it back: this is what rejects 31 April and
-  // 29 February in a year that has no 29th, which the range checks let through.
-  const date = new Date(Date.UTC(year, m - 1, d))
-  if (date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return 'invalid'
-
+  const y = Number(birthYear.value)
+  if (!d || !m || !y) return null
   const pad = (n: number) => String(n).padStart(2, '0')
-  return `${year}-${pad(m)}-${pad(d)}`
-}
+  return `${y}-${pad(m)}-${pad(d)}`
+})
 
 /** Server-side messages, keyed by field, shown under the input that caused them. */
 const fieldErrors = ref<Record<string, string>>({})
@@ -134,9 +156,9 @@ async function submit() {
     if (step.value === 'login') {
       await auth.login(email.value.trim(), password.value)
     } else {
-      const birthdate = birthdateValue()
-      if (birthdate === 'invalid') {
-        fieldErrors.value = { birthdate: t('auth.birthdateInvalid') }
+      const birthdate = birthdateValue.value
+      if (!birthdate) {
+        fieldErrors.value = { birthdate: t('auth.birthdateRequired') }
         return
       }
 
@@ -146,7 +168,7 @@ async function submit() {
         password: password.value,
         firstName: firstName.value.trim(),
         lastName: lastName.value.trim(),
-        ...(birthdate ? { birthdate } : {}),
+        birthdate,
         ...(phone ? { phoneCountryCode: phoneCountryCode.value, phoneNational: phone } : {}),
       })
     }
@@ -319,38 +341,43 @@ onBeforeUnmount(() => {
             <template v-if="step === 'register'">
               <div class="field">
                 <span class="label" id="auth-birth-label">
-                  {{ t('auth.birthdate') }} <span class="opt">{{ t('auth.optional') }}</span>
+                  {{ t('auth.birthdate') }} <span class="req">*</span>
                 </span>
+                <!-- Three lists rather than a date picker: a picker opens on
+                     the current year and makes someone born in 1995 scroll back
+                     three decades to reach their own birthday. The day list is
+                     built from the chosen month, so 31 February is never on it. -->
                 <div class="auth-birth" role="group" aria-labelledby="auth-birth-label">
-                  <input
+                  <select
                     v-model="birthDay"
                     class="input"
-                    inputmode="numeric"
-                    maxlength="2"
-                    :placeholder="t('auth.day')"
                     :aria-label="t('auth.day')"
                     :aria-invalid="fieldErrors.birthdate ? 'true' : undefined"
-                  />
-                  <input
+                  >
+                    <option value="">{{ t('auth.day') }}</option>
+                    <option v-for="d in days" :key="d" :value="String(d)">{{ d }}</option>
+                  </select>
+                  <select
                     v-model="birthMonth"
                     class="input"
-                    inputmode="numeric"
-                    maxlength="2"
-                    :placeholder="t('auth.month')"
                     :aria-label="t('auth.month')"
                     :aria-invalid="fieldErrors.birthdate ? 'true' : undefined"
-                  />
-                  <input
+                  >
+                    <option value="">{{ t('auth.month') }}</option>
+                    <option v-for="m in months" :key="m.value" :value="String(m.value)">
+                      {{ m.label }}
+                    </option>
+                  </select>
+                  <select
                     v-model="birthYear"
                     class="input"
-                    inputmode="numeric"
-                    maxlength="4"
-                    :placeholder="t('auth.year')"
                     :aria-label="t('auth.year')"
                     :aria-invalid="fieldErrors.birthdate ? 'true' : undefined"
-                  />
+                  >
+                    <option value="">{{ t('auth.year') }}</option>
+                    <option v-for="y in years" :key="y" :value="String(y)">{{ y }}</option>
+                  </select>
                 </div>
-                <span class="field-help">{{ t('auth.birthdateHelp', { year: thisYear - 25 }) }}</span>
                 <span v-if="fieldErrors.birthdate" class="field-error">
                   <AppIcon name="alert-circle" :size="16" />{{ fieldErrors.birthdate }}
                 </span>

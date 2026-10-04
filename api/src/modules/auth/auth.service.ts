@@ -81,7 +81,7 @@ export async function register(input: {
   password: string
   firstName: string
   lastName: string
-  birthdate?: string | undefined
+  birthdate: string
   phoneCountryCode?: string | undefined
   phoneNational?: string | undefined
   locale: Locale
@@ -98,7 +98,7 @@ export async function register(input: {
     passwordHash: await hashPassword(input.password),
     firstName: input.firstName.trim(),
     lastName: input.lastName.trim(),
-    birthdate: input.birthdate ?? null,
+    birthdate: input.birthdate,
     phoneCountryCode: input.phoneCountryCode ?? null,
     phoneNational: input.phoneNational ?? null,
     locale: input.locale,

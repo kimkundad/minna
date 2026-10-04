@@ -65,6 +65,7 @@ let refreshToken = ''
       password: PASSWORD,
       firstName: 'มาลี',
       lastName: 'ศรีสุข',
+      birthdate: '1995-03-15',
       locale: 'th',
     },
   })
@@ -78,14 +79,20 @@ let refreshToken = ''
 
 {
   const r = await call('POST', '/api/v1/auth/register', {
-    body: { email: EMAIL, password: PASSWORD, firstName: 'a', lastName: 'b' },
+    body: { email: EMAIL, password: PASSWORD, firstName: 'a', lastName: 'b', birthdate: '1995-03-15' },
   })
   check('duplicate email is rejected', r.status === 409 && r.json?.error?.code === 'conflict')
 }
 
 {
   const r = await call('POST', '/api/v1/auth/register', {
-    body: { email: `weak-${stamp}@example.com`, password: 'abc', firstName: 'a', lastName: 'b' },
+    body: {
+      email: `weak-${stamp}@example.com`,
+      password: 'abc',
+      firstName: 'a',
+      lastName: 'b',
+      birthdate: '1995-03-15',
+    },
   })
   check(
     'weak password is rejected with field errors',

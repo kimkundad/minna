@@ -2241,12 +2241,11 @@
     "birthdate": "Date of birth",
     "day": "DD",
     "month": "MM",
-    "birthdateHelp": "Four-digit year, e.g. {year}",
-    "birthdateInvalid": "That date does not exist. Check the day, month and year.",
     "phone": "Mobile number",
     "dialCode": "Dialling code",
     "phonePlaceholder": "0812345678",
     "optional": "(optional)",
-    "year": "Year"
+    "year": "Year",
+    "birthdateRequired": "Please choose your full date of birth."
   }
 }
