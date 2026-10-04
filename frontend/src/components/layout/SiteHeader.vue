@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import AppAvatar from '@/components/ui/AppAvatar.vue'
 import { data, store } from '@/vendor'
 import logoUrl from '@/assets/img/logo.png'
 
@@ -19,9 +20,39 @@ import logoUrl from '@/assets/img/logo.png'
  * header width, so the nesting is load-bearing rather than incidental.
  */
 const props = withDefaults(
-  defineProps<{ variant?: 'solid' | 'overlay'; active?: 'home' | 'courses' | 'about' | null }>(),
+  defineProps<{
+    variant?: 'solid' | 'overlay' | 'compact'
+    active?: 'home' | 'courses' | 'about' | null
+    /** Compact only: what the back link says and where it goes. */
+    backLabel?: string
+    backTo?: string
+    title?: string
+    subtitle?: string
+  }>(),
   { variant: 'solid', active: null },
 )
+
+interface SessionUser {
+  loggedIn: boolean
+  name: string
+  initials: string
+}
+
+const user = computed(
+  () => (store as unknown as { user: () => SessionUser }).user(),
+)
+const isLoggedIn = computed(() => user.value.loggedIn)
+
+/** Guests have no notifications to count, so the badge never shows for them. */
+const unread = computed(() =>
+  isLoggedIn.value ? (store as unknown as { unreadCount: () => number }).unreadCount() : 0,
+)
+
+const memberPhoto = computed(() => {
+  const photo = data.memberPhoto
+  if (!photo) return null
+  return photo.startsWith('assets/') ? `/${photo}` : photo
+})
 
 const { t } = useI18n()
 const route = useRoute()
@@ -119,7 +150,38 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
             <span v-if="cartCount" class="count-badge">{{ cartCount }}</span>
           </RouterLink>
 
-          <div class="hdr-auth">
+          <!-- Signed in: a notification bell and the member's own menu. Signed
+               out: the two auth buttons. Never both. -->
+          <div v-if="isLoggedIn" class="menu-anchor hdr-bell">
+            <button
+              type="button"
+              class="icon-btn"
+              aria-haspopup="true"
+              aria-expanded="false"
+              :aria-label="
+                unread ? t('header.notificationsUnread', { count: unread }) : t('common.notifications')
+              "
+            >
+              <AppIcon name="bell" />
+              <span v-if="unread" class="count-badge">{{ unread }}</span>
+            </button>
+          </div>
+
+          <div v-if="isLoggedIn" class="menu-anchor">
+            <button type="button" class="avatar-btn" aria-haspopup="true" aria-expanded="false">
+              <AppAvatar
+                :name="user.name"
+                :initials="user.initials"
+                :photo="memberPhoto"
+                :color="0"
+                size="md"
+              />
+              <span class="ab-name">{{ user.name }}</span>
+              <AppIcon name="chevron-down" />
+            </button>
+          </div>
+
+          <div v-else class="hdr-auth">
             <button type="button" class="btn btn--ghost btn--sm">{{ t('common.login') }}</button>
             <button type="button" class="btn btn--primary btn--sm">
               {{ t('common.register') }}
@@ -129,9 +191,18 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
           <button
             type="button"
             class="icon-btn hdr-profile-m"
-            :aria-label="t('header.loginOrRegister')"
+            :aria-label="isLoggedIn ? t('header.myAccount') : t('header.loginOrRegister')"
           >
-            <AppIcon name="user" />
+            <AppAvatar
+              v-if="isLoggedIn"
+              :name="user.name"
+              :initials="user.initials"
+              :photo="memberPhoto"
+              :color="0"
+              size="sm"
+            />
+            <AppIcon v-else name="user" />
+            <span v-if="unread" class="dot-badge" />
           </button>
         </div>
       </div>

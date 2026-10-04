@@ -162,7 +162,6 @@ const heroMeta = computed(() => {
     ['calendar', t('course.updatedAt', { date: date(c.updatedAt) })],
     ['signal', t('course.level', { level: levelShort(c.level) })],
     ['clock', c.durationLabel],
-    ['award', c.ce ? t('course.ceUnits', c.ce) : t('course.noCe')],
     ['mic', c.languageLabel],
     ['book-open', t('course.lessonCount', lessons.value.length)],
   ] as [string, string][]
@@ -269,12 +268,6 @@ const perks = computed(() => {
     [
       'calendar',
       c.isFree ? t('course.perkFree') : t('course.perkAccessDays', { days: c.accessDays }),
-    ],
-    [
-      'award',
-      c.ce
-        ? t('course.perkCertificateCe', { count: c.ce })
-        : t('course.perkCertificate'),
     ],
     ['monitor', t('course.perkAnyDevice')],
   ] as [string, string][]
@@ -466,17 +459,12 @@ const infoRows = computed<InfoRow[]>(() => {
       dd: t('course.lessonCount', lessons.value.length),
       sub: t('course.infoLessonsSub', { modules: c.modules.length }),
     },
-    { dt: t('course.infoCe'), dd: c.ce ? t('course.ceUnitsPlain', c.ce) : t('course.noCe') },
     { dt: t('course.infoLanguage'), dd: String(c.languageLabel).split(': ').pop() ?? '' },
     { dt: t('course.infoUpdated'), dd: dateLong(c.updatedAt) },
     {
       dt: t('course.infoAccess'),
       dd: c.isFree ? t('course.infoAccessFree') : t('course.infoAccessDays', { days: c.accessDays }),
       sub: !c.isFree && c.packageIncluded ? t('course.infoAccessPackageSub') : undefined,
-    },
-    {
-      dt: t('course.infoCertificate'),
-      dd: c.certificate ? t('course.infoCertificateAuto') : t('course.no'),
     },
     {
       dt: t('course.infoInPackage'),

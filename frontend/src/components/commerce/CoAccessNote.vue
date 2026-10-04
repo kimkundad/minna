@@ -21,7 +21,7 @@ defineProps<{ note: AccessNote; id?: string }>()
     <span>
       <template v-if="note.kind === 'blocked'">{{ note.text }}</template>
 
-      <i18n-t v-else-if="note.kind === 'blocked-link'" keypath="commerce.note.blockedLink" tag="span">
+      <i18n-t v-else-if="note.kind === 'blocked-link'" keypath="commerce.note.blockedLink">
         <template #text>{{ note.text }}</template>
         <template #link>
           <a class="link" :href="note.link?.href">{{ note.link?.label }}</a>
@@ -33,13 +33,12 @@ defineProps<{ note: AccessNote; id?: string }>()
       <i18n-t
         v-else-if="note.kind === 'renew' || note.kind === 'renew-short'"
         :keypath="note.kind === 'renew' ? 'commerce.note.renew' : 'commerce.note.renewShort'"
-        tag="span"
       >
         <template #pct><b>{{ note.pct }}%</b></template>
         <template #days>{{ note.days }}</template>
       </i18n-t>
 
-      <i18n-t v-else-if="note.kind === 'access-pkg'" keypath="commerce.note.accessWithPackage" tag="span">
+      <i18n-t v-else-if="note.kind === 'access-pkg'" keypath="commerce.note.accessWithPackage">
         <template #days>{{ note.days }}</template>
         <template #link>
           <a class="link" :href="note.link?.href">{{ note.link?.label }}</a>

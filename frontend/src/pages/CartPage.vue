@@ -283,7 +283,7 @@ useBottomBar('page-cart', bar, () => items.value.length > 0)
               <span>{{ t('commerce.cart.selectAll') }}</span>
             </label>
             <span class="ct-selcount" id="ct-selcount" aria-live="polite">
-              <i18n-t keypath="commerce.cart.selectionCount" tag="span">
+              <i18n-t keypath="commerce.cart.selectionCount">
                 <template #done><b>{{ selected.length }}</b></template>
                 <template #total>{{ selectable.length }}</template>
               </i18n-t>

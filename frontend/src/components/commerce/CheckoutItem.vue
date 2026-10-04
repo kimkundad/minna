@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '@/components/ui/AppIcon.vue'
@@ -77,11 +77,15 @@ const note = computed<AccessNote>(() => {
   return { icon: 'clock', tone: 'info', kind: 'access', days: c.accessDays }
 })
 
-const field = ref<HTMLInputElement | null>(null)
-
 function submit() {
   emit('apply', cid.value, props.draftCode)
 }
+
+/** Lesson count stands where the reference showed CE units, which Minna does
+ *  not award. */
+const lessonCount = computed(
+  () => (store as unknown as { lessons: (c: unknown) => unknown[] }).lessons(props.course).length,
+)
 </script>
 
 <template>
@@ -112,10 +116,7 @@ function submit() {
         @open="emit('instructors', cid)"
       />
       <div class="co-item-meta">
-        <span v-if="course.ce" class="ce-pill">
-          <AppIcon name="award" />{{ t('commerce.cePill', { n: course.ce }) }}
-        </span>
-        <span v-else><AppIcon name="award" />{{ t('course.noCe') }}</span>
+        <span><AppIcon name="book-open" />{{ t('course.lessonCount', lessonCount) }}</span>
         <span><AppIcon name="clock" />{{ course.durationLabel }}</span>
       </div>
       <CoAccessNote :note="note" />
@@ -175,7 +176,6 @@ function submit() {
           </label>
           <div class="co-cp-row">
             <input
-              ref="field"
               class="input"
               type="text"
               :id="inputId"

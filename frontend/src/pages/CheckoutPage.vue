@@ -61,6 +61,16 @@ const router = useRouter()
 const { t } = useI18n()
 
 const tick = useStoreTick()
+/**
+ * The checkout draft is saved without an event — `store.setCheckoutDraft`
+ * writes the bucket and stops there — so the store's own tick never moves when
+ * a coupon is applied. This ref is what the coupon computeds watch instead.
+ */
+const draftTick = ref(0)
+function writeDraft(patch: Record<string, unknown>) {
+  call('setCheckoutDraft', patch)
+  draftTick.value += 1
+}
 const locale = computed(() => String(route.params.locale ?? 'th'))
 const path = (p: string) => `/${locale.value}${p}`
 const baht = (n: number) => t('commerce.baht', { n: num(n) })
@@ -78,6 +88,7 @@ type Block = 'package' | 'owned' | 'ended' | 'missing'
 
 const resolved = computed(() => {
   void tick.value
+  void draftTick.value
   const param = String(route.query.items ?? '')
   const draft = isLoggedIn.value
     ? call<{ items?: string[] } | null>('checkoutDraft')
@@ -115,6 +126,7 @@ const items = computed(() => resolved.value.items.filter((cid) => !dropped.value
 
 const courseCoupons = computed<Record<string, string>>(() => {
   void tick.value
+  void draftTick.value
   const draft = call<{ courseCoupons?: Record<string, string> } | null>('checkoutDraft')
   const out: Record<string, string> = {}
   Object.entries(draft?.courseCoupons ?? {}).forEach(([cid, code]) => {
@@ -125,6 +137,7 @@ const courseCoupons = computed<Record<string, string>>(() => {
 
 const orderCouponCode = computed(() => {
   void tick.value
+  void draftTick.value
   return call<{ orderCoupon?: string | null } | null>('checkoutDraft')?.orderCoupon ?? null
 })
 
@@ -145,7 +158,7 @@ watch(
     const draft = call<{ items?: string[] } | null>('checkoutDraft')
     const source = resolved.value.source === 'param' ? 'buy-now' : 'cart'
     if (!draft) {
-      call('setCheckoutDraft', {
+      writeDraft({
         items: items.value.slice(),
         source,
         courseCoupons: {},
@@ -156,14 +169,14 @@ watch(
     const existing = draft.items ?? []
     const subset = items.value.every((cid) => existing.includes(cid))
     if (!subset) {
-      call('setCheckoutDraft', {
+      writeDraft({
         items: items.value.slice(),
         source,
         courseCoupons: {},
         orderCoupon: null,
       })
     } else if (existing.length !== items.value.length) {
-      call('setCheckoutDraft', { items: items.value.slice(), courseCoupons: courseCoupons.value })
+      writeDraft({ items: items.value.slice(), courseCoupons: courseCoupons.value })
     }
   },
   { immediate: true },
@@ -278,7 +291,7 @@ async function applyCourseCoupon(cid: string, raw: string) {
     couponErrors.value = { ...couponErrors.value, [cid]: result.error ?? '' }
     return
   }
-  call('setCheckoutDraft', {
+  writeDraft({
     courseCoupons: { ...courseCoupons.value, [cid]: result.coupon!.code },
   })
   const { [cid]: _dropped, ...rest } = couponErrors.value
@@ -298,7 +311,7 @@ function removeCourseCoupon(cid: string) {
   const next = { ...courseCoupons.value }
   const code = next[cid]
   delete next[cid]
-  call('setCheckoutDraft', { courseCoupons: next })
+  writeDraft({ courseCoupons: next })
   toast(t('commerce.coupon.removed', { code: code ?? '' }), { type: 'info' })
 }
 
@@ -320,7 +333,7 @@ async function applyOrderCoupon(raw: string) {
     orderCouponError.value = result.error ?? ''
     return
   }
-  call('setCheckoutDraft', { orderCoupon: result.coupon!.code })
+  writeDraft({ orderCoupon: result.coupon!.code })
   orderCouponError.value = ''
   orderCouponDraft.value = ''
   toast(
@@ -334,7 +347,7 @@ async function applyOrderCoupon(raw: string) {
 
 function removeOrderCoupon() {
   const code = orderCouponCode.value
-  call('setCheckoutDraft', { orderCoupon: null })
+  writeDraft({ orderCoupon: null })
   toast(t('commerce.coupon.removed', { code: code ?? '' }), { type: 'info' })
 }
 
@@ -357,7 +370,7 @@ async function removeItem(cid: string) {
   dropped.value = [...dropped.value, cid]
   const next = { ...courseCoupons.value }
   delete next[cid]
-  call('setCheckoutDraft', { items: items.value.slice(), courseCoupons: next })
+  writeDraft({ items: items.value.slice(), courseCoupons: next })
   if (resolved.value.source === 'param') {
     void router.replace({ path: path('/checkout'), query: { items: items.value.join(',') } })
   }
@@ -459,7 +472,7 @@ const previewLines = computed(() => {
     return {
       cid: l.cid,
       title: l.course.title,
-      meta: `${category?.name ?? ''}${l.course.ce ? ` · CE ${l.course.ce}` : ''}`,
+      meta: category?.name ?? '',
       price: l.course.isFree ? t('commerce.free') : baht(l.price),
       image: img ? { ...img, src: assetUrl(img.src) ?? undefined } : null,
       artIcon: category?.icon,
