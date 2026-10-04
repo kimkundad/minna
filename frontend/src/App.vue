@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import SiteHeader from '@/components/layout/SiteHeader.vue'
 import SiteFooter from '@/components/layout/SiteFooter.vue'
+import AuthModal from '@/components/auth/AuthModal.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -49,5 +50,8 @@ onBeforeUnmount(() => document.body.classList.remove(...applied))
       <RouterView />
     </main>
     <SiteFooter />
+    <!-- Mounted once, opened from anywhere through the auth channel, so a
+         locked lesson and the header raise the same dialog. -->
+    <AuthModal />
   </div>
 </template>

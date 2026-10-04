@@ -2218,5 +2218,25 @@
       "markFail": "needs action",
       "markWait": "awaiting a result"
     }
+  },
+  "auth": {
+    "loginTitle": "Sign in",
+    "loginSub": "Your Minna account",
+    "registerTitle": "Create an account",
+    "registerSub": "Free to join, start learning right away",
+    "email": "Email",
+    "password": "Password",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "passwordHelp": "At least 8 characters, with a letter and a number",
+    "noAccount": "No account yet?",
+    "haveAccount": "Already have an account?",
+    "working": "Working…",
+    "networkError": "Could not reach the server. Please try again.",
+    "logout": "Sign out",
+    "signedInAs": "Signed in as",
+    "reasonCheckout": "Sign in to confirm your order",
+    "reasonLesson": "Sign in to open this lesson",
+    "reasonAccount": "Sign in to see your account"
   }
 }

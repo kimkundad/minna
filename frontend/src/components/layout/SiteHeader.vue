@@ -5,6 +5,8 @@ import { useI18n } from 'vue-i18n'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import AppAvatar from '@/components/ui/AppAvatar.vue'
 import { data, store } from '@/vendor'
+import { useAuthStore } from '@/stores/auth'
+import { openAuth } from '@/components/auth/authChannel'
 import logoUrl from '@/assets/img/logo.png'
 
 /**
@@ -32,16 +34,35 @@ const props = withDefaults(
   { variant: 'solid', active: null },
 )
 
-interface SessionUser {
+interface FixtureUser {
   loggedIn: boolean
   name: string
   initials: string
 }
 
-const user = computed(
-  () => (store as unknown as { user: () => SessionUser }).user(),
+const auth = useAuthStore()
+
+/**
+ * Identity comes from our own API; the avatar and the notification count still
+ * come from the fixture store, which is where that data lives until the API
+ * serves it. Signing in flips both, so the two never disagree about whether
+ * anyone is here.
+ */
+const fixtureUser = computed(
+  () => (store as unknown as { user: () => FixtureUser }).user(),
 )
-const isLoggedIn = computed(() => user.value.loggedIn)
+const isLoggedIn = computed(() => auth.isLoggedIn)
+const user = computed(() => ({
+  name: auth.displayName || fixtureUser.value.name,
+  initials: fixtureUser.value.initials,
+}))
+
+const accountMenuOpen = ref(false)
+
+async function signOut() {
+  accountMenuOpen.value = false
+  await auth.logout()
+}
 
 /** Guests have no notifications to count, so the badge never shows for them. */
 const unread = computed(() =>
@@ -94,6 +115,12 @@ function onDocumentClick(e: MouseEvent) {
   megaOpen.value = false
 }
 
+function onDocumentClickAccount(e: MouseEvent) {
+  if (!accountMenuOpen.value) return
+  if ((e.target as HTMLElement | null)?.closest('.menu-anchor')) return
+  accountMenuOpen.value = false
+}
+
 function onKeydown(e: KeyboardEvent) {
   if (e.key !== 'Escape' || !megaOpen.value) return
   megaOpen.value = false
@@ -102,17 +129,22 @@ function onKeydown(e: KeyboardEvent) {
 
 const megaTrigger = ref<HTMLButtonElement | null>(null)
 
-watch(() => route.fullPath, () => { megaOpen.value = false })
+watch(() => route.fullPath, () => {
+  megaOpen.value = false
+  accountMenuOpen.value = false
+})
 
 onMounted(() => {
   onScroll()
   window.addEventListener('scroll', onScroll, { passive: true })
   document.addEventListener('click', onDocumentClick)
+  document.addEventListener('click', onDocumentClickAccount)
   document.addEventListener('keydown', onKeydown)
 })
 onBeforeUnmount(() => {
   window.removeEventListener('scroll', onScroll)
   document.removeEventListener('click', onDocumentClick)
+  document.removeEventListener('click', onDocumentClickAccount)
   document.removeEventListener('keydown', onKeydown)
 })
 </script>
@@ -196,7 +228,13 @@ onBeforeUnmount(() => {
           </div>
 
           <div v-if="isLoggedIn" class="menu-anchor">
-            <button type="button" class="avatar-btn" aria-haspopup="true" aria-expanded="false">
+            <button
+              type="button"
+              class="avatar-btn"
+              aria-haspopup="true"
+              :aria-expanded="accountMenuOpen"
+              @click="accountMenuOpen = !accountMenuOpen"
+            >
               <AppAvatar
                 :name="user.name"
                 :initials="user.initials"
@@ -207,11 +245,39 @@ onBeforeUnmount(() => {
               <span class="ab-name">{{ user.name }}</span>
               <AppIcon name="chevron-down" />
             </button>
+
+            <div v-if="accountMenuOpen" class="menu" role="menu">
+              <RouterLink class="menu-item" role="menuitem" :to="path('/account')">
+                <AppIcon name="user" />{{ t('footer.accountOverview') }}
+              </RouterLink>
+              <RouterLink class="menu-item" role="menuitem" :to="path('/account/learning')">
+                <AppIcon name="book-open" />{{ t('footer.myCourses') }}
+              </RouterLink>
+              <RouterLink class="menu-item" role="menuitem" :to="path('/account/orders')">
+                <AppIcon name="receipt" />{{ t('footer.orders') }}
+              </RouterLink>
+              <RouterLink class="menu-item" role="menuitem" :to="path('/account/profile')">
+                <AppIcon name="settings" />{{ t('footer.accountTitle') }}
+              </RouterLink>
+              <button type="button" class="menu-item" role="menuitem" @click="signOut">
+                <AppIcon name="log-out" />{{ t('auth.logout') }}
+              </button>
+            </div>
           </div>
 
           <div v-else class="hdr-auth">
-            <button type="button" class="btn btn--ghost btn--sm">{{ t('common.login') }}</button>
-            <button type="button" class="btn btn--primary btn--sm">
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm"
+              @click="openAuth({ step: 'login' })"
+            >
+              {{ t('common.login') }}
+            </button>
+            <button
+              type="button"
+              class="btn btn--primary btn--sm"
+              @click="openAuth({ step: 'register' })"
+            >
               {{ t('common.register') }}
             </button>
           </div>
@@ -220,6 +286,7 @@ onBeforeUnmount(() => {
             type="button"
             class="icon-btn hdr-profile-m"
             :aria-label="isLoggedIn ? t('header.myAccount') : t('header.loginOrRegister')"
+            @click="isLoggedIn ? (accountMenuOpen = !accountMenuOpen) : openAuth({ step: 'login' })"
           >
             <AppAvatar
               v-if="isLoggedIn"
