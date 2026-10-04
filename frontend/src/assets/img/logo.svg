@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="87" height="35" viewBox="0 0 87 35" role="img" aria-label="Minna">
+  <!-- Placeholder wordmark at the exact dimensions the header reserves (87x35),
+       so swapping in the real logo will not shift the layout. -->
+  <text x="0" y="25" font-family="'Noto Sans Thai','Noto Sans',system-ui,sans-serif"
+        font-size="25" font-weight="800" letter-spacing="-0.6" fill="currentColor">minna</text>
+</svg>

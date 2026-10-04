@@ -1,0 +1,147 @@
+/* type rescaled for Noto Sans Thai */
+/* ==========================================================================
+   READ VPN Learning — Design Tokens
+   Colour: READ VPN brand palette (Brand · Editorial Ink · Editorial Accent · Surface · Border)
+   Layout / spacing / radius: bedoctor-design-kit/design-tokens.json (observed values)
+   Typeface: Noto Sans Thai (Google Fonts)
+   ========================================================================== */
+
+/* ---- Typeface: Noto Sans Thai (Google Fonts, SIL OFL) ----
+   Replaces DB Heavent, which is a licensed font belonging to another project.
+   The face is loaded from index.html; Noto covers the glyphs DB Heavent was
+   missing (· ← → › − §), so the separate symbol fallback is gone.
+   Every size and line-height in this file was rescaled to match: see
+   scripts/rescale-type.mjs. ---- */
+
+:root {
+  /* ---- Brand ----
+     primary = fills (CTA with white text, active/selected states, progress).
+     Brand-coloured text & icons on light surfaces use --brand-primary-dark (2.2:1 on white · owner-approved deviation). */
+  --brand-primary: #00C2D6;
+  --brand-primary-hover: #00A6B8;
+  --brand-primary-active: #008A99;
+  --brand-primary-dark: #00C2D6;
+  --brand-primary-deep: #005560;
+  --brand-primary-soft: #EAFDFF;
+
+  /* ---- Editorial Ink ----
+     primary = headings & body · secondary = meta / captions (8.1:1) · muted = placeholder, disabled, decoration only */
+  --ink-primary: #18272A;
+  --ink-secondary: #465255;
+  --ink-muted: #7A8587;
+
+  /* ---- Editorial Accent ---- */
+  --cream-primary: #EFE3CA;
+  --cream-soft: #FCF9F2;
+  --cream-dark: #D3B980;
+
+  /* ---- Surface ---- */
+  --surface-base: #FFFFFF;
+  --surface-soft: #F6F8F8;
+  --surface-subtle: #EEF1F1;
+
+  /* ---- Border ---- */
+  --border-default: #E1E5E5;
+  --border-strong: #CDD3D4;
+
+  /* status (each pairs text + tint; always used with icon or label) */
+  --c-success: #17754A;  --c-success-tint: #E3F6EC;
+  --c-warning: #8A5A00;  --c-warning-tint: #FFF4DB;
+  --c-danger: #B42318;   --c-danger-tint: #FDECEC;
+  --c-violet: #5B3CC4;   --c-violet-tint: #EFEAFE;
+  --c-gray: var(--ink-secondary); --c-gray-tint: var(--surface-subtle);
+
+  /* ---- Gradients ---- */
+  --grad-primary: linear-gradient(120deg, var(--brand-primary-active) 0%, var(--brand-primary) 100%);   /* decorative fills only */
+  --grad-panel: linear-gradient(135deg, var(--ink-primary) 0%, var(--brand-primary-deep) 100%);          /* white text ≥ 8.5:1 */
+  --grad-panel-cyan: linear-gradient(135deg, var(--brand-primary-deep) 0%, var(--brand-primary-dark) 100%); /* white text 8.5:1 → 2.2:1 along the gradient */
+  --grad-soft: radial-gradient(60% 70% at 8% 22%, rgba(0,194,214,.14) 0%, rgba(0,194,214,0) 62%),
+               radial-gradient(45% 55% at 12% 88%, rgba(239,227,202,.62) 0%, rgba(239,227,202,0) 70%),
+               radial-gradient(55% 70% at 62% 48%, rgba(0,194,214,.09) 0%, rgba(0,194,214,0) 64%),
+               radial-gradient(40% 60% at 98% 30%, rgba(211,185,128,.16) 0%, rgba(211,185,128,0) 70%),
+               linear-gradient(180deg, var(--surface-soft) 0%, var(--cream-soft) 100%);
+
+  /* ---- Typography (DB Heavent sizes ≈ 1.3–1.375× the old Plus Jakarta / IBM Plex scale) ---- */
+  --font: "Noto Sans Thai", "Noto Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fs-h1: 55.5px;  --lh-h1: 1.29;
+  --fs-h2: 40px;  --lh-h2: 1.29;
+  --fs-h3: 32.5px;  --lh-h3: 1.35;
+  --fs-h4: 23.5px;  --lh-h4: 1.41;
+  --fs-h5: 19.5px;  --lh-h5: 1.47;
+  --fs-h6: 14px;  --lh-h6: 1.47;
+  --fs-body: 16px; --lh-body: 1.65;
+  --fs-sm: 14px;  --fs-xs: 12.5px;
+  --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700; --fw-heavy: 800;
+
+  /* ---- Spacing palette (BeDoctor) ---- */
+  --s-4: 4px; --s-8: 8px; --s-12: 12px; --s-16: 16px; --s-20: 20px; --s-24: 24px;
+  --s-32: 32px; --s-40: 40px; --s-48: 48px; --s-60: 60px; --s-64: 64px; --s-80: 80px;
+  --s-100: 100px; --s-120: 120px;
+
+  /* ---- Layout ---- */
+  --container: 1320px;
+  --gutter: 24px;
+  --page-pad: 24px;             /* container inline padding */
+  --outer: 24px;                /* outer panel margin */
+  --section-top: 100px;
+  --section-bottom: 60px;
+  --header-h: 88px;
+
+  /* ---- Radius ---- */
+  --r-section: 24px; --r-card: 24px; --r-tile: 16px; --r-pill: 38px;
+  --r-md: 14px; --r-sm: 10px; --r-xs: 6px; --r-circle: 50%;
+
+  /* ---- Elevation (kept light; BeDoctor uses heavy shadow only on floating badges) ---- */
+  --shadow-float: 20px 20px 40px rgba(0, 0, 0, .10);            /* observed: rating badge */
+  --shadow-pop: 0 15px 30px rgba(13, 22, 24, .14);               /* observed: cookie popup */
+  --shadow-card: 0 1px 2px rgba(24, 39, 42, .04), 0 6px 18px rgba(24, 39, 42, .05);
+  --shadow-card-hover: 0 2px 4px rgba(24, 39, 42, .05), 0 16px 36px rgba(24, 39, 42, .10);
+  --shadow-sticky: 0 8px 24px rgba(24, 39, 42, .08);
+
+  /* ---- Motion ---- */
+  --dur-btn: 200ms; --ease-btn: ease-in-out;
+  --dur-img: 300ms; --img-zoom: 1.1;
+  --dur-fast: 150ms; --dur-med: 260ms;
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+
+  /* ---- Focus ---- */
+  --focus-ring: 3px solid var(--brand-primary-dark);
+  --focus-offset: 3px;
+
+  /* ---- Z-index ---- */
+  --z-header: 40; --z-dropdown: 50; --z-drawer: 70; --z-modal: 80; --z-toast: 90; --z-proto: 95;
+}
+
+/* Responsive token overrides (BeDoctor breakpoints 1240 / 959 / 767 / 479) */
+@media (max-width: 1239px) {
+  :root { --page-pad: 24px; }
+}
+@media (max-width: 959px) {
+  :root {
+    --fs-h1: 44px; --fs-h2: 34px; --fs-h3: 26px; --fs-h4: 21px; --fs-h5: 17.5px; --fs-h6: 13px;
+    --section-top: 64px; --section-bottom: 40px; --outer: 16px; --header-h: 76px;
+  }
+}
+@media (max-width: 767px) {
+  :root {
+    --fs-h1: 36px; --fs-h2: 27.5px; --fs-h3: 23.5px; --fs-h4: 19.5px; --fs-h5: 16.5px;
+    --page-pad: 20px; --gutter: 16px; --outer: 12px;
+    --section-top: 48px; --section-bottom: 28px; --header-h: 64px;
+    --r-section: 20px; --r-card: 20px;
+  }
+}
+@media (max-width: 479px) {
+  :root { --fs-h1: 31px; --fs-h2: 24.5px; --fs-h3: 21px; --fs-h4: 18px; --fs-h5: 16px; --page-pad: 16px; }
+}
+
+/* Focus Dark Mode palette — applied ONLY on learn.html via body.focus-dark (ink-hue darks + brand cyan) */
+.focus-dark {
+  --fd-bg: #0D1618;
+  --fd-surface: #152225;
+  --fd-surface-2: #1C2E31;
+  --fd-border: #2A3E42;
+  --fd-text: #E6EEEF;
+  --fd-muted: #A3B1B3;
+  --fd-accent: #00C2D6;
+  --fd-accent-2: #7FE3EE;
+}

@@ -1,0 +1,165 @@
+/* type rescaled for Noto Sans Thai */
+/* ==========================================================================
+   Home — Hero Carousel (BeDoctor hero panel), rails, categories, journey,
+   package CTA, articles
+   ========================================================================== */
+
+/* ---------- Hero carousel ---------- */
+.hero {
+  position: relative; isolation: isolate; overflow: hidden;
+  margin: var(--outer) var(--outer) 0; border-radius: var(--r-section);
+  background: var(--grad-soft);
+}
+.hero-viewport { overflow: hidden; touch-action: pan-y; }
+.hero-track { display: flex; transition: transform .7s var(--ease-out); will-change: transform; }
+.hero.is-dragging .hero-track { transition: none; }
+.hero-slide { position: relative; flex: 0 0 100%; min-width: 0; min-height: 560px; display: flex; align-items: center; }
+.hero-media {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 56%; overflow: hidden; background: var(--surface-subtle);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24%); mask-image: linear-gradient(90deg, transparent 0, #000 24%);
+}
+.hero-media img { width: 100%; height: 100%; object-fit: cover; }
+.hero-media::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(246, 248, 248, .55) 0%, rgba(246, 248, 248, 0) 26%); pointer-events: none; }
+.hero-inner { position: relative; z-index: 1; width: 100%; padding-top: 116px; padding-bottom: 84px; }
+.hero-copy { max-width: 580px; }
+.hero-copy .eyebrow { margin-bottom: 14px; }
+.hero-copy h1, .hero-copy .h1 { font-size: clamp(47px, 5.07vw, 73px); line-height: 1.35; margin: 0 0 18px; }
+.hero-copy .h1, .hero-copy h1 { font-weight: var(--fw-bold); color: var(--ink-primary); }
+.hero-copy h1 .accent-grad, .hero-copy .h1 .accent-grad { display: block; }
+.hero-copy p { font-size: 18px; line-height: 1.71; color: var(--ink-primary); max-width: 520px; margin: 0 0 30px; }
+.hero-ctas { display: flex; flex-wrap: wrap; gap: 14px; }
+.hero-slide.is-active .hero-copy > * { animation: rv-fade-up .8s var(--ease-out) both; }
+.hero-slide.is-active .hero-copy > *:nth-child(2) { animation-delay: .06s; }
+.hero-slide.is-active .hero-copy > *:nth-child(3) { animation-delay: .12s; }
+.hero-slide.is-active .hero-copy > *:nth-child(4) { animation-delay: .18s; }
+
+.hero-controls { position: absolute; left: 0; right: 0; bottom: 26px; z-index: 3; pointer-events: none; }
+.hero-controls .container { display: flex; align-items: center; gap: 14px; }
+.hero-controls button { pointer-events: auto; }
+.hero-dots { display: flex; align-items: center; gap: 8px; }
+.hero-dot { position: relative; width: 12px; height: 12px; border-radius: 99px; background: rgba(24, 39, 42, .25); transition: width .3s var(--ease-out), background-color .3s; }
+.hero-dot::before { content: ""; position: absolute; inset: -16px -6px; }  /* 44px hit area */
+.hero-dot[aria-current="true"] { width: 34px; background: var(--brand-primary); }
+.hero-dot:hover { background: rgba(24, 39, 42, .45); }
+.hero-dot[aria-current="true"]:hover { background: var(--brand-primary); }
+.hero-pause { margin-left: 4px; }
+.hero-arrows { margin-left: auto; display: flex; gap: 10px; }
+.hero-arrows .icon-btn { background: rgba(255, 255, 255, .92); }
+@media (max-width: 959px) {
+  .hero-slide { min-height: 520px; }
+  .hero-media { width: 50%; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 42%); mask-image: linear-gradient(90deg, transparent 0, #000 42%); }
+  .hero-copy { max-width: 400px; }
+  .hero-copy h1, .hero-copy .h1 { font-size: 38px; }
+  .hero-copy p { font-size: 16.5px; }
+  .hero-inner { padding-top: 104px; }
+}
+@media (max-width: 767px) {
+  .hero { margin: 0 var(--outer); border-radius: 0 0 var(--r-section) var(--r-section); }
+  .hero-slide { flex-direction: column; align-items: stretch; min-height: 0; }
+  .hero-media { position: relative; width: auto; aspect-ratio: 16 / 10; margin: 70px 14px 0; border-radius: 18px; -webkit-mask-image: none; mask-image: none; }
+  .hero-media::after { display: none; }
+  .hero-inner { padding: 20px 20px 78px; }
+  .hero-copy h1, .hero-copy .h1 { font-size: 30px; line-height: 1.35; margin-bottom: 12px; }
+  .hero-copy p { font-size: 15.5px; margin-bottom: 20px; }
+  .hero-ctas { flex-direction: column; }
+  .hero-ctas .btn { width: 100%; }
+  .hero-controls { bottom: 22px; }
+  .hero-arrows { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-track { transition: none; }
+  .hero-slide.is-active .hero-copy > * { animation: none; }
+}
+
+/* ---------- Rails ---------- */
+.home-rail { padding-top: 64px; }
+.home-rail:first-of-type { padding-top: 56px; }
+#my-courses + #new-courses { padding-top: 56px; }
+.rail-sort { display: flex; align-items: center; gap: 10px; }
+.rail-sort .seg span { min-height: 38px; padding: 0 16px; font-size: 13.5px; }
+@media (max-width: 767px) {
+  .home-rail { padding-top: 44px; }
+  .rail-sort { width: 100%; overflow-x: auto; }
+}
+.my-empty .state-box { padding: 40px 24px; }
+
+/* ---------- Ads spacing ---------- */
+.home-ads { padding-top: 64px; padding-bottom: 8px; }
+.home-ads + .home-cats { margin-top: 56px; }
+.home-ads--last { padding-top: 16px; padding-bottom: 24px; }
+@media (max-width: 767px) { .home-ads { padding-top: 40px; } .home-ads + .home-cats { margin-top: 36px; } }
+
+/* ---------- Categories (BeDoctor services panel + megamenu tiles) ---------- */
+.cat-search { max-width: 520px; margin: -16px auto 32px; }
+.cat-search .search-field input { height: 54px; background: #fff; }
+.cat-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+.cat-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 12px; min-height: 132px; padding: 18px;
+  border-radius: var(--r-tile); background: #fff; color: var(--ink-primary); border: 1px solid transparent;
+  transition: background-color var(--dur-btn), color var(--dur-btn), transform .2s var(--ease-out), box-shadow .2s;
+}
+.cat-card .ci { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; background: var(--brand-primary-soft); color: var(--brand-primary-dark); transition: background-color var(--dur-btn), color var(--dur-btn); }
+.cat-card .ci svg { width: 22px; height: 22px; }
+.cat-card b { display: block; font-size: 15px; line-height: 1.35; }
+.cat-card small { display: block; font-size: 12.5px; color: var(--ink-secondary); line-height: 1.41; margin-top: 2px; transition: color var(--dur-btn); }
+.cat-card .cc-n { margin-top: auto; font-size: 12px; font-weight: 700; color: var(--ink-secondary); transition: color var(--dur-btn); }
+.cat-card:hover, .cat-card:focus-visible { background: var(--brand-primary); color: #fff; transform: translateY(-2px); box-shadow: 0 14px 30px -12px rgba(0, 194, 214, .6); }
+.cat-card:hover .ci, .cat-card:focus-visible .ci { background: rgba(255, 255, 255, .18); color: #fff; }
+.cat-card:hover small, .cat-card:hover .cc-n, .cat-card:focus-visible small, .cat-card:focus-visible .cc-n { color: rgba(255, 255, 255, .85); }
+.cat-empty { text-align: center; color: var(--ink-secondary); padding: 24px 0; margin: 0; }
+@media (max-width: 1239px) { .cat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 767px) {
+  .cat-search { margin-top: -20px; margin-bottom: 20px; }
+  .cat-grid { grid-auto-flow: column; grid-template-columns: none; grid-template-rows: repeat(2, auto); grid-auto-columns: 46%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin-inline: calc(var(--page-pad) * -1); padding: 4px var(--page-pad) 8px; }
+  .cat-grid::-webkit-scrollbar { display: none; }
+  .cat-card { scroll-snap-align: start; min-height: 120px; padding: 14px; }
+}
+
+/* ---------- Learning journey (BeDoctor "Why choose" — white panel, ink text) ---------- */
+.home-journey { margin-top: 24px; background: var(--surface-base); }
+.journey-top { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 64px; align-items: end; }
+.journey-top h2 { margin: 0; max-width: 560px; }
+.journey-intro p { color: var(--ink-primary); font-size: 16.5px; margin-bottom: 24px; }
+.home-journey .journey-steps { list-style: none; margin: var(--s-80) 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; counter-reset: step; }
+.journey-steps li { position: relative; padding-right: 12%; }
+.journey-steps .js-num { display: inline-grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; border: 1.5px solid var(--border-strong); font-size: 19.5px; font-weight: 800; margin-bottom: 24px; color: var(--ink-primary); background: var(--surface-soft); }
+.journey-steps li:not(:last-child)::after { content: ""; position: absolute; top: 32px; left: 80px; right: 12px; height: 1px; background: linear-gradient(90deg, var(--border-strong), rgba(205, 211, 212, 0)); }
+.journey-steps h3 { font-size: 19.5px; line-height: 1.41; margin-bottom: 8px; color: var(--ink-primary); display: flex; align-items: center; gap: 10px; }
+.journey-steps h3 svg { width: 20px; height: 20px; color: var(--brand-primary-dark); }
+.journey-steps p { color: var(--ink-primary); font-size: 15px; margin: 0; }
+@media (max-width: 959px) {
+  .journey-top { grid-template-columns: 1fr; }
+  .home-journey .journey-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 24px; margin-top: var(--s-48); }
+  .journey-steps li::after { display: none; }
+}
+@media (max-width: 767px) { .home-journey .journey-steps { grid-template-columns: 1fr; gap: 28px; } .journey-steps li { padding-right: 0; display: grid; grid-template-columns: 56px 1fr; gap: 0 16px; } .journey-steps .js-num { width: 52px; height: 52px; font-size: 16.5px; margin: 0; grid-row: span 2; } }
+
+/* ---------- Package CTA (BeDoctor appointment CTA) ---------- */
+.home-package { padding-bottom: 0; }
+.pkg-cta {
+  position: relative; overflow: hidden; border-radius: var(--r-section); padding: var(--s-80) var(--s-48) var(--s-64); text-align: center; color: #fff;
+  /* ภาพคลินิก + scrim โทนแบรนด์ให้ตัวอักษรขาวอ่านได้ (deep teal → cyan) */
+  background:
+    radial-gradient(40% 70% at 12% 100%, rgba(239, 227, 202, .28) 0%, rgba(239, 227, 202, 0) 70%),
+    radial-gradient(45% 80% at 95% 0%, rgba(0, 194, 214, .45) 0%, rgba(0, 194, 214, 0) 70%),
+    linear-gradient(135deg, rgba(0, 85, 96, .92) 0%, rgba(0, 110, 122, .86) 45%, rgba(0, 194, 214, .74) 100%),
+    url("../img/readvpn-section.png") center / cover no-repeat var(--brand-primary-deep);
+}
+.pkg-cta::before, .pkg-cta::after { content: ""; position: absolute; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .16); pointer-events: none; }
+.pkg-cta::before { width: 420px; height: 420px; left: -140px; top: -180px; }
+.pkg-cta::after { width: 560px; height: 560px; right: -220px; bottom: -300px; }
+/* โลโก้ VPN แทนไอคอนเดิม — ไฟล์ SVG เป็นสีฟ้าสีเดียว จึงพลิกเป็นขาวให้ตัดกับพื้นเข้ม */
+.pkg-cta .pc-logo { display: block; width: auto; height: 48px; margin: 0 auto var(--s-24); filter: brightness(0) invert(1); }
+.pkg-cta .eyebrow { display: flex; justify-content: center; }
+.pkg-cta h2 { color: #fff; max-width: 720px; margin: 0 auto 16px; font-size: var(--fs-h3); }
+.pkg-cta p { color: rgba(255, 255, 255, .88); max-width: 620px; margin: 0 auto 28px; font-size: 16.5px; }
+.pkg-cta .pc-benefits { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 32px; }
+.pkg-cta .pc-benefits span { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border-radius: 99px; background: rgba(255, 255, 255, .12); font-size: 14.5px; font-weight: 600; }
+.pkg-cta .pc-benefits svg { width: 16px; height: 16px; color: #9FE8F1; }
+.pkg-cta .pc-current { display: inline-flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 12px; margin-bottom: 24px; padding: 10px 18px; border-radius: 16px; background: rgba(13, 22, 24, .25); font-size: 14.5px; }
+.pkg-cta .pc-current b { font-weight: 700; }
+.pkg-cta .btn--white:hover { border-color: #fff; }
+@media (max-width: 767px) { .pkg-cta { padding: var(--s-48) 20px; } .pkg-cta .pc-logo { height: 38px; margin-bottom: 20px; } }
+
+/* ---------- Articles ---------- */
+.home-articles { padding-top: var(--section-top); }

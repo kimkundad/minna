@@ -1,0 +1,82 @@
+/* type rescaled for Noto Sans Thai */
+/* Legal pages (privacy · terms · purchase-terms) — TOC sidebar + long-form prose.
+   Layout pattern mirrors .ds-layout in design-system.css; prose rules are new because
+   base.css only resets lists that carry role="list". */
+
+.lg-layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 48px; padding-top: 48px; padding-bottom: 56px; }
+.lg-content { min-width: 0; max-width: 880px; }
+
+/* ---------- table of contents ---------- */
+.lg-toc { position: sticky; top: 100px; align-self: start; }
+.lg-toc-title { font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-secondary); margin-bottom: 10px; }
+.lg-toc ol { display: grid; gap: 2px; list-style: none; margin: 0; padding: 0; counter-reset: lgtoc; }
+.lg-toc li { counter-increment: lgtoc; }
+.lg-toc a { display: block; padding: 8px 12px; border-radius: 10px; font-size: 14px; line-height: 1.53; color: var(--ink-primary); }
+.lg-toc a::before { content: counter(lgtoc) ". "; color: var(--ink-muted); }
+.lg-toc a:hover { background: var(--surface-soft); color: var(--brand-primary-dark); }
+
+/* ---------- meta line in the hero ---------- */
+.lg-meta { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 14px; color: var(--ink-secondary); font-size: 13.5px; }
+.lg-meta span { display: inline-flex; align-items: center; gap: 6px; }
+.lg-meta svg { width: 16px; height: 16px; }
+.crumbs li { display: inline-flex; align-items: center; }
+
+/* ---------- sections ---------- */
+.lg-intro { margin-bottom: 32px; }
+.lg-sec { padding-bottom: 40px; margin-bottom: 40px; border-bottom: 1px solid var(--border-default); scroll-margin-top: calc(var(--header-h) + 24px); }
+.lg-sec:last-child { border-bottom: 0; margin-bottom: 0; }
+.lg-sec > h2 { font-size: 22.5px; line-height: 1.41; margin-bottom: 14px; }
+.lg-h3 { font-size: 16.5px; line-height: 1.47; margin: 26px 0 10px; color: var(--ink-primary); }
+
+/* ---------- prose ---------- */
+.lg-prose > * + * { margin-top: 14px; }
+.lg-prose p { margin: 0; }
+.lg-prose ul, .lg-prose ol { margin: 0; padding-inline-start: 26px; display: grid; gap: 8px; }
+.lg-prose ul { list-style: disc; }
+.lg-prose ol { list-style: decimal; }
+.lg-prose li { line-height: 1.71; padding-inline-start: 4px; }
+.lg-prose li::marker { color: var(--brand-primary-dark); font-weight: 700; }
+.lg-prose ol > li::marker { color: var(--ink-secondary); }
+.lg-prose li > ul, .lg-prose li > ol { margin-top: 8px; }
+.lg-prose a { color: var(--brand-primary-deep); text-decoration: underline; text-underline-offset: 3px; }
+.lg-prose a:hover { color: var(--brand-primary-dark); }
+.lg-prose b, .lg-prose strong { font-weight: 700; }
+
+/* ---------- definition list (contact block) ---------- */
+.lg-dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 20px; margin: 0; }
+.lg-dl dt { font-weight: 700; color: var(--ink-secondary); }
+.lg-dl dd { margin: 0; }
+
+/* ---------- tables ---------- */
+.lg-table-wrap { overflow-x: auto; margin-top: 16px; border: 1px solid var(--border-default); border-radius: 16px; }
+.lg-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 14px; }
+.lg-table th, .lg-table td { padding: 12px 16px; text-align: left; vertical-align: top; line-height: 1.65; border-bottom: 1px solid var(--border-default); }
+.lg-table thead th { background: var(--surface-soft); font-weight: 700; color: var(--ink-primary); white-space: nowrap; }
+.lg-table tbody tr:last-child th, .lg-table tbody tr:last-child td { border-bottom: 0; }
+.lg-table tbody th { font-weight: 600; color: var(--ink-primary); }
+
+/* ---------- cross links at the end of a page ---------- */
+.lg-more { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 8px; }
+.lg-more a { display: flex; align-items: center; gap: 12px; padding: 18px 20px; border-radius: 18px; border: 1px solid var(--border-default); background: #fff; font-weight: 700; color: var(--ink-primary); transition: box-shadow .25s, transform .25s; }
+.lg-more a:hover { color: var(--brand-primary-dark); box-shadow: var(--shadow-card-hover); transform: translateY(-2px); }
+.lg-more a > span { display: inline-flex; flex-shrink: 0; color: var(--brand-primary-dark); }
+.lg-more svg { width: 20px; height: 20px; }
+
+/* ---------- FAQ accordion body (component markup lives in components.css) ---------- */
+.lg-acc-body { padding: 16px 20px; }
+.acc-btn .acc-chev { display: inline-flex; flex-shrink: 0; }
+.acc-btn .acc-chev svg { width: 20px; height: 20px; color: var(--ink-secondary); }
+
+@media (max-width: 1099px) {
+  .lg-layout { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-top: 32px; }
+  .lg-content { max-width: none; }
+  .lg-toc { position: static; }
+  .lg-toc ol { display: flex; flex-wrap: wrap; gap: 6px; }
+  .lg-toc a { background: var(--surface-soft); }
+}
+@media (max-width: 767px) {
+  .lg-sec > h2 { font-size: 19.5px; }
+  .lg-dl { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .lg-dl dd { margin-bottom: 10px; }
+  .lg-more { grid-template-columns: 1fr; }
+}
