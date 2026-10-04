@@ -1,0 +1,45 @@
+# Local development services only.
+# The three apps (api / frontend / backend) run on the host with their own dev
+# servers so hot reload stays fast; only the stateful services live in Docker.
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#
+# Ports are shifted off the defaults because XAMPP holds 3306 and another project holds 3307 on this
+# machine.
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: minna-dev-mysql
+    restart: unless-stopped
+    ports:
+      - "3308:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: minna
+      MYSQL_DATABASE: minna
+      MYSQL_USER: minna
+      MYSQL_PASSWORD: minna
+      TZ: Asia/Bangkok
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - minna-mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-pminna"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: minna-dev-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - minna-redis:/data
+
+volumes:
+  minna-mysql:
+  minna-redis:
