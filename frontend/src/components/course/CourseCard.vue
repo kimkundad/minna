@@ -9,6 +9,7 @@ import CtaButton from '@/components/ui/CtaButton.vue'
 import CourseImage from './CourseImage.vue'
 import InstructorLine from './InstructorLine.vue'
 import { courseView, store } from '@/vendor'
+import type { CtaAction } from '@/vendor'
 
 /**
  * One course, in the three shapes the design uses:
@@ -60,9 +61,21 @@ const resumeTitle = computed(() => {
   return r.type === 'quiz' ? 'แบบทดสอบท้ายคอร์ส' : r.title
 })
 
-const cardAction = computed(
-  () => (view.value as unknown as { card?: any }).card ?? view.value.primary,
+const lessonCount = computed(
+  () => (store as unknown as { lessons: (c: unknown) => unknown[] }).lessons(course.value).length,
 )
+
+/**
+ * The reference offers a certificate link once a course is finished. Minna
+ * issues none, so that action falls back to the course's own CTA rather than
+ * pointing at a page that will not exist.
+ */
+const cardAction = computed(() => {
+  const action = (view.value as unknown as { card?: CtaAction }).card ?? view.value.primary
+  const target = action?.act ?? action?.action ?? ''
+  const isCertificate = target.includes('cert') || action?.href?.includes('certificate')
+  return isCertificate ? view.value.primary : action
+})
 </script>
 
 <template>
@@ -100,9 +113,11 @@ const cardAction = computed(
         @open="emit('instructors', courseId)"
       />
 
+      <!-- No CE unit here: that is the reference project's professional-credit
+           scheme, and Minna awards none. -->
       <div class="cc-meta">
         <span><AppIcon name="clock" />{{ course.durationLabel }}</span>
-        <span><AppIcon name="award" />{{ course.ce ? `CE ${course.ce}` : 'ไม่มี CE' }}</span>
+        <span><AppIcon name="book-open" />{{ lessonCount }} บทเรียน</span>
         <template v-if="variant === 'list'">
           <span><AppIcon name="signal" />{{ course.levelLabel }}</span>
           <span class="lang"><AppIcon name="mic" />{{ course.languageLabel }}</span>

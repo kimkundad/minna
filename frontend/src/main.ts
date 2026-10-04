@@ -10,6 +10,9 @@ import './assets/css/base.css'
 import './assets/css/components.css'
 import './assets/css/home.css'
 import './assets/css/discovery.css'
+import './assets/css/legal.css'
+import './assets/css/account.css'
+import './assets/css/commerce.css'
 
 // Loaded last so Minna's own decisions win over the ported design.
 import './assets/css/brand.css'

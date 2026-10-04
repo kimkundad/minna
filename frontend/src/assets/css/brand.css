@@ -17,3 +17,80 @@
 .brand-logo { height: 42px; }
 .site-header--compact .brand-logo { height: 34px; }
 .ft-top .brand-logo { height: 52px; }
+
+/* The legal pages' table of contents follows the reading position, which the
+   reference's static list did not do — ten sections of policy is far enough to
+   scroll that you lose your place. The highlight borrows the hover treatment so
+   the two read as one state, and it is marked up as aria-current="location". */
+.lg-toc a[aria-current] { background: var(--brand-primary-soft); color: var(--brand-primary-deep); font-weight: 600; }
+.lg-toc a[aria-current]::before { color: var(--brand-primary-dark); }
+
+/* --------------------------------------------------------------------------
+   Names the reference never had to share
+
+   The prototype loaded one page stylesheet at a time, so home.css and
+   discovery.css were free to mean different things by the same class. We load
+   every file on every page, and the later one wins — which is right for the
+   catalog but leaves it holding a margin it never asked for.
+
+   `.cat-search` is the home page's centred category box in one file and the
+   catalog's left-aligned search in the other. home.css sets `margin: -16px auto
+   32px`, and discovery.css replaces only the top margin, so the catalog's field
+   inherits the auto side margins and ends up centred under a left-aligned
+   heading.
+   -------------------------------------------------------------------------- */
+.cat-hero .cat-search { margin-inline: 0; margin-bottom: 0; }
+
+/* `.cat-grid` is the same name for two different grids: a six-across set of
+   category tiles on the home page, and the auto-filling results grid in the
+   catalog. discovery.css loads later and wins, which left the home page's
+   tiles laid out as search results. Scoped back under .home-cats, at every
+   width home.css defines one. */
+.home-cats .cat-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 1239px) {
+  .home-cats .cat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  /* Two rows that scroll sideways, rather than a tall column of tiles. */
+  .home-cats .cat-grid {
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    grid-template-rows: repeat(2, auto);
+    grid-auto-columns: 46%;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    margin-inline: calc(var(--page-pad) * -1);
+    padding: 4px var(--page-pad) 8px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Account — two grids that were measured against columns Minna does not have
+
+   Minna issues no certificates and awards no CE credits, so the account
+   overview loses the CE tile and the certificate tile, and a course row in
+   "My learning" loses the CE fact and the certificate fact. Both grids are
+   written in account.css with a fixed track count, so without this the
+   survivors would sit in part of a row and leave a hole where the dropped
+   ones used to be.
+   -------------------------------------------------------------------------- */
+
+/* Three tiles, not five: the package takes the full width it already needed
+   for its meter, and the two course counts share the row below it. */
+.acct-stats .acct-stat--pkg { grid-column: 1 / -1; }
+.acct-stats .acct-stat--sm { grid-column: span 3; }
+@container acct (max-width: 640px) {
+  .acct-stats .acct-stat--sm { grid-column: span 3; }
+}
+
+/* Three facts, not five. The 820px rule in account.css also widens the fifth
+   child, which no longer exists, so the count is set at every width. */
+.acct-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@container acct (max-width: 560px) {
+  .acct-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .acct-fact:nth-child(3) { grid-column: 1 / -1; }
+}

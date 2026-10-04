@@ -64,7 +64,10 @@ export function relative(value: unknown): string {
   if (seconds < 60) return 'เมื่อสักครู่'
   if (seconds < 3600) return `${Math.floor(seconds / 60)} นาทีที่แล้ว`
 
-  const days = Math.floor(seconds / 86400)
+  // Calendar days, not elapsed ones: something watched at 23:50 is "เมื่อวาน"
+  // at 00:10, not "วันนี้".
+  const dateApi = (store as unknown as { date: { daysBetween: (a: Date, b: Date) => number } }).date
+  const days = dateApi?.daysBetween ? dateApi.daysBetween(d, new Date()) : Math.floor(seconds / 86400)
   if (days === 0) return `วันนี้ ${fmtTime.format(d)} น.`
   if (days === 1) return `เมื่อวาน ${fmtTime.format(d)} น.`
   if (days < 7) return `${days} วันที่แล้ว`

@@ -52,10 +52,20 @@ const PALETTES = [
   ['#9D174D', '#D44C8C'],
 ]
 
+/**
+ * The fixture data stores local files as bare relative paths ("assets/img/x.png").
+ * A browser resolves those against the current route, so the same card that
+ * works at /th/courses asks for /th/account/assets/img/x.png one level deeper
+ * and gets the SPA shell back. Anchor them at the root.
+ */
+function resolveLocal(src: string): string {
+  return src.startsWith('assets/') ? `/${src}` : src
+}
+
 function photo(width: number, height: number): string {
   const img = props.image
   if (!img) return ''
-  if (img.src) return img.src
+  if (img.src) return resolveLocal(img.src)
   if (!img.id) return ''
 
   const crop = img.fp

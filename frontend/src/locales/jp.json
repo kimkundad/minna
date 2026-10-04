@@ -77,7 +77,64 @@
     "no": "No",
     "notFoundTitle": "We could not find that course",
     "notFoundText": "The link may be wrong, or the course may have been taken down.",
-    "backToCourses": "Back to all courses"
+    "backToCourses": "Back to all courses",
+    "catViewCourses": "— see courses in this category",
+    "mediaLockTitle": "This course is no longer published",
+    "mediaLockText": "Its videos and learner content are closed",
+    "resumeAt": "Last lesson: ",
+    "finalQuiz": "End-of-course quiz",
+    "lastStudied": "Last studied {when}",
+    "accessInPackage": "Included in your package",
+    "accessPackageUntil": "valid until {date}",
+    "accessPackageExpiring": "expiring soon ({days} days left)",
+    "accessUntil": "Access until {date}",
+    "accessRenewed": "Renewed · all earlier progress kept",
+    "accessPerCourse": "Bought on its own",
+    "accessFreeEnrolled": "Enrolled free",
+    "accessFreeForMembers": "Free for members",
+    "perkCertificate": "Certificate when you finish",
+    "perkCertificateCe": "Certificate when you finish · {count} CE units",
+    "quizQuestions": "{count} question | {count} questions",
+    "documentDuration": "Document",
+    "moduleAllDone": "All done",
+    "moduleDoneSr": "lessons completed",
+    "yourStatus": "Your status: ",
+    "stepLessonsDone": "All lessons done",
+    "stepLessonsPartial": "{done}/{total} lessons done (excluding the quiz)",
+    "stepQuizPassed": "Passed",
+    "stepQuizFailed": "Not passed yet · unlimited retries",
+    "stepQuizNone": "Quiz not taken yet",
+    "essayNone": "Essay not submitted",
+    "essayPending": "Awaiting marking",
+    "essayResubmitted": "Awaiting re-marking",
+    "essayRevision": "Needs revision",
+    "essayPassed": "Passed",
+    "stepCertIssued": "Certificate issued",
+    "stepNotYet": "Conditions not met yet",
+    "instructorsSub": "{count} instructor · prototype data | {count} instructors · prototype data",
+    "infoCe": "CE",
+    "ceUnitsPlain": "{count} unit | {count} units",
+    "infoLessonsSub": "({modules} sections, quiz included)",
+    "infoAccessFree": "Free for members",
+    "infoAccessPackageSub": "or for as long as a covering package runs",
+    "infoCertificate": "Certificate",
+    "infoCertificateAuto": "Issued automatically once the conditions are met",
+    "infoPackagePaid": "— the paid membership package",
+    "infoPackageNoFree": "— free for members",
+    "infoPackageNoCourse": "— bought on its own",
+    "infoStatus": "Course status",
+    "infoEnded": "Publication ended {date}",
+    "sameCategoryReason": "Same category: {name}",
+    "notFoundCrumb": "Course not found",
+    "notFoundWithId": "No course with the code “{id}”. The link may be wrong, or the course may have been withdrawn.",
+    "notFoundNoId": "This link names no course. Please pick one from the course list.",
+    "notFoundRailSub": "Popular courses for veterinary professionals",
+    "errorTitle": "Could not load",
+    "errorText": "The course details are unavailable right now. Please try again.",
+    "retry": "Try again",
+    "barDone": "Finished",
+    "barProgress": "Progress",
+    "barNotForSale": "No longer for sale"
   },
   "minutes": "{n} min",
   "hours": "{n} hr",
@@ -113,5 +170,1337 @@
     "privacy": "Privacy policy",
     "terms": "Terms of use",
     "purchaseTerms": "Purchase and refund terms"
+  },
+  "catalog": {
+    "title": "Courses",
+    "lead": "Online courses for veterinary professionals across {count} categories. Study on any device, with CE recorded and a certificate when you finish.",
+    "searchLabel": "Search courses, categories or instructors",
+    "searchPlaceholder": "Search courses, categories or instructors",
+    "searchHelp": "Results update as you type. Press Enter to search now.",
+    "clearQuery": "Clear search",
+    "filtersTitle": "Filters",
+    "clearAllFilters": "Clear all filters",
+    "selectedPrefix": "Selected: ",
+    "coursesUnit": "courses",
+    "showAllCategories": "Show all ({count})",
+    "showLess": "Show less",
+    "groupCategory": "Category",
+    "groupLevel": "Level",
+    "groupCe": "CE",
+    "groupDuration": "Length",
+    "groupAccess": "Access",
+    "groupPrice": "Price",
+    "levelBeginner": "Beginner",
+    "levelIntermediate": "Intermediate",
+    "levelAdvanced": "Advanced",
+    "ceNone": "No CE",
+    "ce13": "1–3 units",
+    "ce46": "4–6 units",
+    "ceGt6": "More than 6 units",
+    "durLe1": "Up to 1 hr",
+    "dur13": "1–3 hrs",
+    "dur36": "3–6 hrs",
+    "durGt6": "More than 6 hrs",
+    "accessFree": "Free",
+    "accessCourse": "Single course",
+    "accessPackage": "Package",
+    "priceFree": "Free",
+    "priceLt1000": "Under ฿1,000",
+    "price1000to2000": "฿1,000–2,000",
+    "priceGt2000": "Over ฿2,000",
+    "filtersBtn": "Filters",
+    "filtersBtnN": "Filters ({count})",
+    "filtersBtnAriaN": "Filters — {count} selected",
+    "sortBtn": "Sort",
+    "sortBtnAria": "Sort — currently: {sort}",
+    "sortBy": "Sort by",
+    "sortRecommended": "Recommended",
+    "sortNew": "Newest",
+    "sortPopular": "Most popular",
+    "sortPriceAsc": "Price: low to high",
+    "sortPriceDesc": "Price: high to low",
+    "sortCeDesc": "Most CE",
+    "viewGroup": "Display style",
+    "viewGrid": "Show as a grid",
+    "viewGridTitle": "Grid view",
+    "viewList": "Show as a list",
+    "viewListTitle": "List view",
+    "countFound": "{count} courses",
+    "countFor": "for “{q}”",
+    "countSortNote": "· sorted by {sort}",
+    "countLoading": "Searching courses…",
+    "countError": "Could not load the courses",
+    "activeFilters": "Filters in use",
+    "chipQuery": "Search: “{q}”",
+    "chipGroup": "{group}: {value}",
+    "chipRemove": "Remove filter {label}",
+    "clearAllChips": "Clear all",
+    "emptyTitle": "No courses match those conditions",
+    "emptyComingTitle": "No courses in {names} yet",
+    "emptyText": "Try fewer filters, a different search, or browse everything across {count} categories.",
+    "emptyComingText": "Courses in this category open soon. In the meantime, have a look at the other categories.",
+    "clearFiltersAction": "Clear filters",
+    "clearQueryAction": "Clear search",
+    "showAllAction": "Browse all courses",
+    "errorTitle": "Could not load",
+    "errorText": "The course list is unavailable right now. Please try again.",
+    "retry": "Try again"
+  },
+  "account": {
+    "title": "My account",
+    "menu": "Account menu",
+    "logout": "Sign out",
+    "package": "Package",
+    "courseUnit": "courses",
+    "days": "{n} days",
+    "progressOf": "Progress — {title}",
+    "nav": {
+      "overview": "Account overview",
+      "learning": "My learning",
+      "orders": "Order history",
+      "package": "My package",
+      "profile": "Account settings"
+    },
+    "page": {
+      "overview": {
+        "title": "Account overview",
+        "desc": "Your package, your learning progress and your latest notifications, on one page"
+      },
+      "learning": {
+        "title": "My learning",
+        "desc": "Progress, quiz status and expiry dates for every course you have access to"
+      },
+      "orders": {
+        "title": "Order history",
+        "desc": "Your course orders, payment status, details and receipts"
+      },
+      "package": {
+        "title": "My package",
+        "desc": "Package status, expiry date, benefits and the plans for your member type"
+      },
+      "profile": {
+        "title": "Account settings",
+        "desc": "Personal information, interests, security and what we may send you"
+      }
+    },
+    "pkgStatus": {
+      "active": "Active",
+      "expiring": "Expiring soon",
+      "expired": "Expired"
+    },
+    "group": {
+      "all": "All",
+      "inProgress": "In progress",
+      "notStarted": "Not started",
+      "completed": "Completed",
+      "completedShort": "Completed",
+      "expired": "Expired"
+    },
+    "gate": {
+      "title": "Sign in to see your account",
+      "text": "Your courses, progress, orders and package appear here once you are signed in.",
+      "alt": "No account yet? Sign up free and start with a free course."
+    },
+    "overview": {
+      "hello": "Hello, {name}",
+      "summary": "Learning summary",
+      "currentPackage": "Current package",
+      "expiresOn": "Expires {date}",
+      "daysLeftLabel": "left:",
+      "upgradeHint": "Upgrade to study the courses included in a package",
+      "managePackage": "Manage package",
+      "viewPackages": "View packages",
+      "continueTitle": "Pick up where you left off",
+      "continueSub": "Progress is saved automatically — carry on from any device",
+      "allCourses": "All my courses ({count})",
+      "lastLesson": "Last lesson:",
+      "lastStudied": "Last studied {when}",
+      "quizLesson": "End-of-course quiz"
+    },
+    "empty": {
+      "learningTitle": "You are not studying anything yet",
+      "overviewText": "Start with a free member course, or find one that matches what you are interested in.",
+      "learningText": "Start with a free member course, or find one that matches what you are interested in — courses you have access to appear here with your progress.",
+      "findCourses": "Find courses",
+      "freeCourses": "See free courses"
+    },
+    "notif": {
+      "sub": "Orders, access about to expire, and essay review results",
+      "newCount": "{count} new",
+      "new": "new",
+      "readAll": "Mark all as read",
+      "markRead": "Mark as read",
+      "emptyTitle": "No notifications yet",
+      "emptyText": "Course purchases, essay review results and expiring access will appear here.",
+      "type": {
+        "purchase": "Order",
+        "essay-pass": "Essay passed",
+        "essay-revision": "Essay needs revision",
+        "essay-submitted": "Essay submitted",
+        "expiry": "Access or package expiring",
+        "welcome": "Welcome"
+      }
+    },
+    "cta": {
+      "continue": "Continue",
+      "start": "Start learning",
+      "viewResult": "View results",
+      "courseDetail": "Course details",
+      "addToCart": "Add to cart",
+      "inCart": "Already in cart",
+      "buyAgain": "Buy again",
+      "buyCourse": "Buy this course",
+      "renewPackage": "Renew package",
+      "takeQuiz": "Take the quiz"
+    },
+    "learning": {
+      "filterLabel": "Filter courses by status",
+      "showing": "Showing {count} courses",
+      "noneInTab": "No courses with this status",
+      "noneInTabText": "Try another status, or look at all of your courses.",
+      "grantedOn": "Access granted",
+      "expiryDate": "Expiry date",
+      "quiz": "Quiz",
+      "source": {
+        "package": "Included in package",
+        "purchase": "Bought separately",
+        "free": "Free for members"
+      },
+      "expiredValue": "Expired",
+      "endedOn": "Withdrawn on {date}",
+      "accessEndedOn": "Access ended {date}",
+      "followsPackage": "Follows the package",
+      "untilDate": "until {date}",
+      "noExpiry": "No expiry",
+      "accessUntil": "Access runs to this date",
+      "quizPassed": "Passed",
+      "quizPassedNote": "Both the multiple choice and the essay have passed",
+      "quizRevision": "Needs revision",
+      "quizRevisionNote": "Your instructor has sent comments to work from",
+      "quizPending": "Awaiting review",
+      "quizPendingNote": "Your instructor is reviewing your essay",
+      "quizTodo": "Not taken",
+      "quizTodoNote": "Available once every lesson is finished",
+      "quizEndedNote": "This course has been withdrawn",
+      "quizExpiredNote": "Buy the course again to carry on and take the quiz",
+      "progress": "Progress",
+      "progressKept": "Progress (kept from before)",
+      "lessonsDone": "{done}/{total} lessons",
+      "notStartedBadge": "Not started"
+    },
+    "lock": {
+      "ended": {
+        "title": "This course has been withdrawn",
+        "text": "It is no longer on sale and its videos and learner materials cannot be opened. Your history and the progress you made ({pct}%) are kept."
+      },
+      "access-expired": {
+        "title": "Your access to this course has expired",
+        "text": "Buy it again to reopen it — your progress ({pct}%) is kept and you carry on from the same lesson."
+      },
+      "pkg-expired": {
+        "title": "Your package has expired",
+        "text": "Renew it to carry on with the courses it covers from where you stopped ({pct}%), or buy this course on its own."
+      }
+    },
+    "orders": {
+      "filterLabel": "Filter orders by status",
+      "toolbarNote": "Course orders only, newest first",
+      "showing": "Showing {count} orders",
+      "order": "Order",
+      "tab": {
+        "all": "All",
+        "success": "Successful",
+        "failed": "Failed or cancelled"
+      },
+      "status": {
+        "paid": "Paid",
+        "free": "Free enrolment",
+        "failed": "Payment failed",
+        "cancelled": "Cancelled"
+      },
+      "method": {
+        "card": "Credit or debit card",
+        "qr": "QR PromptPay",
+        "free": "No charge"
+      },
+      "itemCount": "{count} courses",
+      "coupon": "Code {code}",
+      "normalPrice": "Normal price",
+      "net": "Total",
+      "saved": "You saved {amount} baht",
+      "noteFailed": "Payment failed — nothing was charged and no access was opened · no receipt",
+      "noteCancelled": "This order was cancelled · no receipt",
+      "noteTax": "Tax invoice requested ({type}) · {status}",
+      "taxType": {
+        "individual": "individual",
+        "corporate": "company"
+      },
+      "receiptStatus": {
+        "issued": "issued",
+        "processing": "in progress"
+      },
+      "reorder": "Order again",
+      "receipt": "Receipt",
+      "receiptFor": "Download the receipt for order {id}",
+      "detail": "Details",
+      "noneInTab": "No orders with this status",
+      "noneInTabText": "Try another status, or look at all of your orders.",
+      "emptyTitle": "No orders yet",
+      "emptyText": "Once you buy a course, the order and its receipt appear here."
+    },
+    "pkg": {
+      "currentEyebrow": "Current package",
+      "pricePerYear": "{price} baht/year",
+      "noCharge": "No charge",
+      "perYear": "baht/year",
+      "memberType": "Member type",
+      "startDate": "Start date",
+      "endDate": "Expiry date",
+      "noExpiry": "No expiry",
+      "daysLeft": "Days left",
+      "expiredAlready": "Expired",
+      "unlimited": "Unlimited",
+      "daysMeter": "Days left on your package",
+      "daysOf": "{left} of {total} days left",
+      "benefits": "Benefits",
+      "benefitCourses": "Study every course marked “included in package” right away ({count} courses)",
+      "benefitFree": "Study every free member course",
+      "renew": "Renew package",
+      "change": "Change package",
+      "upgrade": "Upgrade package",
+      "plansTitle": "Change or upgrade your package",
+      "plansDesc": "Every paid plan opens the courses marked “included in package” for as long as your membership runs. Only the plans for your member type are shown.",
+      "plansFor": "Showing plans for",
+      "yourPlan": "Your package",
+      "currentPlan": "Current package",
+      "choosePlan": "Choose this plan",
+      "plansCount": "Showing {count} plans for {type}",
+      "plansFoot": "Billed yearly · prices and benefits may change",
+      "includedTitle": "Courses included in your package",
+      "includedSub": "Open right away for as long as {plan} runs, with nothing more to buy · {count} courses"
+    },
+    "profile": {
+      "jumpLabel": "On this page",
+      "basic": "Basic information",
+      "interests": "Interests",
+      "security": "Security",
+      "consent": "What we send you",
+      "basicNote": "Your name and title appear on your account and documents, so please get them right",
+      "requiredLead": "fields marked",
+      "asterisk": "asterisk",
+      "requiredTail": "are required",
+      "email": "Email address",
+      "emailHelp": "Used to sign in — it cannot be changed here",
+      "phone": "Mobile number",
+      "optional": "(optional)",
+      "phonePlaceholder": "e.g. 081-234-5678",
+      "prefixLabel": "Title",
+      "prefix": {
+        "student": "Veterinary student",
+        "male": "Veterinarian (male)",
+        "female": "Veterinarian (female)"
+      },
+      "firstName": "First name (Thai)",
+      "lastName": "Last name (Thai)",
+      "licenseNo": "Veterinary licence number",
+      "licenseHelp": "For example: ว.12345",
+      "licenseExpiry": "Licence expiry date",
+      "licenseExpiresOn": "Expires: {date}",
+      "studentLicenseNote": "Veterinary students do not need a licence number or expiry date.",
+      "workplace": "Workplace",
+      "workplacePlaceholder": "e.g. clinic, animal hospital or school",
+      "province": "Province",
+      "provincePlaceholder": "Choose a province",
+      "note": "Note",
+      "notePlaceholder": "Anything else you would like us to know",
+      "pdpaTitle": "Permission to use your personal data",
+      "pdpaText": "I agree that Minna may hold and use my personal data to provide the service and look after my account, as set out in the privacy policy.",
+      "pdpaLink": "Read the privacy policy",
+      "unsaved": "You have unsaved changes",
+      "saved": "Saved",
+      "reset": "Undo changes",
+      "save": "Save changes",
+      "interestsTitle": "What you see first",
+      "interestsLegend": "Choose the subjects you are interested in",
+      "interestsDesc": "The subjects you pick are shown first every time you visit.",
+      "interestsCount": "{count} of {total} subjects chosen",
+      "interestsAll": "Every subject ({total} in all)",
+      "confirm": "Confirm",
+      "securitySub": "Manage your password and the devices signed in to your account",
+      "password": "Password",
+      "passwordHint": "Use at least 8 characters with both letters and numbers, and do not reuse it elsewhere.",
+      "changePassword": "Change password",
+      "devices": "Signed-in devices",
+      "thisDevice": "This device",
+      "signOutDevice": "Sign {name} out",
+      "signOutAll": "Sign out everywhere",
+      "signOutAllText": "Signs out all {count} other devices and leaves the one you are using now.",
+      "consentTitle": "News and notifications",
+      "consentSub": "Choose what you want to receive — changes save straight away",
+      "consents": {
+        "news": {
+          "title": "News",
+          "text": "News, articles and events from Minna"
+        },
+        "newCourses": {
+          "title": "New courses",
+          "text": "Tell me when a new course appears in a subject I follow"
+        },
+        "expiryAlert": {
+          "title": "Before access expires",
+          "text": "Warn me before course access or my package runs out"
+        }
+      },
+      "on": "On",
+      "off": "Off",
+      "logoutText": "Signs you out on this device. Your progress and account details are kept."
+    }
+  },
+  "about": {
+    "hero": {
+      "eyebrow": "About Minna",
+      "titleA": "A new language, ",
+      "titleB": "a little every day",
+      "lead": "Minna is an online language school that keeps courses, lessons, practice and your progress in one place. It is built for people with jobs and timetables: easy to start, easy to come back to, and aimed at language you can actually use.",
+      "ctaPrimary": "Browse courses",
+      "ctaSecondary": "Get to know us",
+      "imageAlt": "A group of learners going over a lesson together"
+    },
+    "who": {
+      "eyebrow": "Who We Are",
+      "title": "Who we are",
+      "quote": "Minna is an online language school built on one idea: a language does not start in a textbook, it starts with the first sentence you dare to say out loud. So our lessons are short, clear, and always end with you using the language.",
+      "body": "Japanese, English and Vietnamese sit side by side in one account, with practice, downloadable notes, and a progress record that always tells you what to study next.",
+      "sign": "Minna · Online language school",
+      "imageAlt": "A learner writing down new vocabulary during a lesson"
+    },
+    "beliefs": {
+      "eyebrow": "Our Beliefs",
+      "title": "What we believe",
+      "intro": "Every course and every lesson on Minna starts from the same three ideas — a language should be easy to reach, worth using, and possible to study every day without a fight.",
+      "items": [
+        {
+          "title": "Lessons you can reach",
+          "text": "Short lessons in a clear order, on a laptop, a tablet or a phone, wherever you happen to have ten minutes."
+        },
+        {
+          "title": "Speaking from lesson one",
+          "text": "Every lesson carries sentences you would really say, with native audio and pronunciation practice to try them on straight away."
+        },
+        {
+          "title": "Keeping the streak",
+          "text": "We remember where you stopped, count the days you studied, and bring you back to the next lesson in a single account."
+        }
+      ]
+    },
+    "practice": {
+      "eyebrow": "Practice-oriented",
+      "title": "Language that works outside the lesson",
+      "text": "The material is built around the situations you actually meet: introducing yourself, ordering food, talking to colleagues, writing an email, sitting an interview.",
+      "checks": [
+        "Dialogues from real situations, with native audio",
+        "Vocabulary and grammar summaries to review later",
+        "Every level, from no prior study to using it at work",
+        "Exercises and written work marked by your teacher, with notes"
+      ],
+      "link": "Browse courses by language and level",
+      "imageAlt": "A vocabulary notebook and a language textbook on a desk"
+    },
+    "platform": {
+      "eyebrow": "From Lesson to Conversation",
+      "title": "From a lesson to a conversation",
+      "lead": "Start with a lesson short enough to finish in one sitting, practise the sounds, work through the exercises, and watch your own progress build — until the sentence you once memorised is simply one you can say.",
+      "steps": [
+        {
+          "title": "Read the lesson and vocabulary"
+        },
+        {
+          "title": "Watch the video"
+        },
+        {
+          "title": "Do the exercises and written work"
+        },
+        {
+          "title": "Follow your progress"
+        }
+      ],
+      "floatTitle": "Courses · practice · progress",
+      "floatText": "in one account",
+      "imageAlt": "A learner studying a language online on a laptop"
+    },
+    "community": {
+      "eyebrow": "Community / Learning Together",
+      "title": "Getting better, together",
+      "sub": "A place for complete beginners, school and university students, and working adults who want a new language they can really use.",
+      "cards": [
+        {
+          "title": "Ask in the lesson",
+          "text": "Put a question to your teacher and compare notes with other learners, in any lesson."
+        },
+        {
+          "title": "Any starting point",
+          "text": "Packages and access are shaped around what you are after, whether that is starting from nothing or using the language at work."
+        },
+        {
+          "title": "Several languages, one place",
+          "text": "Study more than one language, switch between them freely, and keep all your progress in the same account."
+        }
+      ]
+    },
+    "cta": {
+      "title": "Start your next language with Minna",
+      "text": "Pick the language and the level that fit, study on any device, and always pick up where you left off.",
+      "button": "Browse courses"
+    }
+  },
+  "legal": {
+    "toc": "Contents",
+    "related": "Related documents",
+    "protoTitle": "Sample content for the prototype",
+    "protoText": "This document exists to show the structure of the page and how it links to the rest of the site. It is not a binding legal document and has not been reviewed by a lawyer.",
+    "metaEffective": "In effect 1 January 2026",
+    "metaUpdated": "Last updated 23 September 2026",
+    "metaVersion": "Version 1.0",
+    "privacy": {
+      "title": "Privacy policy",
+      "crumb": "Privacy policy",
+      "lead": "Minna respects every learner's privacy. This document explains what personal data we collect, how we use, disclose and protect it, under Thailand's Personal Data Protection Act B.E. 2562 (PDPA).",
+      "s": {
+        "controller": {
+          "toc": "Data controller and contact",
+          "heading": "The data controller and how to reach us",
+          "p1a": "Minna (\"we\", \"the school\", \"the platform\") acts as the ",
+          "p1b": "data controller",
+          "p1c": " for the personal data collected through the Minna website and online language school.",
+          "p2": "If you have a question about this policy, want to exercise one of your rights, or wish to complain about how we handle personal data, contact our Data Protection Officer:",
+          "contact": [
+            {
+              "b": "Email",
+              "t": "contact{'@'}minna.example (sample)"
+            },
+            {
+              "b": "Telephone",
+              "t": "02-XXX-XXXX (sample) · Mon–Fri 9.00–17.00"
+            },
+            {
+              "b": "Address",
+              "t": "Minna office (sample address for the prototype)"
+            },
+            {
+              "b": "Response time",
+              "t": "Within 30 days of receiving a complete request"
+            }
+          ]
+        },
+        "collect": {
+          "toc": "What we collect",
+          "heading": "The personal data we collect",
+          "p1": "We collect only what the service needs, in four groups.",
+          "h1": "2.1 Account and learner profile",
+          "account": [
+            "Your name, email address and phone number",
+            "The languages you chose to study and the level you were placed at",
+            "The goal you picked for yourself — work, travel, or a proficiency exam",
+            "Your time zone and the language the site is displayed in",
+            "A profile photo, if you upload one"
+          ],
+          "h2": "2.2 Study record and results",
+          "learning": [
+            "Which courses you enrolled on, when you started, and when access ends",
+            "Progress lesson by lesson, video watch time, and the lesson you stopped at",
+            "Exercise answers and scores, plus written work and audio sent to a teacher",
+            "Consistency statistics, such as your study streak and total study time"
+          ],
+          "h3": "2.3 Orders and payment",
+          "payment": [
+            "Order history, the courses or packages bought, amounts paid, and coupons used",
+            "Billing details for a receipt or tax invoice — taxpayer name, taxpayer number, branch and address — kept only if you ask for a tax invoice",
+            "Payment status and the transaction reference"
+          ],
+          "cardTitle": "We never hold your card details",
+          "cardText": "Full card numbers, CVV codes and banking passwords are not stored on our systems. They go straight to a payment provider certified to PCI DSS.",
+          "h4": "2.4 Technical and usage data",
+          "technical": [
+            "IP address, browser type and version, operating system, and device type",
+            "Access logs, sign-in times, and the pages you visited",
+            "Data stored on your own device, such as cookies and local storage"
+          ]
+        },
+        "purpose": {
+          "toc": "Purposes and legal bases",
+          "heading": "Why we process your data, and on what basis",
+          "p1": "We process your personal data on the legal bases set out in sections 24 and 26 of the PDPA:",
+          "caption": "Table of processing purposes, the data used, and the legal basis for each",
+          "head": [
+            "Purpose",
+            "Data used",
+            "Legal basis"
+          ],
+          "rows": [
+            [
+              "Creating and running your account, granting access",
+              "Account data · study record",
+              "Contract"
+            ],
+            [
+              "Taking orders, payments and refunds",
+              "Order data",
+              "Contract"
+            ],
+            [
+              "Issuing receipts and tax invoices, keeping accounting records",
+              "Order data",
+              "Legal obligation"
+            ],
+            [
+              "Recording your progress and exercise results",
+              "Study record",
+              "Contract"
+            ],
+            [
+              "Suggesting courses and lessons that suit your level",
+              "Study record · usage data",
+              "Legitimate interest"
+            ],
+            [
+              "Sending study reminders and marketing email",
+              "Email · the interests you chose",
+              "Consent"
+            ],
+            [
+              "Keeping the platform secure and preventing misuse",
+              "Technical data · access logs",
+              "Legitimate interest"
+            ],
+            [
+              "Improving the lessons and the experience",
+              "Aggregated, non-identifying usage data",
+              "Legitimate interest"
+            ],
+            [
+              "Answering questions and after-sales support",
+              "Account data · order data",
+              "Contract"
+            ]
+          ],
+          "p2a": "Where we rely on consent, you ",
+          "p2b": "may withdraw it at any time",
+          "p2c": ", without affecting any lawful processing carried out before the withdrawal."
+        },
+        "cookies": {
+          "toc": "Cookies and tracking",
+          "heading": "Cookies and tracking technologies",
+          "p1": "We use cookies and local storage to keep the platform working and to remember your settings. There are three kinds:",
+          "items": [
+            {
+              "b": "Strictly necessary",
+              "t": " — your sign-in state, your chosen language, and your cart. These cannot be turned off."
+            },
+            {
+              "b": "Analytics",
+              "t": " — counts visitors and routes through the site without identifying anyone, so we can improve the lessons."
+            },
+            {
+              "b": "Marketing",
+              "t": " — used only with your consent, to measure advertising and show you relevant courses."
+            }
+          ],
+          "p2": "You can delete or refuse cookies in your browser settings, but turning off the necessary ones will stop you signing in and opening a course."
+        },
+        "share": {
+          "toc": "Disclosure to third parties",
+          "heading": "Disclosure to third parties",
+          "p1a": "We ",
+          "p1b": "do not sell, rent or trade",
+          "p1c": " your personal data for anyone else's marketing. We disclose only what is necessary, to:",
+          "items": [
+            {
+              "b": "Payment providers",
+              "t": " — to take payment, check transactions and issue refunds"
+            },
+            {
+              "b": "IT infrastructure providers",
+              "t": " — cloud hosting, email delivery and video streaming, each bound by a data processing agreement"
+            },
+            {
+              "b": "Course teachers",
+              "t": " — only the written work and audio that has to be marked, shown with the learner's name"
+            },
+            {
+              "b": "Analytics providers",
+              "t": " — aggregated, non-identifying data only, to measure and improve the lessons"
+            },
+            {
+              "b": "Government bodies and law enforcement",
+              "t": " — on a lawful order"
+            }
+          ],
+          "p2": "Where data is transferred abroad — to a cloud provider, for instance — we make sure the destination offers adequate protection, or apply the safeguards the PDPA requires."
+        },
+        "retention": {
+          "toc": "How long we keep it",
+          "heading": "How long we keep your data",
+          "p1": "We keep data only as long as the purpose requires, then delete it or render it non-identifying.",
+          "caption": "Table of retention periods by data type",
+          "head": [
+            "Data type",
+            "Retention period"
+          ],
+          "rows": [
+            [
+              "Account data",
+              "While the account is open, and one year after it closes"
+            ],
+            [
+              "Progress and results",
+              "Three years from your last study session"
+            ],
+            [
+              "Accounting and tax records",
+              "Ten years, as the law requires"
+            ],
+            [
+              "Access logs",
+              "90 days"
+            ],
+            [
+              "Support correspondence",
+              "Two years from the day the case was closed"
+            ],
+            [
+              "Data processed on consent",
+              "Until you withdraw consent"
+            ]
+          ]
+        },
+        "rights": {
+          "toc": "Your rights",
+          "heading": "Your rights over your personal data",
+          "p1": "Under the PDPA you have the following rights:",
+          "items": [
+            {
+              "b": "Access and a copy",
+              "t": " — to learn what data we hold about you and receive a copy"
+            },
+            {
+              "b": "Rectification",
+              "t": " — most of it you can correct yourself, on ",
+              "href": "/account/profile",
+              "link": "your profile page",
+              "after": ""
+            },
+            {
+              "b": "Erasure",
+              "t": " — once the purpose has passed, or once you withdraw consent"
+            },
+            {
+              "b": "Restriction",
+              "t": " — while we are checking whether the data is accurate"
+            },
+            {
+              "b": "Objection",
+              "t": " — particularly to processing for direct marketing"
+            },
+            {
+              "b": "Portability",
+              "t": " — to receive your data in a machine-readable form"
+            },
+            {
+              "b": "Withdrawal of consent",
+              "t": " — at any time, without affecting processing already done"
+            },
+            {
+              "b": "Complaint",
+              "t": " — to the Personal Data Protection Committee office"
+            }
+          ],
+          "p2b": "How to exercise them: ",
+          "p2": "send your request, with proof of identity, to the Data Protection Officer's address in section 1. We answer within 30 days, and may ask for more information to confirm the request really comes from you.",
+          "p3": "If erasing your data makes the service impossible to provide — closing your account, for instance — any remaining course access ends at the same time, and this does not create a right to a refund."
+        },
+        "security": {
+          "toc": "Security measures",
+          "heading": "How we keep your data safe",
+          "items": [
+            "Every page is served over HTTPS/TLS",
+            "Passwords are stored as one-way hashes; nobody on the team can read yours",
+            "Access to data is limited by role, and every access is logged for review",
+            "Backups run regularly, and restores are tested on a schedule",
+            "Risks are reviewed and systems updated against current security standards"
+          ],
+          "p1": "If a breach occurs that poses a high risk to your rights and freedoms, we notify the Personal Data Protection Committee office within 72 hours and tell you without delay."
+        },
+        "minors": {
+          "toc": "Minors",
+          "heading": "Data about minors",
+          "p1": "The service is open to people aged 13 and over. Learners under 20 need a parent or guardian's consent before signing up and before every payment, and we may ask for evidence of that consent.",
+          "p2": "If we learn that we have collected a minor's data without valid consent, we delete it as quickly as we can."
+        },
+        "changes": {
+          "toc": "Changes to this policy",
+          "heading": "Changes to this policy",
+          "p1": "We may revise this policy from time to time to keep up with the service and with the law. The version in force is always the one published on this page.",
+          "p2": "Where a change is material, we tell you at least 30 days in advance, by email or by a notice on the platform, before it takes effect."
+        }
+      }
+    },
+    "terms": {
+      "title": "Terms of use",
+      "crumb": "Terms of use",
+      "lead": "These terms are the agreement between you and Minna covering your use of the Minna online language school. Signing up or using the service means you have read and accepted all of them.",
+      "s": {
+        "accept": {
+          "toc": "Acceptance and definitions",
+          "heading": "Acceptance and definitions",
+          "p1a": "By signing up, signing in, buying a course or using any part of the platform, you agree to be bound by these terms, together with the ",
+          "p1b": " and the ",
+          "p1c": ", which form part of them. If you do not accept them, please stop using the service.",
+          "h1": "Definitions",
+          "terms": [
+            {
+              "b": "\"The platform\"",
+              "t": " means the Minna website and online language school in full."
+            },
+            {
+              "b": "\"You\" or \"the user\"",
+              "t": " means anyone using the service, whether or not they have signed up."
+            },
+            {
+              "b": "\"Content\"",
+              "t": " means every video, document, image, audio file, exercise and teaching material on the platform."
+            },
+            {
+              "b": "\"Access\"",
+              "t": " means the right to study a course, obtained by buying it, by a package, or because the course is free."
+            },
+            {
+              "b": "\"Level\"",
+              "t": " means the difficulty Minna assigns to a course so lessons can be ordered sensibly. It is not an official proficiency result."
+            }
+          ]
+        },
+        "eligibility": {
+          "toc": "Who can use it, and signing up",
+          "heading": "Who can use the service, and signing up",
+          "p1": "The platform is open to the general public. There are two kinds of account:",
+          "kinds": [
+            {
+              "b": "Standard account",
+              "t": " — anyone aged 13 or over; free courses and ordinary purchases"
+            },
+            {
+              "b": "Account for a learner under 20",
+              "t": " — a parent or guardian must consent before signing up and before each payment"
+            }
+          ],
+          "p2": "You confirm that what you give us when signing up is true and current. If it turns out to be false, we may suspend the account and any access attached to it, without a refund.",
+          "p3": "Some benefits, such as student pricing, may need further evidence before they can be used."
+        },
+        "account": {
+          "toc": "Your account and its security",
+          "heading": "Your account and its security",
+          "leadB": "One account, one person",
+          "leadT": " — do not share your account or password so that someone else can study. Unusual simultaneous use across devices is detected.",
+          "items": [
+            "You are responsible for keeping your password safe and for everything done under your account",
+            "Tell us at once if you suspect your account has been accessed without your permission",
+            "We may sign every device out when we see a security risk"
+          ]
+        },
+        "access": {
+          "toc": "Course access and its duration",
+          "heading": "Course access and its duration",
+          "p1": "A successful payment gives you access for a limited time, not ownership of the content. The length of that access is shown on each course page before you buy.",
+          "h1": "4.1 Kinds of access",
+          "kinds": [
+            {
+              "b": "A single course",
+              "t": " — study that course for the number of days stated, counted from a successful payment"
+            },
+            {
+              "b": "A membership package",
+              "t": " — study every course included in the package, without limit, for as long as the membership lasts"
+            },
+            {
+              "b": "A free course",
+              "t": " — enrol straight away, and study it for as long as it stays published"
+            }
+          ],
+          "h2": "4.2 When access ends",
+          "expiry": [
+            "When access ends you can no longer open the lessons, but your progress and results are kept",
+            "You may buy access again at any time; the full period starts over and you carry on from where you were",
+            "We send an email reminder seven days before access ends"
+          ],
+          "p2": "We may revise, extend or correct course content to keep it current, and may withdraw a course from sale — anyone who already has access keeps it until it expires."
+        },
+        "ip": {
+          "toc": "Intellectual property",
+          "heading": "Intellectual property",
+          "p1": "Everything on the platform — video, slides, documents, audio, images, exercises and the arrangement of the lessons — belongs to Minna or to the teachers who licensed it to us. What you receive is permission to view it for your own study, and nothing more.",
+          "banner": "Strictly not permitted",
+          "forbidden": [
+            "Recording the screen, downloading, or reproducing video and documents by any means",
+            "Publishing, forwarding or selling the content to anyone else, paid or free",
+            "Using the content to teach, or in your own material, without written permission",
+            "Adapting, translating, or making derivative works from our content",
+            "Using automated tools to extract data or content from the system"
+          ],
+          "p2": "Documents explicitly marked \"downloadable\" may be downloaded for your own revision only, and still may not be passed on. Infringement can lead to account suspension and legal action."
+        },
+        "quizzes": {
+          "toc": "Quizzes and assessment",
+          "heading": "Quizzes and how we assess your work",
+          "h1": "6.1 Taking a quiz",
+          "rules": [
+            "Multiple-choice questions may be retaken without limit; your best score is kept as the result for that lesson",
+            "Written work and audio recordings go to a teacher, who normally returns them within seven working days",
+            "The pass mark for each lesson is shown on the course page before you start",
+            "Having someone else take a quiz for you is cheating, and every result will be voided"
+          ],
+          "h2": "6.2 Progress and results",
+          "p1": "Progress and scores are recorded automatically for every lesson, and you can look back over them from your account for as long as the account is open. All of it is internal to Minna.",
+          "h3": "6.3 What a Minna level does not mean",
+          "noticeTitle": "Levels and scores are internal to Minna",
+          "noticeText": "The levels and scores on the platform exist to put lessons in the right order for you. They are not an official proficiency result and cannot be cited to a school, an employer or a government body.",
+          "p2": "If you need a result you can cite, sit the official examination for that language with the body that runs it. Our courses are designed to help you prepare, but we do not guarantee the outcome."
+        },
+        "prohibited": {
+          "toc": "What you must not do",
+          "heading": "What you must not do",
+          "p1": "You agree not to:",
+          "items": [
+            "Share your account, password or lesson links with anyone who has no access",
+            "Record, reproduce or publish the platform's content anywhere",
+            "Attempt to break into the system, probe it for weaknesses, or get around access controls",
+            "Use automated tools, scripts or bots to extract data or create accounts in bulk",
+            "Post advertising, scams or unlawful material in the question-and-answer areas",
+            "Threaten, insult or discriminate against other learners and teachers",
+            "Use someone else's details to sign up or to pay"
+          ]
+        },
+        "suspend": {
+          "toc": "Suspending and closing an account",
+          "heading": "Suspending and closing an account",
+          "byYouB": "By you",
+          "byYouT": " — you may ask us to close your account at any time. Closing it does not create a right to a refund for the access you have left, unless the case falls under the ",
+          "byYouEnd": ".",
+          "byUsB": "By us",
+          "byUsT": " — we may suspend or close your account, with reasonable notice, where:",
+          "reasons": [
+            "You break any of these terms, particularly by sharing an account or infringing copyright",
+            "You gave false information when signing up or when claiming a discount",
+            "You use the system in a way that harms other learners or the security of the platform",
+            "A lawful order requires us to"
+          ],
+          "p1": "Where we close an account because you broke these terms, any remaining access ends immediately and no refund is due."
+        },
+        "liability": {
+          "toc": "Limitation of liability",
+          "heading": "Limitation of liability",
+          "noticeTitle": "No guarantee of results",
+          "noticeText": "The content is made for studying a language on your own. How far you get depends on the time and consistency you put in. Minna does not guarantee your progress, your result in any external proficiency exam, or any professional outcome.",
+          "items": [
+            "We are not liable for indirect or consequential loss, or for lost opportunity",
+            "We do not warrant that the service will be uninterrupted or entirely free of error",
+            "We are not liable for problems caused by your own device, network or software",
+            "We are not liable for events beyond our reasonable control"
+          ],
+          "capB": "Our total liability",
+          "capT": " — capped at what you actually paid us in the twelve months before the event",
+          "p1": "None of the above applies to liability arising from our wilful misconduct or gross negligence, or to liability the law does not permit us to limit."
+        },
+        "law": {
+          "toc": "Governing law and changes",
+          "heading": "Governing law and changes to these terms",
+          "p1": "These terms are governed by Thai law, and any dispute falls under the jurisdiction of the Thai courts.",
+          "p2": "We may amend these terms from time to time. Where a change is material we give at least 30 days' notice by email or by a notice on the platform. Continuing to use the service after the effective date means you accept the amended version.",
+          "p3": "If any clause turns out to be void or unenforceable, the rest remain in full effect."
+        }
+      }
+    },
+    "purchase": {
+      "title": "Purchase and refund terms",
+      "crumb": "Purchase and refund terms",
+      "lead": "These are the terms you accept when you tick \"I accept the purchase and refund terms\" at checkout. They cover prices, how to pay, when access starts, and how refunds are decided.",
+      "s": {
+        "price": {
+          "toc": "Prices and tax",
+          "heading": "Prices and tax",
+          "leadB": "Every price is in Thai baht and includes VAT",
+          "leadT": " — the figure on the course page is the amount you pay.",
+          "items": [
+            "A struck-through price is the full price before whatever campaign discount is running",
+            "We may change prices at any time; a change never affects an order already paid for",
+            "A course marked free costs nothing, and nothing is charged later"
+          ]
+        },
+        "payment": {
+          "toc": "How to pay, and tax invoices",
+          "heading": "How to pay, and tax invoices",
+          "p1": "The platform takes payment two ways:",
+          "methods": [
+            {
+              "b": "Credit or debit card",
+              "t": " — charged immediately; access is granted automatically once the payment succeeds"
+            },
+            {
+              "b": "PromptPay (QR)",
+              "t": " — scan in your banking app; we confirm and grant access within a few minutes"
+            }
+          ],
+          "p2a": "Payments are handled by a provider certified to PCI DSS. ",
+          "p2b": "We never store your card number.",
+          "h1": "Receipts and tax invoices",
+          "receiptA": "An electronic receipt is issued automatically and can be downloaded from ",
+          "receiptLink": "your order history",
+          "receiptB": ".",
+          "invoiceB": "A full tax invoice",
+          "invoiceT": " — enter your taxpayer details at checkout, or ask for one within 7 days of the order",
+          "correction": "Taxpayer details entered incorrectly can also be corrected within 7 days; after that the accounting period has closed"
+        },
+        "coupon": {
+          "toc": "Coupons and discounts",
+          "heading": "Coupons and discounts",
+          "items": [
+            {
+              "b": "",
+              "t": "One coupon per order, and a coupon cannot be combined with a campaign discount"
+            },
+            {
+              "b": "A coupon must be entered before you confirm the order",
+              "t": " — it cannot be applied afterwards"
+            },
+            {
+              "b": "",
+              "t": "Coupons expire, and may be limited to particular courses or languages"
+            },
+            {
+              "b": "A coupon has no cash value",
+              "t": " — it cannot be exchanged for money or transferred to anyone else"
+            },
+            {
+              "b": "",
+              "t": "We may void a coupon obtained improperly and charge the difference if we find out later"
+            }
+          ]
+        },
+        "grant": {
+          "toc": "When access starts",
+          "heading": "When access starts",
+          "items": [
+            {
+              "b": "Paying by card",
+              "t": " — access starts the moment the bank approves the transaction"
+            },
+            {
+              "b": "",
+              "t": "Paying by PromptPay — access starts when the provider confirms the transfer, usually within 15 minutes"
+            },
+            {
+              "b": "The expiry date is counted from the day access starts",
+              "t": " — not from the day you open the first lesson"
+            },
+            {
+              "b": "",
+              "t": "If you have paid but have no access after 24 hours, contact us with your order number"
+            }
+          ]
+        },
+        "refund": {
+          "toc": "Refund policy",
+          "heading": "Refund policy",
+          "p1": "An online course is a digital product you can open immediately, so a refund depends on how much of it you have actually used:",
+          "caption": "Table of refund conditions by study progress and elapsed time",
+          "head": [
+            "Situation",
+            "Condition",
+            "Refunded"
+          ],
+          "rows": [
+            [
+              "Not started",
+              "Requested within 7 days of payment, with no lesson opened",
+              "100% refunded"
+            ],
+            [
+              "Barely started",
+              "Requested within 7 days, with no more than 20% of the course completed",
+              "50% of what you paid"
+            ],
+            [
+              "More than 20% completed",
+              "Whenever the request is made",
+              "No refund"
+            ],
+            [
+              "Written work already submitted for marking",
+              "The course has been used in full",
+              "No refund"
+            ],
+            [
+              "More than 7 days after payment",
+              "Every case, unless an exception below applies",
+              "No refund"
+            ],
+            [
+              "Annual membership package",
+              "Cancelled within the first 14 days, with no package course started",
+              "100% refunded"
+            ],
+            [
+              "A package already in use",
+              "Cancelled after 14 days, or once access has been used",
+              "Pro rata for the remaining months, less handling"
+            ],
+            [
+              "Free course",
+              "Nothing was paid",
+              "Nothing to refund"
+            ]
+          ],
+          "h1": "5.1 Always refunded in full",
+          "p2": "The following exceptions are refunded in full, whatever your progress and whenever you ask:",
+          "alwaysA": "A fault on our side left you ",
+          "alwaysB": "unable to study for more than 72 hours",
+          "alwaysC": " and we could not fix it",
+          "always": [
+            "We cancelled or withdrew the course before your access expired",
+            "What you received differs materially from what was advertised",
+            "You were charged twice through an error on our side",
+            "You were charged without making the transaction (a fraudulent payment), once confirmed"
+          ],
+          "h2": "5.2 Not refunded",
+          "neverBefore": [
+            "Changing your mind, buying the wrong course, or buying twice without checking, once 7 days have passed",
+            "Not finding the time to study until access expired",
+            "Your device or connection not being able to cope, after the minimum requirements were stated"
+          ],
+          "neverLinkA": "The account was suspended for breaking the ",
+          "neverLinkB": " — sharing an account, or infringing copyright, for instance",
+          "neverAfter": [
+            "An external proficiency exam not turning out as you hoped",
+            "You asking us to close your account while access remains"
+          ]
+        },
+        "process": {
+          "toc": "How a refund is handled",
+          "heading": "How a refund is handled, and how long it takes",
+          "steps": [
+            {
+              "b": "Ask",
+              "t": " — contact us with your order number and the reason, within the time limits in section 5"
+            },
+            {
+              "b": "Review",
+              "t": " — we check your study progress and the payment status, which takes no more than 5 working days"
+            },
+            {
+              "b": "Decision",
+              "t": " — we email you the outcome and the amount to be returned, within 7 working days"
+            },
+            {
+              "b": "Payment",
+              "t": " — cards are credited within one or two billing cycles; PromptPay is returned to the original account within 7–14 working days"
+            }
+          ],
+          "noticeTitle": "Access ends when the refund completes",
+          "noticeText": "Once the refund has gone through, access to that course ends immediately, and the progress recorded against it can no longer be opened.",
+          "p1": "We charge nothing to process a refund, but if a bank or payment provider charges a transfer fee, that amount is deducted from what is returned."
+        },
+        "transfer": {
+          "toc": "Changing and transferring access",
+          "heading": "Changing and transferring access",
+          "items": [
+            {
+              "b": "Access is tied to the account that bought it",
+              "t": " — it cannot be transferred or resold"
+            },
+            {
+              "b": "",
+              "t": "A course you have bought cannot be swapped for another. If you bought the wrong one, request a refund under section 5 and buy again"
+            },
+            {
+              "b": "",
+              "t": "Buying a course as a gift for someone else is not available yet"
+            },
+            {
+              "b": "",
+              "t": "To buy for several people at once, contact us about organisation terms"
+            }
+          ]
+        },
+        "package": {
+          "toc": "Packages and renewal",
+          "heading": "Membership packages and renewal",
+          "items": [
+            {
+              "b": "A package runs for a year",
+              "t": " — paid once, usable for the full 12 months"
+            },
+            {
+              "b": "Nothing renews automatically",
+              "t": " — we remind you 14 days before it ends and you choose whether to renew"
+            },
+            {
+              "b": "The courses in a package can change",
+              "t": " — a course you have already started stays available until your membership ends"
+            },
+            {
+              "b": "",
+              "t": "To cancel a package part-way through, see the refund conditions in section 5"
+            },
+            {
+              "b": "",
+              "t": "You can upgrade to a larger package by paying the difference, pro rata for the remaining months"
+            }
+          ]
+        },
+        "complaint": {
+          "toc": "Complaints and contact",
+          "heading": "Complaints and how to reach us",
+          "p1": "If you believe a refund decision was unfair, raise it with us here:",
+          "contact": [
+            {
+              "b": "Email",
+              "t": "contact{'@'}minna.example (sample)"
+            },
+            {
+              "b": "Telephone",
+              "t": "02-XXX-XXXX (sample) · Mon–Fri 9.00–17.00"
+            },
+            {
+              "b": "Response time",
+              "t": "Within 15 working days of receiving the complaint"
+            }
+          ],
+          "p2": "If it still cannot be settled, you may complain to the Office of the Consumer Protection Board or another competent authority."
+        },
+        "faq": {
+          "toc": "Frequently asked questions",
+          "heading": "Frequently asked questions",
+          "items": [
+            {
+              "q": "I opened one lesson. Can I still get a refund?",
+              "a": "Yes. If your total progress is still 20% or less and you ask within 7 days of paying, you get 50% of what you paid back."
+            },
+            {
+              "q": "My access expired before I finished. What now?",
+              "a": "Buy access again from the course page. The full period starts over and you carry on from the progress already saved. Expired access is not itself grounds for a refund."
+            },
+            {
+              "q": "Can I get a tax invoice after the fact?",
+              "a": "Yes, within 7 days of the order: contact us with your order number and your taxpayer details. After that the accounting period has closed and we cannot issue one."
+            },
+            {
+              "q": "Can I buy a course as a gift?",
+              "a": "Not yet. Access is tied to the account that bought it and cannot be transferred. To buy for several people at once, contact us about organisation terms."
+            },
+            {
+              "q": "Can I study several languages at once, and how is that charged?",
+              "a": "You can. Each language is a separate course, or you can take a package that already covers several. Progress in all of them stays in one account."
+            }
+          ]
+        }
+      }
+    }
+  },
+  "commerce": {
+    "free": "Free",
+    "freeForMembers": "for members",
+    "baht": "{n} THB",
+    "normalPrice": "Usual price ",
+    "courseCount": "{n} courses",
+    "cePill": "CE {n}",
+    "summaryTitle": "Order summary",
+    "cancel": "Cancel",
+    "undo": "Undo",
+    "showDetail": "Show detail",
+    "hideDetail": "Hide detail",
+    "steps": {
+      "label": "Order steps",
+      "cart": "Cart",
+      "summary": "Review",
+      "pay": "Payment",
+      "done": "Done",
+      "doneSuffix": " (completed)"
+    },
+    "note": {
+      "free": "Free course — access is granted as soon as you confirm",
+      "renew": "Buy again and carry on from {pct} of the way through · {days} days of fresh access from the day you pay",
+      "renewShort": "Buy again and carry on from {pct} of the way through · {days} days of fresh access",
+      "access": "{days} days of access from the day you pay",
+      "accessWithPackage": "{days} days of access from the day you pay · or {link} to study this course without buying it separately",
+      "renewPackage": "renew your package",
+      "blockedLink": "{text} · {link}"
+    },
+    "block": {
+      "package": "Your package already covers this course — there is nothing to buy",
+      "owned": "You already have access to this course",
+      "ended": "This course is no longer on sale",
+      "missing": "We could not find this course",
+      "startLearning": "Start learning"
+    },
+    "blockBadge": {
+      "package": "In your package",
+      "owned": "Already yours",
+      "ended": "Not on sale"
+    },
+    "trust": {
+      "payment": "Pay by QR or credit/debit card (simulated)",
+      "receipt": "You can ask for a receipt or full tax invoice at the next step",
+      "keptInCart": "Anything you leave unselected stays in your cart"
+    },
+    "toast": {
+      "close": "Dismiss notification"
+    },
+    "confirm": {
+      "close": "Close dialog"
+    },
+    "cart": {
+      "title": "Your cart",
+      "itemCount": "{n} items in your cart",
+      "subtitle": "· Select only the courses you want to order. The rest stay in your cart.",
+      "emptySubtitle": "Nothing in your cart yet",
+      "regionLabel": "Cart items and order summary",
+      "listHeading": "Items in your cart",
+      "emptyTitle": "Your cart is empty",
+      "emptyText": "Pick a course you are interested in and press “Add to cart” to order several at once — or start with a course that is free for members.",
+      "browseCourses": "Browse courses",
+      "browseFree": "Browse free courses",
+      "blockedTitle": "{n} items do not need buying",
+      "blockedText": "Courses in your package, courses you already have access to, and courses no longer on sale are left out of the total. Remove them whenever you like.",
+      "selectAll": "Select all",
+      "selectionCount": "{done} of {total} selected",
+      "select": "Select {title}",
+      "selectBlocked": "Select {title} (unavailable)",
+      "saving": "Save {amount}",
+      "remove": "Remove",
+      "removeAria": "Remove {title} from your cart",
+      "selectedCount": "Courses selected",
+      "normalTotal": "Usual price, total",
+      "normalDiscount": "Off the usual price",
+      "total": "Total",
+      "totalNote": "Before any coupon",
+      "couponNext": "You can enter a coupon at the next step",
+      "guestNotice": "You will need to sign in or sign up before confirming. Everything in your cart is kept.",
+      "checkout": "Continue to order",
+      "goingToCheckout": "Opening your order…",
+      "pickAtLeastOne": "Select at least one course to continue",
+      "confirmTitle": "Remove this course from your cart?",
+      "confirmMessage": "“{title}” will be taken out of your cart. You can add it back later from the course page.",
+      "confirmOk": "Remove from cart",
+      "removed": "“{title}” removed from your cart",
+      "restored": "“{title}” is back in your cart",
+      "added": "“{title}” added to your cart",
+      "alreadyInCart": "That course is already in your cart",
+      "barLabel": "Cart total",
+      "barSelected": "{n} courses selected · total",
+      "barNone": "No courses selected",
+      "signInFirst": "sign in before confirming",
+      "recTitle": "Recommended courses",
+      "recSubMember": "Picked from your interests and what you have studied",
+      "recSubGuest": "Courses our editors recommend"
+    }
   }
 }
