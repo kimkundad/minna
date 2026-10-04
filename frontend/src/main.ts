@@ -8,6 +8,7 @@ import { i18n } from './locales'
 import './assets/css/tokens.css'
 import './assets/css/base.css'
 import './assets/css/components.css'
+import './assets/css/home.css'
 import './assets/css/discovery.css'
 
 createApp(App).use(createPinia()).use(router).use(i18n).mount('#app')

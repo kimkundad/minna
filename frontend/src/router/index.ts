@@ -14,11 +14,19 @@ const router = createRouter({
     {
       path: '/:locale(th|en|jp|vn)',
       children: [
-        { path: '', name: 'home', component: () => import('@/pages/HomePage.vue') },
+        {
+          path: '',
+          name: 'home',
+          component: () => import('@/pages/HomePage.vue'),
+          // The hero runs under a transparent header, so the solid one would
+          // cut a band across the top of the image.
+          meta: { headerVariant: 'overlay', headerActive: 'home' },
+        },
         {
           path: 'courses/:id',
           name: 'course',
           component: () => import('@/pages/CoursePage.vue'),
+          meta: { headerActive: 'courses' },
         },
       ],
     },

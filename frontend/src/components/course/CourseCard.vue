@@ -73,7 +73,7 @@ const cardAction = computed(
   >
     <RouterLink class="cc-media" :to="href" tabindex="-1" aria-hidden="true">
       <CourseImage
-        :src="course.image?.src"
+        :image="course.image"
         :width="640"
         :height="360"
         :art-icon="category?.icon"
