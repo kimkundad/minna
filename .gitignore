@@ -1,23 +1,49 @@
-/.phpunit.cache
-/node_modules
-/public/build
-/public/hot
-/public/storage
-/storage/*.key
-/storage/pail
-/vendor
+# ---- common ----
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+yarn-error.log*
+.idea/
+.vscode/
+.fleet/
+.nova/
+.zed/
+
+# ---- node (frontend / backend / api) ----
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
 .env
-.env.backup
-.env.production
-.phpactor.json
-.phpunit.result.cache
-Homestead.json
-Homestead.yaml
-npm-debug.log
-yarn-error.log
-/auth.json
-/.fleet
-/.idea
-/.nova
-/.vscode
-/.zed
+.env.*
+!.env.example
+
+# ---- api ----
+/api/drizzle/meta/_journal.json.bak
+/api/uploads/
+
+# ---- legacy laravel ----
+/_legacy/vendor/
+/_legacy/node_modules/
+/_legacy/public/build/
+/_legacy/public/hot/
+/_legacy/public/storage
+/_legacy/storage/*.key
+/_legacy/storage/pail/
+/_legacy/storage/framework/cache/
+/_legacy/storage/framework/sessions/
+/_legacy/storage/framework/views/
+/_legacy/storage/logs/
+/_legacy/.phpunit.cache
+/_legacy/.phpunit.result.cache
+/_legacy/.phpactor.json
+/_legacy/auth.json
+
+# ---- design reference ----
+# _design-ref is its own git repo (READ VPN prototype).
+# Clone it from https://github.com/ideavivat/Frontend-Readvpn.git if you need it.
+/_design-ref/
+
+# ---- stray empty dir left by the restructure (safe to delete by hand) ----
+/Frontend-Read/
