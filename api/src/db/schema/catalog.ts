@@ -9,6 +9,7 @@ import {
   json,
   mysqlEnum,
   mysqlTable,
+  primaryKey,
   smallint,
   text,
   uniqueIndex,
@@ -121,7 +122,7 @@ export const courseInstructors = mysqlTable(
     sortOrder: int('sort_order').default(0).notNull(),
   },
   (t) => [
-    uniqueIndex('course_instructors_unique').on(t.courseId, t.userId),
+    primaryKey({ columns: [t.courseId, t.userId] }),
     index('course_instructors_user_idx').on(t.userId),
   ],
 )

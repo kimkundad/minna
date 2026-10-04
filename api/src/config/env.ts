@@ -17,6 +17,14 @@ const schema = z.object({
     .transform((v) => v.split(',').map((s) => s.trim()).filter(Boolean)),
 
   DATABASE_URL: z.string().min(1),
+  /** Managed MySQL (DigitalOcean, PlanetScale, RDS) refuses plaintext connections. */
+  DATABASE_SSL: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  /** Path to the provider's CA certificate. Without it the chain cannot be
+   *  verified, and DATABASE_SSL alone falls back to an unverified connection. */
+  DATABASE_SSL_CA: z.string().optional(),
   REDIS_URL: z.string().optional(),
 
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),

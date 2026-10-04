@@ -34,7 +34,7 @@ CREATE TABLE `roles` (
 CREATE TABLE `user_roles` (
 	`user_id` bigint unsigned NOT NULL,
 	`role_id` bigint unsigned NOT NULL,
-	CONSTRAINT `user_roles_unique` UNIQUE(`user_id`,`role_id`)
+	CONSTRAINT `user_roles_user_id_role_id_pk` PRIMARY KEY(`user_id`,`role_id`)
 );
 --> statement-breakpoint
 CREATE TABLE `users` (
@@ -85,7 +85,7 @@ CREATE TABLE `course_instructors` (
 	`user_id` bigint unsigned NOT NULL,
 	`role` varchar(120),
 	`sort_order` int NOT NULL DEFAULT 0,
-	CONSTRAINT `course_instructors_unique` UNIQUE(`course_id`,`user_id`)
+	CONSTRAINT `course_instructors_course_id_user_id_pk` PRIMARY KEY(`course_id`,`user_id`)
 );
 --> statement-breakpoint
 CREATE TABLE `course_modules` (
@@ -363,7 +363,7 @@ CREATE TABLE `orders` (
 CREATE TABLE `package_courses` (
 	`package_id` bigint unsigned NOT NULL,
 	`course_id` bigint unsigned NOT NULL,
-	CONSTRAINT `package_courses_unique` UNIQUE(`package_id`,`course_id`)
+	CONSTRAINT `package_courses_package_id_course_id_pk` PRIMARY KEY(`package_id`,`course_id`)
 );
 --> statement-breakpoint
 CREATE TABLE `packages` (

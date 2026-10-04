@@ -6,6 +6,7 @@ import {
   index,
   mysqlEnum,
   mysqlTable,
+  primaryKey,
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/mysql-core'
@@ -57,8 +58,10 @@ export const userRoles = mysqlTable(
       .notNull()
       .references(() => roles.id, { onDelete: 'cascade' }),
   },
+  // A composite key rather than a surrogate id: the pair is the identity. It
+  // also satisfies managed MySQL, which refuses tables with no primary key.
   (t) => [
-    uniqueIndex('user_roles_unique').on(t.userId, t.roleId),
+    primaryKey({ columns: [t.userId, t.roleId] }),
     index('user_roles_role_idx').on(t.roleId),
   ],
 )

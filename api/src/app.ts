@@ -1,0 +1,48 @@
+import fastifyCookie from '@fastify/cookie'
+import fastifyCors from '@fastify/cors'
+import fastifyRateLimit from '@fastify/rate-limit'
+import Fastify from 'fastify'
+import { env } from './config/env'
+import { pool } from './db/client'
+import authPlugin from './plugins/auth'
+import errorHandler from './plugins/error-handler'
+import authRoutes from './modules/auth/auth.routes'
+
+export async function buildApp() {
+  const app = Fastify({
+    logger:
+      env.NODE_ENV === 'development'
+        ? { transport: { target: 'pino-pretty', options: { translateTime: 'HH:MM:ss' } } }
+        : true,
+    // Behind nginx, so req.ip must come from X-Forwarded-For or every rate
+    // limit would key on the proxy and throttle everyone together.
+    trustProxy: true,
+    bodyLimit: 2 * 1024 * 1024,
+  })
+
+  await app.register(errorHandler)
+
+  await app.register(fastifyCors, {
+    origin: env.CORS_ORIGINS,
+    // The refresh cookie only travels if the browser is told to send it.
+    credentials: true,
+  })
+
+  await app.register(fastifyCookie)
+
+  await app.register(fastifyRateLimit, {
+    max: 300,
+    timeWindow: '1 minute',
+  })
+
+  await app.register(authPlugin)
+
+  app.get('/health', async () => {
+    await pool.query('SELECT 1')
+    return { status: 'ok', uptime: Math.round(process.uptime()) }
+  })
+
+  await app.register(authRoutes, { prefix: '/api/v1/auth' })
+
+  return app
+}

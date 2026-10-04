@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "6549c64a-d0e4-4cda-87f1-bdbaf14d204e",
+  "id": "59a43bb9-d7e6-4ee5-91e4-9c1aca121c2e",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "password_resets": {
@@ -261,14 +261,6 @@
         }
       },
       "indexes": {
-        "user_roles_unique": {
-          "name": "user_roles_unique",
-          "columns": [
-            "user_id",
-            "role_id"
-          ],
-          "isUnique": true
-        },
         "user_roles_role_idx": {
           "name": "user_roles_role_idx",
           "columns": [
@@ -305,7 +297,15 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "user_roles_user_id_role_id_pk": {
+          "name": "user_roles_user_id_role_id_pk",
+          "columns": [
+            "user_id",
+            "role_id"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraint": {}
     },
@@ -671,14 +671,6 @@
         }
       },
       "indexes": {
-        "course_instructors_unique": {
-          "name": "course_instructors_unique",
-          "columns": [
-            "course_id",
-            "user_id"
-          ],
-          "isUnique": true
-        },
         "course_instructors_user_idx": {
           "name": "course_instructors_user_idx",
           "columns": [
@@ -715,7 +707,15 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "course_instructors_course_id_user_id_pk": {
+          "name": "course_instructors_course_id_user_id_pk",
+          "columns": [
+            "course_id",
+            "user_id"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraint": {}
     },
@@ -3220,14 +3220,6 @@
         }
       },
       "indexes": {
-        "package_courses_unique": {
-          "name": "package_courses_unique",
-          "columns": [
-            "package_id",
-            "course_id"
-          ],
-          "isUnique": true
-        },
         "package_courses_course_idx": {
           "name": "package_courses_course_idx",
           "columns": [
@@ -3264,7 +3256,15 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "package_courses_package_id_course_id_pk": {
+          "name": "package_courses_package_id_course_id_pk",
+          "columns": [
+            "package_id",
+            "course_id"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraint": {}
     },

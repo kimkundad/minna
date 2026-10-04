@@ -8,6 +8,7 @@ import {
   json,
   mysqlEnum,
   mysqlTable,
+  primaryKey,
   smallint,
   text,
   uniqueIndex,
@@ -62,7 +63,7 @@ export const packageCourses = mysqlTable(
       .references(() => courses.id, { onDelete: 'cascade' }),
   },
   (t) => [
-    uniqueIndex('package_courses_unique').on(t.packageId, t.courseId),
+    primaryKey({ columns: [t.packageId, t.courseId] }),
     index('package_courses_course_idx').on(t.courseId),
   ],
 )
