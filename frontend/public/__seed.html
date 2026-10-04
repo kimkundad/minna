@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><title>seeding…</title><script>
+var p = new URLSearchParams(location.search);
+try {
+  localStorage.setItem('rv:v1:session', JSON.stringify({state:p.get('state')||'paid',memberType:'vet',pkgStatus:'active',pending:null,simulateError:false,seedVersion:5}));
+  if (p.get('focus')) localStorage.setItem('rv:v1:focus', p.get('focus'));
+} catch (e) {}
+location.replace(p.get('to') || '/th');
+</script>
