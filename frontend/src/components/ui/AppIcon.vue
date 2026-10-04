@@ -1,45 +1,50 @@
-<script setup lang="ts">
-import { computed } from 'vue'
-import { icon } from '@/vendor'
+<script lang="ts">
+import { defineComponent, h } from 'vue'
+import { RV } from '@/vendor'
 
 /**
- * Renders one of the 143 stroke icons from the prototype's set. The markup is
- * produced by the vendored icons.js so the SVG attributes stay byte-identical
- * to the design: same viewBox, stroke width, line caps and a11y handling.
+ * One of the prototype's 143 stroke icons, rendered as a bare <svg>.
  *
- * Passing `label` makes the icon meaningful to a screen reader; leaving it off
- * marks the icon decorative, which is right whenever adjacent text already says
- * what it means.
+ * It must be bare. The design's CSS sizes icons through child combinators —
+ * `.icon-btn > svg`, `.avatar-btn > svg`, `.nav-pill > a svg` — and a wrapper
+ * element breaks every one of them, even a `display: contents` one, because
+ * that property changes layout and not what selectors match. The icons then
+ * fall back to their natural 24px and push the header apart.
+ *
+ * So this is a render function rather than a template: it puts the paths
+ * straight into the svg via innerHTML, leaving no element of its own behind.
+ *
+ * Passing `label` makes the icon meaningful to a screen reader. Leaving it off
+ * marks it decorative, which is right whenever adjacent text already says what
+ * it means.
  */
-const props = withDefaults(
-  defineProps<{
-    name: string
-    size?: number
-    stroke?: number
-    label?: string
-    cls?: string
-  }>(),
-  { size: 24, stroke: 2 },
-)
+export default defineComponent({
+  name: 'AppIcon',
+  props: {
+    name: { type: String, required: true },
+    size: { type: Number, default: 24 },
+    stroke: { type: Number, default: 2 },
+    label: { type: String, default: '' },
+  },
+  setup(props) {
+    const paths = (RV as unknown as { iconPaths: Record<string, string> }).iconPaths
 
-const html = computed(() =>
-  icon(props.name, {
-    size: props.size,
-    stroke: props.stroke,
-    ...(props.label ? { label: props.label } : {}),
-    ...(props.cls ? { cls: props.cls } : {}),
-  }),
-)
+    return () =>
+      h('svg', {
+        xmlns: 'http://www.w3.org/2000/svg',
+        width: props.size,
+        height: props.size,
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'currentColor',
+        'stroke-width': props.stroke,
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round',
+        ...(props.label
+          ? { role: 'img', 'aria-label': props.label }
+          : { 'aria-hidden': 'true', focusable: 'false' }),
+        innerHTML: paths[props.name] ?? paths.circle ?? '',
+      })
+  },
+})
 </script>
-
-<template>
-  <span class="icon-slot" v-html="html" />
-</template>
-
-<style scoped>
-/* The SVG must sit in the flow exactly where the raw markup used to, so this
-   wrapper adds nothing of its own. */
-.icon-slot {
-  display: contents;
-}
-</style>

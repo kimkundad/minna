@@ -106,7 +106,7 @@
     "myCourses": "คอร์สของฉัน",
     "orders": "ประวัติคำสั่งซื้อ",
     "contactTitle": "ติดต่อเรา",
-    "email": "contact@minna.example",
+    "email": "contact{'@'}minna.example",
     "phone": "02-XXX-XXXX",
     "copyright": "© {year} Minna · โรงเรียนสอนภาษาออนไลน์",
     "policies": "นโยบาย",

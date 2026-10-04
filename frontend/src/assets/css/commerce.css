@@ -1,3 +1,4 @@
+/* display sizes rescaled for Noto Sans Thai */
 /* type rescaled for Noto Sans Thai */
 /* ==========================================================================
    READ VPN Learning — Commerce
@@ -395,7 +396,7 @@
 .co-pay-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; padding: 16px 18px; border-radius: 18px; background: var(--grad-soft); border: 1px solid var(--border-default); }
 .co-pay-top > div { min-width: 0; }
 .co-pay-lbl { display: block; font-size: 13px; font-weight: 600; color: var(--ink-secondary); }
-.co-pay-amt { display: block; font-size: 30px; line-height: 1.35; font-weight: 800; color: var(--ink-primary); font-variant-numeric: tabular-nums; }
+.co-pay-amt { display: block; font-size: 24.5px; line-height: 1.35; font-weight: 800; color: var(--ink-primary); font-variant-numeric: tabular-nums; }
 .co-pay-meta { display: grid; gap: 2px; margin: 0; font-size: 13px; text-align: right; }
 .co-pay-meta div { display: flex; justify-content: flex-end; gap: 8px; }
 .co-pay-meta dt { color: var(--ink-secondary); }

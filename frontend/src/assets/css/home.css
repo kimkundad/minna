@@ -1,3 +1,4 @@
+/* display sizes rescaled for Noto Sans Thai */
 /* type rescaled for Noto Sans Thai */
 /* ==========================================================================
    Home — Hero Carousel (BeDoctor hero panel), rails, categories, journey,
@@ -23,7 +24,7 @@
 .hero-inner { position: relative; z-index: 1; width: 100%; padding-top: 116px; padding-bottom: 84px; }
 .hero-copy { max-width: 580px; }
 .hero-copy .eyebrow { margin-bottom: 14px; }
-.hero-copy h1, .hero-copy .h1 { font-size: clamp(47px, 5.07vw, 73px); line-height: 1.35; margin: 0 0 18px; }
+.hero-copy h1, .hero-copy .h1 { font-size: clamp(29.5px, 3.17vw, 45.5px); line-height: 1.35; margin: 0 0 18px; }
 .hero-copy .h1, .hero-copy h1 { font-weight: var(--fw-bold); color: var(--ink-primary); }
 .hero-copy h1 .accent-grad, .hero-copy .h1 .accent-grad { display: block; }
 .hero-copy p { font-size: 18px; line-height: 1.71; color: var(--ink-primary); max-width: 520px; margin: 0 0 30px; }
@@ -49,7 +50,7 @@
   .hero-slide { min-height: 520px; }
   .hero-media { width: 50%; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 42%); mask-image: linear-gradient(90deg, transparent 0, #000 42%); }
   .hero-copy { max-width: 400px; }
-  .hero-copy h1, .hero-copy .h1 { font-size: 38px; }
+  .hero-copy h1, .hero-copy .h1 { font-size: 31px; }
   .hero-copy p { font-size: 16.5px; }
   .hero-inner { padding-top: 104px; }
 }
@@ -59,7 +60,7 @@
   .hero-media { position: relative; width: auto; aspect-ratio: 16 / 10; margin: 70px 14px 0; border-radius: 18px; -webkit-mask-image: none; mask-image: none; }
   .hero-media::after { display: none; }
   .hero-inner { padding: 20px 20px 78px; }
-  .hero-copy h1, .hero-copy .h1 { font-size: 30px; line-height: 1.35; margin-bottom: 12px; }
+  .hero-copy h1, .hero-copy .h1 { font-size: 24.5px; line-height: 1.35; margin-bottom: 12px; }
   .hero-copy p { font-size: 15.5px; margin-bottom: 20px; }
   .hero-ctas { flex-direction: column; }
   .hero-ctas .btn { width: 100%; }

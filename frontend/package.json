@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vue-tsc --build && vite build",
     "preview": "vite preview",
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "vue-tsc --noEmit",
+    "fixtures:images": "node scripts/copy-fixture-images.mjs",
+    "type:rescale": "node scripts/rescale-type.mjs && node scripts/rescale-display.mjs"
   },
   "dependencies": {
     "pinia": "^2.3.0",

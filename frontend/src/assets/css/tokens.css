@@ -1,3 +1,4 @@
+/* display sizes rescaled for Noto Sans Thai */
 /* type rescaled for Noto Sans Thai */
 /* ==========================================================================
    READ VPN Learning — Design Tokens
@@ -63,9 +64,9 @@
 
   /* ---- Typography (DB Heavent sizes ≈ 1.3–1.375× the old Plus Jakarta / IBM Plex scale) ---- */
   --font: "Noto Sans Thai", "Noto Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --fs-h1: 55.5px;  --lh-h1: 1.29;
-  --fs-h2: 40px;  --lh-h2: 1.29;
-  --fs-h3: 32.5px;  --lh-h3: 1.35;
+  --fs-h1: 45px;  --lh-h1: 1.29;
+  --fs-h2: 32.5px;  --lh-h2: 1.29;
+  --fs-h3: 26.5px;  --lh-h3: 1.35;
   --fs-h4: 23.5px;  --lh-h4: 1.41;
   --fs-h5: 19.5px;  --lh-h5: 1.47;
   --fs-h6: 14px;  --lh-h6: 1.47;
@@ -118,20 +119,20 @@
 }
 @media (max-width: 959px) {
   :root {
-    --fs-h1: 44px; --fs-h2: 34px; --fs-h3: 26px; --fs-h4: 21px; --fs-h5: 17.5px; --fs-h6: 13px;
+    --fs-h1: 36px; --fs-h2: 27.5px; --fs-h3: 26px; --fs-h4: 21px; --fs-h5: 17.5px; --fs-h6: 13px;
     --section-top: 64px; --section-bottom: 40px; --outer: 16px; --header-h: 76px;
   }
 }
 @media (max-width: 767px) {
   :root {
-    --fs-h1: 36px; --fs-h2: 27.5px; --fs-h3: 23.5px; --fs-h4: 19.5px; --fs-h5: 16.5px;
+    --fs-h1: 29.5px; --fs-h2: 27.5px; --fs-h3: 23.5px; --fs-h4: 19.5px; --fs-h5: 16.5px;
     --page-pad: 20px; --gutter: 16px; --outer: 12px;
     --section-top: 48px; --section-bottom: 28px; --header-h: 64px;
     --r-section: 20px; --r-card: 20px;
   }
 }
 @media (max-width: 479px) {
-  :root { --fs-h1: 31px; --fs-h2: 24.5px; --fs-h3: 21px; --fs-h4: 18px; --fs-h5: 16px; --page-pad: 16px; }
+  :root { --fs-h1: 25px; --fs-h2: 24.5px; --fs-h3: 21px; --fs-h4: 18px; --fs-h5: 16px; --page-pad: 16px; }
 }
 
 /* Focus Dark Mode palette — applied ONLY on learn.html via body.focus-dark (ink-hue darks + brand cyan) */

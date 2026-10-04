@@ -106,7 +106,7 @@
     "myCourses": "My courses",
     "orders": "Order history",
     "contactTitle": "Contact us",
-    "email": "contact@minna.example",
+    "email": "contact{'@'}minna.example",
     "phone": "02-XXX-XXXX",
     "copyright": "© {year} Minna · Online language school",
     "policies": "Policies",

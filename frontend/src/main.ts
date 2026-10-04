@@ -11,4 +11,7 @@ import './assets/css/components.css'
 import './assets/css/home.css'
 import './assets/css/discovery.css'
 
+// Loaded last so Minna's own decisions win over the ported design.
+import './assets/css/brand.css'
+
 createApp(App).use(createPinia()).use(router).use(i18n).mount('#app')

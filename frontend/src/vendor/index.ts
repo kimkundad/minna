@@ -98,9 +98,13 @@ export interface CourseView {
 }
 
 export interface CtaAction {
-  act: string
+  /** Dispatch key handled by the page, e.g. 'buy' or 'add-cart'. */
+  act?: string
+  action?: string
   label: string
   icon?: string
+  /** Button style: primary, secondary, ghost or danger. */
+  variant?: string
   kind?: string
   href?: string
   disabled?: boolean

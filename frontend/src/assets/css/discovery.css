@@ -1,3 +1,4 @@
+/* display sizes rescaled for Noto Sans Thai */
 /* type rescaled for Noto Sans Thai */
 /* ==========================================================================
    READ VPN Learning — Discovery pages
@@ -233,7 +234,7 @@
 }
 .cd-cat svg { width: 16px; height: 16px; }
 .cd-cat:hover { color: var(--brand-primary-dark); }
-.cd-title { max-width: 820px; margin: 0 0 14px; font-size: clamp(39px, 3.96vw, 57px); line-height: 1.35; }
+.cd-title { max-width: 820px; margin: 0 0 14px; font-size: clamp(24.5px, 2.47vw, 35.5px); line-height: 1.35; }
 .cd-lead { max-width: 760px; margin: 0 0 24px; font-size: 17.5px; line-height: 1.71; color: var(--ink-primary); }
 .cd-inst {
   display: inline-flex; align-items: center; gap: 14px; max-width: 100%; padding: 8px 16px 8px 8px; border-radius: 22px;
@@ -532,7 +533,7 @@ ul.cd-outcomes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr))
 .ab-hero-copy > *:nth-child(3) { animation-delay: .12s; }
 .ab-hero-copy > *:nth-child(4) { animation-delay: .18s; }
 .ab-hero-copy .eyebrow { margin-bottom: 14px; }
-.ab-hero-copy h1 { margin: 0 0 20px; font-size: clamp(47px, 4.94vw, 70px); line-height: 1.35; }
+.ab-hero-copy h1 { margin: 0 0 20px; font-size: clamp(29.5px, 3.09vw, 44px); line-height: 1.35; }
 .ab-hero-copy h1 .accent-grad { display: block; }
 .ab-lead { max-width: 540px; margin: 0 0 32px; font-size: 17.5px; line-height: 1.76; color: var(--ink-primary); }
 .ab-ctas { display: flex; flex-wrap: wrap; gap: 14px; }
@@ -635,7 +636,7 @@ ul.ab-checks { display: grid; gap: 12px; margin: 0 0 28px; padding: 0; list-styl
   .ab-hero { min-height: 520px; }
   .ab-hero-media { width: 50%; }
   .ab-hero-copy { max-width: 440px; }
-  .ab-hero-copy h1 { font-size: 36px; }
+  .ab-hero-copy h1 { font-size: 29.5px; }
   .ab-lead { font-size: 16px; }
   .ab-hero-inner { padding-top: 104px; padding-bottom: 64px; }
   .ab-who-grid { gap: 32px; }
@@ -666,7 +667,7 @@ ul.ab-checks { display: grid; gap: 12px; margin: 0 0 28px; padding: 0; list-styl
   .ab-hero-media { order: 2; position: relative; width: auto; aspect-ratio: 4 / 3; margin: 0 14px 14px; border-radius: 18px; -webkit-mask-image: none; mask-image: none; }
   .ab-hero-media::after { display: none; }
   .ab-hero-copy { max-width: none; }
-  .ab-hero-copy h1 { font-size: 31px; line-height: 1.35; margin-bottom: 14px; }
+  .ab-hero-copy h1 { font-size: 25px; line-height: 1.35; margin-bottom: 14px; }
   .ab-lead { margin-bottom: 24px; font-size: 15.5px; }
   .ab-ctas { flex-direction: column; }
   .ab-ctas .btn { width: 100%; }

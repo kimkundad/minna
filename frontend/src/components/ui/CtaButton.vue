@@ -32,7 +32,7 @@ const classes = computed(() => [
   props.extraClass ?? '',
 ])
 
-const isLink = computed(() => Boolean(props.action?.href && !props.action?.act))
+const isLink = computed(() => Boolean(props.action?.href && !(props.action?.act ?? props.action?.action)))
 </script>
 
 <template>
@@ -49,10 +49,10 @@ const isLink = computed(() => Boolean(props.action?.href && !props.action?.act))
       v-else
       type="button"
       :class="classes"
-      :data-action="action.act"
+      :data-action="action.act ?? action.action"
       :data-cid="courseId"
       :data-lid="lessonId"
-      @click="emit('run', action.act, courseId, lessonId)"
+      @click="emit('run', (action.act ?? action.action)!, courseId, lessonId)"
     >
       <AppIcon v-if="action.icon" :name="action.icon" />{{ action.label }}
     </button>

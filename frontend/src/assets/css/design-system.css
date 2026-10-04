@@ -1,3 +1,4 @@
+/* display sizes rescaled for Noto Sans Thai */
 /* type rescaled for Noto Sans Thai */
 /* Design System page (prototype support) */
 .page-ds code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .75em; background: var(--surface-subtle); padding: 2px 6px; border-radius: 6px; color: var(--ink-primary); }
@@ -10,7 +11,7 @@
 .ds-toc a:hover { background: var(--surface-soft); color: var(--brand-primary-dark); }
 .ds-sec { padding-bottom: 56px; margin-bottom: 56px; border-bottom: 1px solid var(--border-default); scroll-margin-top: 110px; }
 .ds-sec:last-child { border-bottom: 0; }
-.ds-sec > h2 { font-size: 30px; margin-bottom: 8px; }
+.ds-sec > h2 { font-size: 24.5px; margin-bottom: 8px; }
 .ds-desc { color: var(--ink-primary); max-width: 820px; margin-bottom: 24px; }
 .ds-h3 { font-size: 16px; margin: 28px 0 12px; color: var(--ink-secondary); text-transform: uppercase; letter-spacing: .05em; }
 .ds-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }

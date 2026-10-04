@@ -1,0 +1,19 @@
+/* ==========================================================================
+   Minna overrides
+
+   Everything Minna changes about the ported design lives here, loaded last, so
+   the ten files copied from the reference stay untouched and a later update to
+   them does not quietly swallow our decisions.
+
+   The type scale is deliberately NOT overridden here. It is rescaled at the
+   source by scripts/rescale-type.mjs and scripts/rescale-display.mjs, which can
+   be re-run against a fresh copy of the reference CSS. A second set of sizes in
+   this file would only drift away from them.
+   ========================================================================== */
+
+/* The Minna mark sets its name on two lines, so it needs more height than the
+   single-line wordmark the header was measured against. At 34px its letters are
+   too small to read. */
+.brand-logo { height: 42px; }
+.site-header--compact .brand-logo { height: 34px; }
+.ft-top .brand-logo { height: 52px; }

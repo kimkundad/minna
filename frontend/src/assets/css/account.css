@@ -1,3 +1,4 @@
+/* display sizes rescaled for Noto Sans Thai */
 /* type rescaled for Noto Sans Thai */
 /* ==========================================================================
    Account — one shared layout for 6 pages (account*.html)
@@ -10,7 +11,7 @@
 
 /* ---------- Compact page hero + account pill tabs (tablet / mobile) ---------- */
 .acct-hero { padding: 28px 0 30px; }
-.acct-hero h1 { font-size: 38px; line-height: 1.35; margin: 10px 0 4px; }
+.acct-hero h1 { font-size: 31px; line-height: 1.35; margin: 10px 0 4px; }
 .acct-hero-desc { font-size: 16px; line-height: 1.59; }
 .acct-tabs-nav { display: none; margin-top: 18px; }
 .acct-tabs {
@@ -23,7 +24,7 @@
 .acct-tabs .tab[aria-current="page"] { background: var(--brand-primary); color: #fff; }
 @media (max-width: 959px) {
   .acct-tabs-nav { display: block; }
-  .acct-hero h1 { font-size: 32px; }
+  .acct-hero h1 { font-size: 26px; }
 }
 @media (max-width: 767px) {
   .acct-hero { padding: 20px 0 22px; }
@@ -152,7 +153,7 @@ a.acct-stat:hover .acct-stat-go svg { transform: translateX(3px); }
 .acct-ce-nums { display: flex; align-items: stretch; gap: 22px; margin-top: 6px; }
 .acct-ce-nums > span:not(.acct-ce-div) { display: flex; flex-direction: column; gap: 2px; }
 .acct-ce-div { width: 1px; background: var(--border-default); }
-.acct-stat--sm .stat-value { font-size: 30px; }
+.acct-stat--sm .stat-value { font-size: 24.5px; }
 @container acct (max-width: 640px) {
   .acct-welcome { flex-wrap: wrap; align-items: flex-start; gap: 14px 16px; padding: 20px; }
   .acct-welcome .avatar--xl { width: 60px; height: 60px; font-size: 20.5px; border-width: 3px; }
@@ -405,7 +406,7 @@ ul.acct-oi-list { padding: 4px 22px; }
 .acct-plans { position: relative; padding: 60px 32px 40px; border-radius: var(--r-section); background: var(--surface-subtle); }
 .acct-plans-head { max-width: 660px; margin: 0 auto 40px; text-align: center; }
 .acct-plans-head .eyebrow { justify-content: center; }
-.acct-plans-head h2 { margin: 0 0 14px; font-size: 36px; line-height: 1.35; }
+.acct-plans-head h2 { margin: 0 0 14px; font-size: 29.5px; line-height: 1.35; }
 .acct-plans-desc { max-width: 580px; margin: 0 auto; color: var(--ink-primary); }
 .acct-plans-note { display: inline-flex; align-items: flex-start; gap: 8px; margin: 20px 0 0; padding: 8px 18px; border-radius: 20px; background: #fff; border: 1px solid var(--border-default); font-size: 14px; line-height: 1.53; color: var(--ink-primary); text-align: left; }
 .acct-plans-note svg { width: 17px; height: 17px; margin-top: 2px; flex-shrink: 0; color: var(--brand-primary-dark); }
@@ -429,7 +430,7 @@ ul.acct-oi-list { padding: 4px 22px; }
 .acct-plan-ico svg { position: relative; width: 36px; height: 36px; stroke-width: 1.7; }
 .acct-plan h3 { margin: 0 0 12px; font-size: 22px; line-height: 1.35; font-weight: 800; color: var(--ink-primary); }
 .acct-plan-price { display: flex; align-items: flex-start; justify-content: center; gap: 6px; margin: 0 0 24px; color: var(--ink-primary); }
-.acct-plan-price b { font-size: 46px; line-height: 1.24; font-weight: 800; letter-spacing: 0; }
+.acct-plan-price b { font-size: 37.5px; line-height: 1.24; font-weight: 800; letter-spacing: 0; }
 .acct-plan-price span { margin-top: 7px; font-size: 14px; font-weight: 600; color: var(--ink-secondary); }
 ul.acct-plan-feats { width: 100%; margin: 0 0 34px; }
 .acct-plan-feats li { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 6px; font-size: 14.5px; line-height: 1.53; color: var(--ink-primary); border-bottom: 1px solid var(--border-default); }
@@ -466,11 +467,11 @@ ul.acct-plan-feats { width: 100%; margin: 0 0 34px; }
 .acct-plans-foot svg { width: 14px; height: 14px; flex-shrink: 0; }
 @container acct (max-width: 920px) {
   .acct-plans { padding: 48px 20px 32px; }
-  .acct-plans-head h2 { font-size: 30px; }
+  .acct-plans-head h2 { font-size: 24.5px; }
   .acct-plan-grid { gap: 16px; }
   .acct-plan { padding: 50px 16px 26px; }
   .acct-plan h3 { font-size: 18.5px; min-height: 2.3em; display: flex; align-items: center; justify-content: center; }
-  .acct-plan-price b { font-size: 38px; }
+  .acct-plan-price b { font-size: 31px; }
   .acct-plan-feats li { font-size: 13.5px; padding: 10px 2px; }
   .acct-plan-btn { min-width: 0; width: 100%; padding-inline: 12px; }
   .acct-plan-badge { top: 14px; right: 14px; height: 26px; padding: 0 10px; font-size: 11.5px; }
@@ -483,7 +484,7 @@ ul.acct-plan-feats { width: 100%; margin: 0 0 34px; }
   .acct-plan-grid { grid-template-columns: minmax(0, 1fr); max-width: 440px; margin-inline: auto; gap: 18px; }
   .acct-plan { padding: 48px 22px 28px; }
   .acct-plan h3 { font-size: 20.5px; min-height: 0; }
-  .acct-plan-price b { font-size: 42px; }
+  .acct-plan-price b { font-size: 34px; }
   .acct-plan-feats li { font-size: 14.5px; padding: 12px 6px; }
   .acct-plan-cur { display: inline-flex; top: 16px; left: 16px; }
   ul.acct-plan-feats { margin-bottom: 26px; }

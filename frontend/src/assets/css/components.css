@@ -1,3 +1,4 @@
+/* display sizes rescaled for Noto Sans Thai */
 /* type rescaled for Noto Sans Thai */
 /* ==========================================================================
    READ VPN Learning — Shared components
@@ -437,7 +438,7 @@ button.inst-line:hover .inst-names { color: var(--brand-primary-dark); }
 .price strong { font-size: 18px; font-weight: 800; color: var(--ink-primary); font-variant-numeric: tabular-nums; }
 .price s { font-size: 13px; color: var(--c-danger); font-variant-numeric: tabular-nums; }
 .price--free strong { color: var(--c-success); }
-.price--lg strong { font-size: 32px; }
+.price--lg strong { font-size: 26px; }
 .price--lg s { font-size: 16px; }
 
 /* ---------- Course card ---------- */
@@ -499,7 +500,7 @@ button.inst-line:hover .inst-names { color: var(--brand-primary-dark); }
 
 /* ---------- Rails (horizontal course rails) ---------- */
 .rail-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px 24px; margin-bottom: 24px; flex-wrap: wrap; }
-.rail-head h2 { margin: 0; font-size: 30px; line-height: 1.35; }
+.rail-head h2 { margin: 0; font-size: 24.5px; line-height: 1.35; }
 .rail-head .eyebrow { margin-bottom: 8px; }
 .rail-sub { margin: 6px 0 0; color: var(--ink-secondary); font-size: 15px; }
 .rail-tools { display: flex; align-items: center; gap: 10px; }
@@ -812,7 +813,7 @@ button.lesson:hover, a.lesson:hover { background: var(--surface-soft); }
 .stat { display: flex; flex-direction: column; gap: 6px; padding: 20px 22px; background: #fff; border: 1px solid var(--border-default); border-radius: 20px; min-width: 0; }
 .stat-ico { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: var(--brand-primary-soft); color: var(--brand-primary-dark); margin-bottom: 6px; }
 .stat-ico svg { width: 20px; height: 20px; }
-.stat-value { font-size: 32px; line-height: 1.29; font-weight: 800; color: var(--ink-primary); font-variant-numeric: tabular-nums; }
+.stat-value { font-size: 26px; line-height: 1.29; font-weight: 800; color: var(--ink-primary); font-variant-numeric: tabular-nums; }
 .stat-value small { font-size: 15px; font-weight: 600; color: var(--ink-secondary); margin-left: 4px; }
 .stat-label { font-size: 14px; color: var(--ink-secondary); }
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: 12px 24px; margin: 0; font-size: 15px; }

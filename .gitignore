@@ -47,3 +47,7 @@ dist/
 
 # ---- stray empty dir left by the restructure (safe to delete by hand) ----
 /Frontend-Read/
+
+# Fixture photography copied from _design-ref by
+# frontend/scripts/copy-fixture-images.mjs. Not ours to commit, and temporary.
+/frontend/public/assets/img/
