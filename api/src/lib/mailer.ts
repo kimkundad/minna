@@ -77,6 +77,12 @@ export async function sendMail(mail: Mail, log: MailLogger): Promise<void> {
     log.info({ to: mail.to, subject: mail.subject }, 'mail sent')
   } catch (err) {
     log.error({ err, to: mail.to, subject: mail.subject }, 'mail failed')
+    // Outside production, fall back to the log. A broken mail server should
+    // not also mean the only copy of a verification link is gone — the flow
+    // has to stay walkable while the credentials are being sorted out.
+    if (env.NODE_ENV !== 'production') {
+      log.info({ to: mail.to, subject: mail.subject, body: mail.text }, 'mail (send failed, logged)')
+    }
   }
 }
 
