@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Minna No Nihongo">
+  <!--
+    The mark from the logo — an open book with the rising sun behind it — on a
+    filled tile rather than on white.
+
+    A favicon is read at 16px in a row of other favicons, where an outline on a
+    transparent ground disappears into whatever the browser paints behind it.
+    The tile holds its shape at that size; the wordmark does not, which is why
+    only the mark is here.
+  -->
+  <rect width="64" height="64" rx="14" fill="#00C2D6"/>
+
+  <!-- The sun sits behind the pages, as it does in the logo. -->
+  <circle cx="32" cy="24" r="9" fill="#FF4438"/>
+
+  <!-- Two pages fanning from the spine. Drawn as solid shapes rather than
+       strokes so they stay legible when the whole icon is 16 pixels wide. -->
+  <path
+    d="M32 29.5c-3.6-2.8-8.2-4.4-13.2-4.4-1.6 0-3.1.2-4.6.5a1.6 1.6 0 0 0-1.2 1.6v18.4c0 1 .9 1.8 1.9 1.6 1.2-.2 2.5-.3 3.9-.3 5 0 9.6 1.6 13.2 4.4V29.5Z"
+    fill="#fff"
+  />
+  <path
+    d="M32 29.5c3.6-2.8 8.2-4.4 13.2-4.4 1.6 0 3.1.2 4.6.5a1.6 1.6 0 0 1 1.2 1.6v18.4c0 1-.9 1.8-1.9 1.6-1.2-.2-2.5-.3-3.9-.3-5 0-9.6 1.6-13.2 4.4V29.5Z"
+    fill="#fff"
+  />
+
+  <!-- The spine, a touch darker so the two pages separate at small sizes. -->
+  <path d="M30.6 29.5h2.8v22.8h-2.8z" fill="#D7F3F7"/>
+</svg>

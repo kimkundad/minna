@@ -1,0 +1,14 @@
+{
+  "name": "Minna No Nihongo",
+  "short_name": "Minna",
+  "description": "โรงเรียนสอนภาษาออนไลน์",
+  "start_url": "/th",
+  "display": "standalone",
+  "background_color": "#f4f6f7",
+  "theme_color": "#00C2D6",
+  "icons": [
+    { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any" },
+    { "src": "/apple-touch-icon.png", "type": "image/png", "sizes": "180x180" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any maskable" }
+  ]
+}
