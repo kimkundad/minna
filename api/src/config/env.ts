@@ -45,6 +45,14 @@ const schema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
+  // SMTP, so the provider is a configuration choice rather than a code one.
+  // With no host, mail is written to the log instead of sent.
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  MAIL_FROM: z.string().optional(),
+
   APP_URL: z.string().url().default('http://localhost:5173'),
 })
 
@@ -56,6 +64,9 @@ const REQUIRED_IN_PRODUCTION = [
   'SPACES_SECRET',
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
+  // Without this, password resets and receipts silently go nowhere.
+  'SMTP_HOST',
+  'MAIL_FROM',
 ] as const
 
 const parsed = schema.safeParse(process.env)

@@ -2,6 +2,7 @@ import { and, eq, gt, isNull } from 'drizzle-orm'
 import { db } from '../../db/client'
 import type { Locale } from '../../db/schema/auth'
 import {
+  emailVerifications,
   passwordResets,
   refreshTokens,
   roles as rolesTable,
@@ -248,9 +249,15 @@ export async function revokeSession(userId: number, sessionId: number): Promise<
  * differently would turn this endpoint into a way to discover who has an
  * account. Returns the token when there is one so the caller can mail it.
  */
-export async function createPasswordReset(email: string): Promise<string | null> {
+export async function createPasswordReset(
+  email: string,
+): Promise<{ token: string; name: string } | null> {
   const normalised = email.trim().toLowerCase()
-  const [row] = await db.select({ id: users.id }).from(users).where(eq(users.email, normalised)).limit(1)
+  const [row] = await db
+    .select({ id: users.id, firstName: users.firstName, lastName: users.lastName })
+    .from(users)
+    .where(eq(users.email, normalised))
+    .limit(1)
   if (!row) return null
 
   const token = generateToken(32)
@@ -259,7 +266,7 @@ export async function createPasswordReset(email: string): Promise<string | null>
     tokenHash: hashToken(token),
     expiresAt: expiresAt('1h'),
   })
-  return token
+  return { token, name: `${row.firstName} ${row.lastName}`.trim() }
 }
 
 export async function resetPassword(token: string, newPassword: string): Promise<void> {
@@ -303,6 +310,69 @@ export async function changePassword(
     .set({ passwordHash: await hashPassword(newPassword) })
     .where(eq(users.id, userId))
   await revokeAllSessions(userId)
+}
+
+/**
+ * Issues a verification link for the address on the account.
+ *
+ * Any link already outstanding is retired first, so a "resend" cannot leave two
+ * working links in two different inboxes — including the old address, if the
+ * account's email was changed in between.
+ */
+export async function createEmailVerification(
+  userId: number,
+): Promise<{ token: string; email: string; name: string } | null> {
+  const [row] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+  if (!row) throw notFound('Account not found.')
+  if (row.emailVerifiedAt) return null
+
+  await db
+    .update(emailVerifications)
+    .set({ usedAt: new Date() })
+    .where(and(eq(emailVerifications.userId, userId), isNull(emailVerifications.usedAt)))
+
+  const token = generateToken(32)
+  await db.insert(emailVerifications).values({
+    userId,
+    email: row.email,
+    tokenHash: hashToken(token),
+    expiresAt: expiresAt('24h'),
+  })
+
+  return { token, email: row.email, name: `${row.firstName} ${row.lastName}`.trim() }
+}
+
+/**
+ * Consumes a verification link.
+ *
+ * The link proves one specific address, so it is refused when the account has
+ * since moved to another: otherwise changing your email to someone else's and
+ * then opening an older link would mark the new one verified.
+ */
+export async function verifyEmail(token: string): Promise<PublicUser> {
+  const [row] = await db
+    .select()
+    .from(emailVerifications)
+    .where(eq(emailVerifications.tokenHash, hashToken(token)))
+    .limit(1)
+
+  if (!row || row.usedAt || row.expiresAt.getTime() <= Date.now()) {
+    throw unauthorized('This link is no longer valid. Request a new one.')
+  }
+
+  const [user] = await db.select().from(users).where(eq(users.id, row.userId)).limit(1)
+  if (!user) throw notFound('Account not found.')
+  if (user.email !== row.email) {
+    throw unauthorized('This link was sent to a different address. Request a new one.')
+  }
+
+  await db.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, user.id))
+  await db
+    .update(emailVerifications)
+    .set({ usedAt: new Date() })
+    .where(eq(emailVerifications.id, row.id))
+
+  return toPublicUser({ ...user, emailVerifiedAt: new Date() }, await rolesOf(user.id))
 }
 
 export async function acceptPrivacy(userId: number): Promise<void> {

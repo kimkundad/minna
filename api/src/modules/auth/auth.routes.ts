@@ -3,6 +3,12 @@ import { z } from 'zod'
 import { env } from '../../config/env'
 import { badRequest, unauthorized } from '../../lib/errors'
 import { parseDuration } from '../../lib/tokens'
+import { sendMail } from '../../lib/mailer'
+import {
+  emailVerifiedMail,
+  passwordResetMail,
+  verifyEmailMail,
+} from '../../lib/email-templates'
 import * as schemas from './auth.schemas'
 import * as service from './auth.service'
 
@@ -52,6 +58,15 @@ export default async function authRoutes(app: FastifyInstance) {
     const user = await service.register(body)
     const accessToken = app.jwt.sign({ sub: user.id, roles: user.roles })
     const refreshToken = await service.issueRefreshToken(user.id, deviceOf(req))
+
+    // Sent now, but nothing is gated on it yet: someone can look around and
+    // start a free course straight away, and only needs a verified address at
+    // the point money and a receipt are involved.
+    const pending = await service.createEmailVerification(user.id)
+    if (pending) {
+      const url = `${env.APP_URL}/verify-email?token=${pending.token}`
+      void sendMail({ ...verifyEmailMail(pending.name, url), to: pending.email }, req.log)
+    }
 
     setRefreshCookie(reply, refreshToken)
     return reply.status(201).send({ user, accessToken, refreshToken })
@@ -109,17 +124,51 @@ export default async function authRoutes(app: FastifyInstance) {
 
   app.post('/forgot-password', strictLimit, async (req, reply) => {
     const body = schemas.forgotPasswordBody.parse(req.body)
-    const token = await service.createPasswordReset(body.email)
+    const reset = await service.createPasswordReset(body.email)
 
-    // Mail is not wired up yet. Until it is, the link is logged in development
-    // so the flow can be exercised end to end; it is never put in the response.
-    if (token && env.NODE_ENV !== 'production') {
-      req.log.info({ resetUrl: `${env.APP_URL}/reset-password?token=${token}` }, 'password reset')
+    if (reset) {
+      const url = `${env.APP_URL}/reset-password?token=${reset.token}`
+      const mail = passwordResetMail(reset.name, url)
+      // Not awaited: the answer must take the same time whether or not the
+      // address exists, and a slow mail server would otherwise say so.
+      void sendMail({ ...mail, to: body.email }, req.log)
     }
 
     return reply.send({
       message: 'If that address has an account, a reset link is on its way.',
     })
+  })
+
+  /**
+   * Sends — or re-sends — the verification link for the signed-in account.
+   * Rate limited harder than the rest: this one puts mail in someone's inbox.
+   */
+  app.post(
+    '/verify-email/send',
+    { preHandler: app.authenticate, config: { rateLimit: { max: 5, timeWindow: '1 hour' } } },
+    async (req, reply) => {
+      const pending = await service.createEmailVerification(req.user.sub)
+
+      if (pending) {
+        const url = `${env.APP_URL}/verify-email?token=${pending.token}`
+        const mail = verifyEmailMail(pending.name, url)
+        void sendMail({ ...mail, to: pending.email }, req.log)
+      }
+
+      // The same answer either way, so an already-verified account is not
+      // reported differently from one that has just been sent a link.
+      return reply.send({ message: 'If the address still needs verifying, a link is on its way.' })
+    },
+  )
+
+  app.post('/verify-email', strictLimit, async (req, reply) => {
+    const { token } = schemas.verifyEmailBody.parse(req.body)
+    const user = await service.verifyEmail(token)
+
+    const mail = emailVerifiedMail(`${user.firstName} ${user.lastName}`.trim())
+    void sendMail({ ...mail, to: user.email }, req.log)
+
+    return reply.send({ user })
   })
 
   app.post('/reset-password', strictLimit, async (req, reply) => {

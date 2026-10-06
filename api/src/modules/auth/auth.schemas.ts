@@ -53,6 +53,10 @@ export const forgotPasswordBody = z.object({
   email: z.string().email().max(255),
 })
 
+export const verifyEmailBody = z.object({
+  token: z.string().min(1),
+})
+
 export const resetPasswordBody = z.object({
   token: z.string().min(1),
   password,

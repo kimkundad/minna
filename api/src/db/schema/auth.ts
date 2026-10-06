@@ -111,6 +111,34 @@ export const passwordResets = mysqlTable(
   ],
 )
 
+/**
+ * Email verification links, stored hashed like every other token we hand out.
+ *
+ * Separate from `password_resets` even though the shape is close: they expire on
+ * different schedules, a verification is consumed once and then never needed
+ * again, and keeping them apart means a bug in one cannot hand out the other.
+ */
+export const emailVerifications = mysqlTable(
+  'email_verifications',
+  {
+    id: bigint('id', { mode: 'number', unsigned: true }).autoincrement().primaryKey(),
+    userId: bigint('user_id', { mode: 'number', unsigned: true })
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** The address this link proves, which may differ from the account's
+     *  current one if it was changed while a link was outstanding. */
+    email: varchar('email', { length: 255 }).notNull(),
+    tokenHash: varchar('token_hash', { length: 64 }).notNull(),
+    expiresAt: datetime('expires_at').notNull(),
+    usedAt: datetime('used_at'),
+    createdAt: datetime('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
+  },
+  (t) => [
+    uniqueIndex('email_verifications_hash_unique').on(t.tokenHash),
+    index('email_verifications_user_idx').on(t.userId),
+  ],
+)
+
 export const usersRelations = relations(users, ({ many }) => ({
   roles: many(userRoles),
   refreshTokens: many(refreshTokens),
