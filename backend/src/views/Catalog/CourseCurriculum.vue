@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import FileField from '@/components/forms/FileField.vue'
 import {
   ApiError,
   api,
@@ -281,27 +282,28 @@ onMounted(load)
             </p>
           </div>
 
-          <div v-if="lessonForm.type === 'video'">
-            <label :class="labelClass">Video path<span class="text-error-500">*</span></label>
-            <input
+          <div v-if="lessonForm.type === 'video'" class="sm:col-span-2">
+            <FileField
               v-model="lessonForm.videoPath"
-              placeholder="minna/courses/1/lesson-1.mp4"
-              :class="inputClass"
+              :course-id="courseId"
+              purpose="course-video"
+              label="Video"
+              accept="video/*"
+              hint="Uploaded straight to storage, in pieces, so a large file survives a dropped connection."
             />
-            <p class="mt-1 text-xs text-gray-400">
-              The stored path, not a URL. Uploading is not wired up yet.
-            </p>
             <p v-if="fieldErrors.videoPath" class="mt-1 text-sm text-error-500">
               {{ fieldErrors.videoPath }}
             </p>
           </div>
 
-          <div v-if="lessonForm.type === 'document'">
-            <label :class="labelClass">Document path</label>
-            <input
+          <div v-if="lessonForm.type === 'document'" class="sm:col-span-2">
+            <FileField
               v-model="lessonForm.documentPath"
-              placeholder="minna/courses/1/workbook.pdf"
-              :class="inputClass"
+              :course-id="courseId"
+              purpose="course-document"
+              label="Document"
+              accept=".pdf,.doc,.docx,.ppt,.pptx,image/*"
+              hint="A worksheet or handout. Up to 200 MB."
             />
           </div>
 

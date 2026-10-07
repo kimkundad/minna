@@ -206,6 +206,14 @@ export const api = {
   deleteLesson: (courseId: number, lessonId: number) =>
     send<void>(`/courses/${courseId}/lessons/${lessonId}`, { method: 'DELETE' }),
 
+  /* ---------------- uploads ---------------- */
+
+  uploadTicket: (body: { purpose: UploadPurpose; courseId?: number }) =>
+    send<{ data: UploadTicket }>('/uploads/ticket', { method: 'POST', body }),
+
+  signPath: (path: string, ttl?: number) =>
+    send<{ data: { url: string } }>('/uploads/sign', { method: 'POST', body: { path, ttl } }),
+
   reorder: (courseId: number, what: 'modules' | 'lessons', ids: number[]) =>
     send<void>(`/courses/${courseId}/reorder/${what}`, { method: 'POST', body: { ids } }),
 }
@@ -345,4 +353,15 @@ export interface CourseDetail extends CourseInput {
   createdAt: string
   updatedAt: string
   instructors?: { id: number; firstName: string; lastName: string; avatarPath: string | null }[]
+}
+
+export type UploadPurpose = 'course-thumbnail' | 'course-video' | 'course-document' | 'avatar'
+
+export interface UploadTicket {
+  ticket: string
+  expiresAt: string
+  /** The store's own origin. Not this API: the bytes go straight there. */
+  baseUrl: string
+  folder: string
+  maxSize: number
 }

@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import FileField from '@/components/forms/FileField.vue'
 import {
   ApiError,
   api,
@@ -266,6 +267,33 @@ onMounted(load)
               class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
             />
           </div>
+
+          <div v-if="!isNew" class="sm:col-span-2">
+            <FileField
+              v-model="form.thumbnailPath"
+              :course-id="id ?? undefined"
+              purpose="course-thumbnail"
+              label="Cover image"
+              accept="image/*"
+              hint="Shown on cards and at the top of the course page. Up to 8 MB."
+              preview
+            />
+          </div>
+
+          <div v-if="!isNew" class="sm:col-span-2">
+            <FileField
+              v-model="form.sampleVideoPath"
+              :course-id="id ?? undefined"
+              purpose="course-video"
+              label="Sample video"
+              accept="video/*"
+              hint="A free taste of the course, playable before buying."
+            />
+          </div>
+
+          <p v-if="isNew" class="text-sm text-gray-400 sm:col-span-2">
+            Files can be uploaded once the course has been created.
+          </p>
 
           <div>
             <label :class="labelClass">What they will learn</label>
