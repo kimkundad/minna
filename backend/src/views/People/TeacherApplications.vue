@@ -11,6 +11,7 @@ import {
   type Category,
   type TeacherApplication,
 } from '@/lib/api'
+import { useConfirm } from '@/composables/useConfirm'
 
 /**
  * The queue of people asking to teach.
@@ -20,6 +21,8 @@ import {
  * gets mapped onto a real category — the applicant did not know our category
  * tree and should not have had to guess at it.
  */
+const { ask } = useConfirm()
+
 const rows = ref<TeacherApplication[]>([])
 const total = ref(0)
 const totalPages = ref(1)
@@ -94,11 +97,21 @@ async function openOne(row: TeacherApplication) {
 async function decide(decision: 'approved' | 'rejected') {
   if (!open.value) return
   const who = open.value.email
-  const confirmText =
+  const { ok } = await ask(
     decision === 'approved'
-      ? `Approve ${who}? Their account gets the teacher role and they are emailed.`
-      : `Reject ${who}?`
-  if (!window.confirm(confirmText)) return
+      ? {
+          title: `Approve ${who}?`,
+          message: 'Their account gets the teacher role and they are emailed.',
+          confirmLabel: 'Approve',
+        }
+      : {
+          title: `Reject ${who}?`,
+          message: 'They are not told automatically. An application can only be decided once.',
+          confirmLabel: 'Reject',
+          tone: 'danger',
+        },
+  )
+  if (!ok) return
 
   deciding.value = true
   error.value = ''

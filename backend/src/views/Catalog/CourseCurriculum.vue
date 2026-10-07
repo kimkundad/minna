@@ -13,6 +13,7 @@ import {
   type LessonType,
 } from '@/lib/api'
 import { formatDuration } from '@/lib/money'
+import { useConfirm } from '@/composables/useConfirm'
 
 /**
  * A course's modules and lessons.
@@ -27,6 +28,7 @@ import { formatDuration } from '@/lib/money'
  * the list half-sorted if the tab closed in the middle.
  */
 const route = useRoute()
+const { ask } = useConfirm()
 const courseId = computed(() => Number(route.params.id))
 
 const data = ref<Curriculum | null>(null)
@@ -118,10 +120,15 @@ async function saveModuleTitle(moduleId: number) {
 }
 
 async function removeModule(moduleId: number, title: string, lessonCount: number) {
-  const note = lessonCount
-    ? `\n\nIts ${lessonCount} lesson(s) stay on the course and move out of any module.`
-    : ''
-  if (!window.confirm(`Delete the module “${title}”?${note}`)) return
+  const { ok } = await ask({
+    title: `Delete the module “${title}”?`,
+    message: lessonCount
+      ? `Its ${lessonCount} lesson(s) stay on the course and move out of any module.`
+      : 'It has no lessons in it.',
+    confirmLabel: 'Delete module',
+    tone: 'danger',
+  })
+  if (!ok) return
   try {
     await api.deleteModule(courseId.value, moduleId)
     await load()
@@ -192,7 +199,13 @@ async function saveLesson() {
 }
 
 async function removeLesson(lesson: Lesson) {
-  if (!window.confirm(`Delete the lesson “${lesson.title}”?`)) return
+  const { ok } = await ask({
+    title: `Delete the lesson “${lesson.title}”?`,
+    message: 'This cannot be undone. The course length will be recalculated.',
+    confirmLabel: 'Delete lesson',
+    tone: 'danger',
+  })
+  if (!ok) return
   try {
     await api.deleteLesson(courseId.value, lesson.id)
     await load()

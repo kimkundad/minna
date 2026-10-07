@@ -4,6 +4,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import TablePager from '@/components/common/TablePager.vue'
 import { ApiError, api, type Category, type CategoryInput } from '@/lib/api'
+import { useConfirm } from '@/composables/useConfirm'
 
 /**
  * Categories, as a tree in one table.
@@ -16,6 +17,8 @@ import { ApiError, api, type Category, type CategoryInput } from '@/lib/api'
  * somebody fixed a typo in a title is a broken link on every page that pointed
  * at it.
  */
+const { ask } = useConfirm()
+
 const rows = ref<Category[]>([])
 const loading = ref(true)
 const error = ref('')
@@ -149,7 +152,13 @@ async function save() {
 async function remove(row: Category) {
   // The API refuses when courses or sub-categories still point at it, and says
   // how many. This only needs to confirm intent.
-  if (!window.confirm(`Delete “${row.name}”?`)) return
+  const { ok } = await ask({
+    title: `Delete “${row.name}”?`,
+    message: 'This cannot be undone.',
+    confirmLabel: 'Delete',
+    tone: 'danger',
+  })
+  if (!ok) return
   try {
     await api.deleteCategory(row.id)
     await Promise.all([load(), loadRoots()])

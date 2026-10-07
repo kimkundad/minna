@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import TablePager from '@/components/common/TablePager.vue'
 import { ApiError, people, type CreateMemberInput, type Member, type RoleName } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
+import { useConfirm } from '@/composables/useConfirm'
 
 /**
  * The table behind the students, teachers and admins screens.
@@ -29,6 +30,7 @@ const props = defineProps<{
 }>()
 
 const auth = useAuthStore()
+const { ask } = useConfirm()
 
 const rows = ref<Member[]>([])
 const total = ref(0)
@@ -222,12 +224,19 @@ async function savePassword() {
 
 async function toggleStatus(member: Member) {
   const next = member.status === 'active' ? 'suspended' : 'active'
-  const reason =
-    next === 'suspended'
-      ? window.prompt(`Suspend ${member.email}? Give a reason for the record:`)
-      : ''
-  // prompt returns null when cancelled; an empty string is a reason of "none".
-  if (next === 'suspended' && reason === null) return
+  let reason = ''
+  if (next === 'suspended') {
+    const answer = await ask({
+      title: `Suspend ${member.email}?`,
+      message:
+        'They will not be able to sign in. Nothing they bought, were taught or were marked on is removed.',
+      confirmLabel: 'Suspend',
+      tone: 'danger',
+      reason: { label: 'Reason for the record', placeholder: 'Why this account is being stopped' },
+    })
+    if (!answer.ok) return
+    reason = answer.reason
+  }
   try {
     await people.setStatus(member.id, next, reason || undefined)
     await load()

@@ -7,6 +7,8 @@
       :class="[isExpanded || isHovered ? 'xl:ml-[290px]' : 'xl:ml-[90px]']"
     >
       <app-header />
+      <!-- Mounted once so any view can ask a question without wiring its own. -->
+      <ConfirmDialog />
       <div class="mx-auto max-w-(--breakpoint-2xl) p-4 pb-20 md:p-6 md:pb-6">
         <slot></slot>
       </div>
@@ -19,5 +21,6 @@ import AppSidebar from './AppSidebar.vue'
 import AppHeader from './AppHeader.vue'
 import { useSidebar } from '@/composables/useSidebar'
 import Backdrop from './Backdrop.vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 const { isExpanded, isHovered } = useSidebar()
 </script>
