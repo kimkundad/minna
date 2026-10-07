@@ -176,6 +176,87 @@ export const api = {
     send<{ data: CourseDetail }>(`/courses/${id}`, { method: 'PATCH', body }),
 
   deleteCourse: (id: number) => send<void>(`/courses/${id}`, { method: 'DELETE' }),
+
+  /* ---------------- curriculum ---------------- */
+
+  curriculum: (courseId: number) =>
+    send<{ data: Curriculum }>(`/courses/${courseId}/curriculum`),
+
+  createModule: (courseId: number, body: ModuleInput) =>
+    send<{ data: CourseModule }>(`/courses/${courseId}/modules`, { method: 'POST', body }),
+
+  updateModule: (courseId: number, moduleId: number, body: Partial<ModuleInput>) =>
+    send<{ data: CourseModule }>(`/courses/${courseId}/modules/${moduleId}`, {
+      method: 'PATCH',
+      body,
+    }),
+
+  deleteModule: (courseId: number, moduleId: number) =>
+    send<void>(`/courses/${courseId}/modules/${moduleId}`, { method: 'DELETE' }),
+
+  createLesson: (courseId: number, body: LessonInput) =>
+    send<{ data: Lesson }>(`/courses/${courseId}/lessons`, { method: 'POST', body }),
+
+  updateLesson: (courseId: number, lessonId: number, body: Partial<LessonInput>) =>
+    send<{ data: Lesson }>(`/courses/${courseId}/lessons/${lessonId}`, {
+      method: 'PATCH',
+      body,
+    }),
+
+  deleteLesson: (courseId: number, lessonId: number) =>
+    send<void>(`/courses/${courseId}/lessons/${lessonId}`, { method: 'DELETE' }),
+
+  reorder: (courseId: number, what: 'modules' | 'lessons', ids: number[]) =>
+    send<void>(`/courses/${courseId}/reorder/${what}`, { method: 'POST', body: { ids } }),
+}
+
+export type LessonType = 'video' | 'document' | 'quiz'
+
+export interface CourseModule {
+  id: number
+  courseId: number
+  title: string
+  sortOrder: number
+}
+
+export interface ModuleInput {
+  title: string
+  sortOrder?: number
+}
+
+export interface Lesson {
+  id: number
+  courseId: number
+  moduleId: number | null
+  type: LessonType
+  title: string
+  subtitle: string | null
+  description: string | null
+  durationSeconds: number
+  videoPath: string | null
+  documentPath: string | null
+  isPreview: boolean
+  sortOrder: number
+}
+
+export interface LessonInput {
+  moduleId?: number | null
+  type: LessonType
+  title: string
+  subtitle?: string | null
+  description?: string | null
+  durationSeconds?: number
+  videoPath?: string | null
+  documentPath?: string | null
+  isPreview?: boolean
+  sortOrder?: number
+}
+
+export interface Curriculum {
+  modules: (CourseModule & { lessons: Lesson[] })[]
+  /** Lessons attached to the course itself, outside any module. */
+  loose: Lesson[]
+  totalSeconds: number
 }
 
 export interface Paged<T> {

@@ -408,6 +408,13 @@ onMounted(load)
           {{ saving ? 'Saving…' : isNew ? 'Create course' : 'Save changes' }}
         </button>
         <RouterLink
+          v-if="!isNew"
+          :to="`/courses/${id}/curriculum`"
+          class="rounded-lg border border-brand-500 px-5 py-3 text-sm font-medium text-brand-500 transition hover:bg-brand-50 dark:hover:bg-brand-500/10"
+        >
+          Modules and lessons
+        </RouterLink>
+        <RouterLink
           to="/courses"
           class="rounded-lg border border-gray-300 px-5 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
         >

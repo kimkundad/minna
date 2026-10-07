@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { LOCALES } from '../../db/schema/auth'
-import { COURSE_LEVELS } from '../../db/schema/catalog'
+import { COURSE_LEVELS, LESSON_TYPES } from '../../db/schema/catalog'
 
 /**
  * Validation for the catalog.
@@ -87,4 +87,43 @@ export const courseListQuery = listQuery.extend({
   status: z.enum(['draft', 'pending', 'approved', 'rejected', 'ended']).optional(),
   categoryId: z.coerce.number().int().positive().optional(),
   sort: z.enum(['newest', 'title', 'price', 'popularity']).default('newest'),
+})
+
+/* ---------------- curriculum ---------------- */
+
+export const moduleBody = z.object({
+  title: z.string().min(1, 'A title is required.').max(255),
+  sortOrder: z.coerce.number().int().min(0).default(0),
+})
+
+export const modulePatch = moduleBody.partial()
+
+export const lessonBody = z
+  .object({
+    /** A lesson may sit directly on the course, outside any module. */
+    moduleId: z.coerce.number().int().positive().nullable().optional(),
+    type: z.enum(LESSON_TYPES),
+    title: z.string().min(1, 'A title is required.').max(255),
+    subtitle: z.string().max(255).nullable().optional(),
+    description: z.string().max(10000).nullable().optional(),
+    /** Seconds. Course length is the sum of these. */
+    durationSeconds: z.coerce.number().int().min(0).max(86400).default(0),
+    videoPath: z.string().max(512).nullable().optional(),
+    documentPath: z.string().max(512).nullable().optional(),
+    /** Playable before buying. */
+    isPreview: z.boolean().default(false),
+    sortOrder: z.coerce.number().int().min(0).default(0),
+  })
+  // A video lesson with no video is a lesson that cannot be taken. The file is
+  // uploaded separately, so this only applies once something claims to be one.
+  .refine((v) => v.type !== 'video' || v.videoPath !== undefined, {
+    message: 'A video lesson needs a video.',
+    path: ['videoPath'],
+  })
+
+export const lessonPatch = lessonBody.innerType().partial()
+
+/** New order for a course's lessons or modules, as ids in the order wanted. */
+export const reorderBody = z.object({
+  ids: z.array(z.coerce.number().int().positive()).min(1).max(500),
 })

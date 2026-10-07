@@ -163,4 +163,128 @@ export default async function catalogRoutes(app: FastifyInstance) {
     })
     return reply.status(204).send()
   })
+  /* ---------------- curriculum ---------------- */
+
+  // Guests see the curriculum of a published course, which is how a sales page
+  // lists what is inside before anyone pays. getCourse does the status check.
+  app.get('/courses/:id/curriculum', { preHandler: app.optionalAuth }, async (req) => {
+    const { id } = idParam.parse(req.params)
+    await service.getCourse(id, staff(req))
+    return { data: await service.getCurriculum(id) }
+  })
+
+  app.post('/courses/:id/modules', staffOnly, async (req, reply) => {
+    const { id } = idParam.parse(req.params)
+    await assertMayEditCourse(req, id)
+    const body = schemas.moduleBody.parse(req.body)
+    const created = await service.createModule(id, body)
+
+    audit(req, {
+      action: 'module.created',
+      subjectType: 'course',
+      subjectId: id,
+      summary: created.title,
+    })
+    return reply.status(201).send({ data: created })
+  })
+
+  app.patch('/courses/:id/modules/:moduleId', staffOnly, async (req) => {
+    const { id } = idParam.parse(req.params)
+    const { moduleId } = z.object({ moduleId: z.coerce.number().int().positive() }).parse(req.params)
+    await assertMayEditCourse(req, id)
+
+    const body = schemas.modulePatch.parse(req.body)
+    const { before, after } = await service.updateModule(id, moduleId, body)
+
+    audit(req, {
+      action: 'module.updated',
+      subjectType: 'course',
+      subjectId: id,
+      summary: after.title,
+      changes: diff(before as never, body as never),
+    })
+    return { data: after }
+  })
+
+  app.delete('/courses/:id/modules/:moduleId', staffOnly, async (req, reply) => {
+    const { id } = idParam.parse(req.params)
+    const { moduleId } = z.object({ moduleId: z.coerce.number().int().positive() }).parse(req.params)
+    await assertMayEditCourse(req, id)
+
+    const removed = await service.deleteModule(id, moduleId)
+    audit(req, {
+      action: 'module.deleted',
+      subjectType: 'course',
+      subjectId: id,
+      summary: removed.title,
+    })
+    return reply.status(204).send()
+  })
+
+  app.post('/courses/:id/lessons', staffOnly, async (req, reply) => {
+    const { id } = idParam.parse(req.params)
+    await assertMayEditCourse(req, id)
+    const body = schemas.lessonBody.parse(req.body)
+    const created = await service.createLesson(id, body)
+
+    audit(req, {
+      action: 'lesson.created',
+      subjectType: 'course',
+      subjectId: id,
+      summary: created.title,
+    })
+    return reply.status(201).send({ data: created })
+  })
+
+  app.patch('/courses/:id/lessons/:lessonId', staffOnly, async (req) => {
+    const { id } = idParam.parse(req.params)
+    const { lessonId } = z.object({ lessonId: z.coerce.number().int().positive() }).parse(req.params)
+    await assertMayEditCourse(req, id)
+
+    const body = schemas.lessonPatch.parse(req.body)
+    const { before, after } = await service.updateLesson(id, lessonId, body)
+
+    audit(req, {
+      action: 'lesson.updated',
+      subjectType: 'course',
+      subjectId: id,
+      summary: after.title,
+      changes: diff(before as never, body as never),
+    })
+    return { data: after }
+  })
+
+  app.delete('/courses/:id/lessons/:lessonId', staffOnly, async (req, reply) => {
+    const { id } = idParam.parse(req.params)
+    const { lessonId } = z.object({ lessonId: z.coerce.number().int().positive() }).parse(req.params)
+    await assertMayEditCourse(req, id)
+
+    const removed = await service.deleteLesson(id, lessonId)
+    audit(req, {
+      action: 'lesson.deleted',
+      subjectType: 'course',
+      subjectId: id,
+      summary: removed.title,
+    })
+    return reply.status(204).send()
+  })
+
+  // Reordering is its own call rather than a patch per row: dragging a lesson
+  // up a list changes the position of everything it passes, and sending those
+  // one at a time leaves the order wrong if the tab closes halfway.
+  app.post('/courses/:id/reorder/:what', staffOnly, async (req, reply) => {
+    const { id } = idParam.parse(req.params)
+    const { what } = z.object({ what: z.enum(['modules', 'lessons']) }).parse(req.params)
+    await assertMayEditCourse(req, id)
+
+    const { ids } = schemas.reorderBody.parse(req.body)
+    await service.reorder(what, id, ids)
+
+    audit(req, {
+      action: what === 'modules' ? 'module.reordered' : 'lesson.reordered',
+      subjectType: 'course',
+      subjectId: id,
+    })
+    return reply.status(204).send()
+  })
 }

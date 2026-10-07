@@ -43,6 +43,12 @@ const router = createRouter({
       meta: { title: 'Course', roles: ['admin', 'teacher'] },
     },
     {
+      path: '/courses/:id/curriculum',
+      name: 'CourseCurriculum',
+      component: () => import('@/views/Catalog/CourseCurriculum.vue'),
+      meta: { title: 'Curriculum', roles: ['admin', 'teacher'] },
+    },
+    {
       path: '/categories',
       name: 'Categories',
       component: () => import('@/views/Catalog/Categories.vue'),

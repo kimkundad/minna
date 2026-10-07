@@ -1,6 +1,13 @@
 import { and, asc, count, desc, eq, inArray, like, ne, or, sql } from 'drizzle-orm'
 import { db } from '../../db/client'
-import { categories, courseInstructors, courses, users } from '../../db/schema/index'
+import {
+  categories,
+  courseInstructors,
+  courseModules,
+  courses,
+  lessons,
+  users,
+} from '../../db/schema/index'
 import { conflict, notFound } from '../../lib/errors'
 
 /**
@@ -313,4 +320,170 @@ export async function isCourseInstructor(courseId: number, userId: number): Prom
     .where(and(eq(courseInstructors.courseId, courseId), eq(courseInstructors.userId, userId)))
     .limit(1)
   return Boolean(row)
+}
+
+/* ---------------- curriculum ---------------- */
+
+/**
+ * A course's modules and lessons, in the order they are taught.
+ *
+ * Lessons belong to the course, not to the module: `module_id` is nullable, so
+ * a short course can be a flat list and deleting a module leaves its lessons
+ * on the course rather than taking them with it.
+ */
+export async function getCurriculum(courseId: number) {
+  const mods = await db
+    .select()
+    .from(courseModules)
+    .where(eq(courseModules.courseId, courseId))
+    .orderBy(asc(courseModules.sortOrder), asc(courseModules.id))
+
+  const items = await db
+    .select()
+    .from(lessons)
+    .where(eq(lessons.courseId, courseId))
+    .orderBy(asc(lessons.sortOrder), asc(lessons.id))
+
+  return {
+    modules: mods.map((m) => ({
+      ...m,
+      lessons: items.filter((l) => l.moduleId === m.id),
+    })),
+    /** Lessons attached to the course itself. */
+    loose: items.filter((l) => l.moduleId === null),
+    totalSeconds: items.reduce((sum, l) => sum + l.durationSeconds, 0),
+  }
+}
+
+/**
+ * Keeps `courses.duration_seconds` equal to the sum of its lessons.
+ *
+ * It is cached on the course so the catalog can filter by length without
+ * joining every lesson, which means it has to be recomputed whenever a lesson
+ * is added, edited or removed. Doing it here rather than at each call site is
+ * what stops the two drifting apart.
+ */
+async function refreshCourseDuration(courseId: number) {
+  const [row] = await db
+    .select({ total: sql<number>`COALESCE(SUM(${lessons.durationSeconds}), 0)` })
+    .from(lessons)
+    .where(eq(lessons.courseId, courseId))
+
+  await db
+    .update(courses)
+    .set({ durationSeconds: Number(row?.total ?? 0) })
+    .where(eq(courses.id, courseId))
+}
+
+export async function createModule(courseId: number, input: { title: string; sortOrder: number }) {
+  await db.insert(courseModules).values({ courseId, ...input })
+  const [created] = await db
+    .select()
+    .from(courseModules)
+    .where(eq(courseModules.courseId, courseId))
+    .orderBy(desc(courseModules.id))
+    .limit(1)
+  return created!
+}
+
+export async function updateModule(
+  courseId: number,
+  moduleId: number,
+  input: Partial<{ title: string; sortOrder: number }>,
+) {
+  const [before] = await db
+    .select()
+    .from(courseModules)
+    .where(and(eq(courseModules.id, moduleId), eq(courseModules.courseId, courseId)))
+    .limit(1)
+  if (!before) throw notFound('That module does not exist on this course.')
+
+  if (Object.keys(input).length) {
+    await db.update(courseModules).set(input).where(eq(courseModules.id, moduleId))
+  }
+  const [after] = await db.select().from(courseModules).where(eq(courseModules.id, moduleId)).limit(1)
+  return { before, after: after! }
+}
+
+export async function deleteModule(courseId: number, moduleId: number) {
+  const [row] = await db
+    .select()
+    .from(courseModules)
+    .where(and(eq(courseModules.id, moduleId), eq(courseModules.courseId, courseId)))
+    .limit(1)
+  if (!row) throw notFound('That module does not exist on this course.')
+
+  // The foreign key is ON DELETE SET NULL, so the lessons survive and land back
+  // on the course. Losing a section heading must not lose the teaching.
+  await db.delete(courseModules).where(eq(courseModules.id, moduleId))
+  return row
+}
+
+export async function createLesson(courseId: number, input: Record<string, unknown>) {
+  const values = { ...input, courseId } as typeof lessons.$inferInsert
+  await db.insert(lessons).values(values)
+
+  const [created] = await db
+    .select()
+    .from(lessons)
+    .where(eq(lessons.courseId, courseId))
+    .orderBy(desc(lessons.id))
+    .limit(1)
+
+  await refreshCourseDuration(courseId)
+  return created!
+}
+
+export async function updateLesson(
+  courseId: number,
+  lessonId: number,
+  input: Record<string, unknown>,
+) {
+  const [before] = await db
+    .select()
+    .from(lessons)
+    .where(and(eq(lessons.id, lessonId), eq(lessons.courseId, courseId)))
+    .limit(1)
+  if (!before) throw notFound('That lesson does not exist on this course.')
+
+  if (Object.keys(input).length) {
+    await db
+      .update(lessons)
+      .set(input as Partial<typeof lessons.$inferInsert>)
+      .where(eq(lessons.id, lessonId))
+  }
+
+  await refreshCourseDuration(courseId)
+  const [after] = await db.select().from(lessons).where(eq(lessons.id, lessonId)).limit(1)
+  return { before, after: after! }
+}
+
+export async function deleteLesson(courseId: number, lessonId: number) {
+  const [row] = await db
+    .select()
+    .from(lessons)
+    .where(and(eq(lessons.id, lessonId), eq(lessons.courseId, courseId)))
+    .limit(1)
+  if (!row) throw notFound('That lesson does not exist on this course.')
+
+  await db.delete(lessons).where(eq(lessons.id, lessonId))
+  await refreshCourseDuration(courseId)
+  return row
+}
+
+/** Rewrites sort order from the position of each id in the list. */
+export async function reorder(
+  table: 'modules' | 'lessons',
+  courseId: number,
+  ids: number[],
+): Promise<void> {
+  const target = table === 'modules' ? courseModules : lessons
+  // One statement per row, but a curriculum is tens of rows, not thousands,
+  // and a CASE expression here would be harder to read than it is fast.
+  for (const [index, id] of ids.entries()) {
+    await db
+      .update(target)
+      .set({ sortOrder: index })
+      .where(and(eq(target.id, id), eq(target.courseId, courseId)))
+  }
 }
