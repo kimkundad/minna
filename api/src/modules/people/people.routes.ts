@@ -2,9 +2,11 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { audit } from '../../lib/audit'
 import { conflict, forbidden } from '../../lib/errors'
-import { emailVerifiedMail } from '../../lib/email-templates'
+import { env } from '../../config/env'
+import { emailVerifiedMail, passwordResetMail } from '../../lib/email-templates'
 import { sendMail } from '../../lib/mailer'
 import * as schemas from './people.schemas'
+import * as authService from '../auth/auth.service'
 import * as service from './people.service'
 
 /**
@@ -30,6 +32,66 @@ export default async function peopleRoutes(app: FastifyInstance) {
   app.get('/members/:id', adminOnly, async (req) => {
     const { id } = idParam.parse(req.params)
     return { data: await service.getMember(id) }
+  })
+
+  /**
+   * Creates a staff account. No password is set: the person follows a link and
+   * chooses their own, so nobody else ever knows it.
+   *
+   * When mail cannot be sent the link comes back in the response instead, for
+   * the creator to pass on. It is shown once and not stored anywhere readable,
+   * the same as the emailed one.
+   */
+  app.post('/members', superOnly, async (req, reply) => {
+    const body = schemas.createMemberBody.parse(req.body)
+    const created = await service.createMember(body)
+
+    const reset = await authService.createPasswordReset(created.email)
+    const url = reset ? `${env.APP_URL}/reset-password?token=${reset.token}` : null
+
+    if (url && body.sendInvite) {
+      void sendMail({ ...passwordResetMail(created.firstName, url), to: created.email }, req.log)
+    }
+
+    audit(req, {
+      action: 'member.created',
+      subjectType: 'user',
+      subjectId: created.id,
+      summary: `${created.email} as ${created.roles.join(', ')}`,
+    })
+
+    return reply.status(201).send({
+      data: created,
+      // Only when the creator asked to hand it over themselves.
+      inviteUrl: body.sendInvite ? null : url,
+    })
+  })
+
+  /**
+   * Sends a set-password link to an existing member.
+   *
+   * This is the answer to the sign-in page's "ask another administrator": the
+   * link goes to the member's own address, so an administrator starts the reset
+   * without ever learning the password that comes out of it.
+   */
+  app.post('/members/:id/password-reset', superOnly, async (req, reply) => {
+    const { id } = idParam.parse(req.params)
+    const member = await service.getMember(id)
+
+    const reset = await authService.createPasswordReset(member.email)
+    const url = reset ? `${env.APP_URL}/reset-password?token=${reset.token}` : null
+    if (url) {
+      void sendMail({ ...passwordResetMail(member.firstName, url), to: member.email }, req.log)
+    }
+
+    audit(req, {
+      action: 'member.password_reset_sent',
+      subjectType: 'user',
+      subjectId: id,
+      summary: member.email,
+    })
+
+    return reply.status(202).send({ sent: Boolean(url) })
   })
 
   app.put('/members/:id/roles', superOnly, async (req) => {

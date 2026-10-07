@@ -22,20 +22,7 @@ const error = ref('')
 
 const page = ref(1)
 const q = ref('')
-const role = ref<RoleName | ''>('')
 const status = ref<'active' | 'suspended' | ''>('')
-
-/** The member whose roles are being edited, and the set being built. */
-const editing = ref<Member | null>(null)
-const draftRoles = ref<RoleName[]>([])
-const saving = ref(false)
-
-const ALL_ROLES: { value: RoleName; label: string; note: string }[] = [
-  { value: 'superadmin', label: 'Superadmin', note: 'Roles, settings, audit log' },
-  { value: 'admin', label: 'Admin', note: 'Courses, orders, content' },
-  { value: 'teacher', label: 'Teacher', note: 'Their own courses and marking' },
-  { value: 'student', label: 'Student', note: 'Learns on the public site' },
-]
 
 const ROLE_STYLE: Record<RoleName, string> = {
   superadmin: 'bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-400',
@@ -52,7 +39,7 @@ async function load() {
       page: page.value,
       perPage: 20,
       ...(q.value ? { q: q.value } : {}),
-      ...(role.value ? { role: role.value } : {}),
+      group: 'learners',
       ...(status.value ? { status: status.value } : {}),
     })
     rows.value = res.data
@@ -73,38 +60,11 @@ watch(q, () => {
     void load()
   }, 300)
 })
-watch([role, status], () => {
+watch(status, () => {
   page.value = 1
   void load()
 })
 watch(page, load)
-
-function openRoles(member: Member) {
-  editing.value = member
-  draftRoles.value = [...member.roles]
-  error.value = ''
-}
-
-function toggleRole(value: RoleName) {
-  draftRoles.value = draftRoles.value.includes(value)
-    ? draftRoles.value.filter((r) => r !== value)
-    : [...draftRoles.value, value]
-}
-
-async function saveRoles() {
-  if (!editing.value) return
-  saving.value = true
-  error.value = ''
-  try {
-    await people.setRoles(editing.value.id, draftRoles.value)
-    editing.value = null
-    await load()
-  } catch (err) {
-    error.value = err instanceof ApiError ? err.message : 'Could not change those roles.'
-  } finally {
-    saving.value = false
-  }
-}
 
 async function toggleStatus(member: Member) {
   const next = member.status === 'active' ? 'suspended' : 'active'
@@ -146,7 +106,7 @@ onMounted(load)
       </div>
 
       <div
-        class="grid grid-cols-1 gap-3 border-y border-gray-100 px-5 py-4 dark:border-gray-800 sm:grid-cols-3 sm:px-6"
+        class="grid grid-cols-1 gap-3 border-y border-gray-100 px-5 py-4 dark:border-gray-800 sm:grid-cols-2 sm:px-6"
       >
         <input
           v-model="q"
@@ -154,13 +114,6 @@ onMounted(load)
           placeholder="Search name or email"
           class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
         />
-        <select
-          v-model="role"
-          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-        >
-          <option value="">Any role</option>
-          <option v-for="r in ALL_ROLES" :key="r.value" :value="r.value">{{ r.label }}</option>
-        </select>
         <select
           v-model="status"
           class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
@@ -178,55 +131,6 @@ onMounted(load)
       >
         {{ error }}
       </p>
-
-      <!-- Role editing sits above the table, so the other members stay in view
-           while deciding what someone should be. -->
-      <div
-        v-if="editing"
-        class="border-y border-gray-100 bg-gray-50 px-5 py-5 dark:border-gray-800 dark:bg-white/[0.02] sm:px-6"
-      >
-        <h4 class="mb-4 text-sm font-medium text-gray-800 dark:text-white/90">
-          Roles for {{ editing.email }}
-        </h4>
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <label
-            v-for="r in ALL_ROLES"
-            :key="r.value"
-            class="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-700"
-            :class="{ 'border-brand-500': draftRoles.includes(r.value) }"
-          >
-            <input
-              type="checkbox"
-              :checked="draftRoles.includes(r.value)"
-              class="mt-0.5 h-5 w-5 rounded border-gray-300 text-brand-500 dark:border-gray-700 dark:bg-gray-900"
-              @change="toggleRole(r.value)"
-            />
-            <span>
-              <span class="block text-sm font-medium text-gray-800 dark:text-white/90">
-                {{ r.label }}
-              </span>
-              <span class="block text-xs text-gray-500 dark:text-gray-400">{{ r.note }}</span>
-            </span>
-          </label>
-        </div>
-        <div class="mt-4 flex gap-3">
-          <button
-            type="button"
-            :disabled="saving"
-            class="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600 disabled:opacity-60"
-            @click="saveRoles"
-          >
-            {{ saving ? 'Saving…' : 'Save roles' }}
-          </button>
-          <button
-            type="button"
-            class="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-300"
-            @click="editing = null"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
 
       <div class="overflow-x-auto">
         <table class="w-full min-w-[820px] text-left">
@@ -289,12 +193,8 @@ onMounted(load)
               </td>
               <td class="px-5 py-3.5 text-right text-sm sm:px-6">
                 <template v-if="auth.isSuperadmin">
-                  <button type="button" class="text-brand-500 hover:text-brand-600" @click="openRoles(m)">
-                    Roles
-                  </button>
                   <button
                     type="button"
-                    class="ml-4"
                     :class="m.status === 'active' ? 'text-error-500' : 'text-success-600'"
                     @click="toggleStatus(m)"
                   >

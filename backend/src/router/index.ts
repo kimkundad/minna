@@ -56,6 +56,15 @@ const router = createRouter({
     },
 
     {
+      // Who can sign in here. Superadmin only: creating staff and granting
+      // roles are the two powers that could be turned on the people who hold
+      // them.
+      path: '/staff',
+      name: 'Staff',
+      component: () => import('@/views/People/Staff.vue'),
+      meta: { title: 'Team', roles: ['superadmin'] },
+    },
+    {
       path: '/members',
       name: 'Members',
       component: () => import('@/views/People/Members.vue'),

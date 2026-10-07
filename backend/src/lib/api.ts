@@ -387,6 +387,8 @@ export interface MemberListQuery extends Record<string, string | number | boolea
   q?: string
   role?: RoleName
   status?: 'active' | 'suspended'
+  /** 'staff' is anyone who can sign in here; 'learners' is everyone else. */
+  group?: 'staff' | 'learners'
   sort?: 'newest' | 'name' | 'email'
 }
 
@@ -424,6 +426,12 @@ export const people = {
 
   member: (id: number) => send<{ data: Member }>(`/members/${id}`),
 
+  create: (body: CreateMemberInput) =>
+    send<{ data: Member; inviteUrl: string | null }>('/members', { method: 'POST', body }),
+
+  sendPasswordReset: (id: number) =>
+    send<{ sent: boolean }>(`/members/${id}/password-reset`, { method: 'POST', body: {} }),
+
   setRoles: (id: number, roles: RoleName[]) =>
     send<{ data: Member }>(`/members/${id}/roles`, { method: 'PUT', body: { roles } }),
 
@@ -447,4 +455,14 @@ export const people = {
       `/teacher-applications/${id}/decision`,
       { method: 'POST', body },
     ),
+}
+
+export interface CreateMemberInput {
+  email: string
+  firstName: string
+  lastName: string
+  roles: RoleName[]
+  locale?: 'th' | 'en' | 'jp' | 'vn'
+  /** False returns the set-password link instead of emailing it. */
+  sendInvite?: boolean
 }

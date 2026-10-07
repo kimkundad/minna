@@ -266,6 +266,10 @@ const allGroups = [
           { name: 'Access rights', path: '/entitlements', soon: true },
         ],
       },
+      // Separate from members because it answers a different question — who
+      // can get in, rather than what a customer bought — and there will be a
+      // handful of these and thousands of those.
+      { icon: SettingsIcon, name: 'Team', path: '/staff', roles: ['superadmin'] },
     ],
   },
   {

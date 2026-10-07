@@ -9,6 +9,9 @@ export const memberListQuery = z.object({
   perPage: z.coerce.number().int().min(1).max(100).default(20),
   q: z.string().max(200).optional(),
   role: z.enum(['superadmin', 'admin', 'teacher', 'student']).optional(),
+  /** 'staff' is anyone who can sign in to the admin; 'learners' is everyone
+   *  else. Two screens, because they answer different questions. */
+  group: z.enum(['staff', 'learners']).optional(),
   status: z.enum(['active', 'suspended']).optional(),
   sort: z.enum(['newest', 'name', 'email']).default('newest'),
 })
@@ -42,4 +45,23 @@ export const decideApplicationBody = z.object({
   /** Which category the free-text subject turned out to be. */
   categoryId: z.coerce.number().int().positive().nullable().optional(),
   note: z.string().max(500).optional(),
+})
+
+/**
+ * A staff account created from the admin.
+ *
+ * No password field on purpose. The person sets their own through a link, so
+ * nobody else ever knows it — an administrator who types a colleague's
+ * password knows it, and a password two people know is not one.
+ *
+ * `sendInvite: false` exists for the case where mail is not working yet: the
+ * API then returns a one-time link for the creator to pass on by hand.
+ */
+export const createMemberBody = z.object({
+  email: z.string().email('Enter a valid email address.').max(255),
+  firstName: z.string().min(1, 'Enter a first name.').max(100),
+  lastName: z.string().min(1, 'Enter a last name.').max(100),
+  roles: z.array(z.enum(['superadmin', 'admin', 'teacher', 'student'])).min(1, 'Pick at least one role.'),
+  locale: z.enum(['th', 'en', 'jp', 'vn']).default('th'),
+  sendInvite: z.boolean().default(true),
 })

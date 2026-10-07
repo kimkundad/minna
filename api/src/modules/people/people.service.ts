@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import { and, asc, count, desc, eq, inArray, like, or, sql } from 'drizzle-orm'
 import { db } from '../../db/client'
 import {
@@ -8,6 +9,7 @@ import {
   users,
 } from '../../db/schema/index'
 import { conflict, notFound } from '../../lib/errors'
+import { hashPassword } from '../../lib/password'
 import type { RoleName } from '../../plugins/auth'
 
 export interface Paged<T> {
@@ -30,6 +32,7 @@ export interface MemberListOptions {
   q?: string | undefined
   role?: RoleName | undefined
   status?: 'active' | 'suspended' | undefined
+  group?: 'staff' | 'learners' | undefined
   sort: 'newest' | 'name' | 'email'
 }
 
@@ -50,6 +53,22 @@ export async function listMembers(opts: MemberListOptions): Promise<Paged<unknow
           WHERE ur.user_id = ${users.id} AND r.name = ${opts.role}
         )`
       : undefined,
+    // Staff is anyone who can sign in to the admin. Learners are the rest,
+    // including an account with no role at all — which still belongs on a
+    // screen, or it is invisible to everyone.
+    opts.group === 'staff'
+      ? sql`EXISTS (
+          SELECT 1 FROM user_roles ur
+          JOIN roles r ON r.id = ur.role_id
+          WHERE ur.user_id = ${users.id} AND r.name IN ('superadmin','admin','teacher')
+        )`
+      : opts.group === 'learners'
+        ? sql`NOT EXISTS (
+            SELECT 1 FROM user_roles ur
+            JOIN roles r ON r.id = ur.role_id
+            WHERE ur.user_id = ${users.id} AND r.name IN ('superadmin','admin','teacher')
+          )`
+        : undefined,
   ].filter(Boolean)
 
   const filter = where.length ? and(...(where as never[])) : undefined
@@ -274,4 +293,44 @@ export async function decideApplication(
   }
 
   return { application: await getApplication(id), granted }
+}
+
+/**
+ * Creates a staff account with no usable password.
+ *
+ * The hash stored is of a value nobody holds, so the account cannot be signed
+ * into until someone follows a set-password link. That is deliberate: an
+ * account that exists with a password an administrator chose is an account two
+ * people can open.
+ */
+export async function createMember(input: {
+  email: string
+  firstName: string
+  lastName: string
+  roles: RoleName[]
+  locale: 'th' | 'en' | 'jp' | 'vn'
+}) {
+  const email = input.email.trim().toLowerCase()
+
+  const [taken] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1)
+  if (taken) throw conflict('That email already has an account.', { email: 'Already registered.' })
+
+  await db.insert(users).values({
+    email,
+    // Argon2 over 64 random bytes: valid, and matching nothing anyone can type.
+    passwordHash: await hashPassword(randomBytes(64).toString('base64url')),
+    firstName: input.firstName.trim(),
+    lastName: input.lastName.trim(),
+    locale: input.locale,
+    // Staff are created by a person who already knows who they are, so the
+    // address does not need proving a second time.
+    emailVerifiedAt: new Date(),
+    privacyAcceptedAt: new Date(),
+  })
+
+  const [created] = await db.select().from(users).where(eq(users.email, email)).limit(1)
+  if (!created) throw new Error('user row vanished right after insert')
+
+  await setRoles(created.id, input.roles)
+  return getMember(created.id)
 }
