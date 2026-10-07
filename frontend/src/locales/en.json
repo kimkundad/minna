@@ -16,7 +16,8 @@
   },
   "language": {
     "chooseTitle": "Choose your language",
-    "chooseSub": "Pick the language you want to browse in. You can change it later from the menu at the top right."
+    "chooseSub": "Pick the language you want to browse in. You can change it later from the menu at the top right.",
+    "switch": "Language: {name}"
   },
   "course": {
     "instructorCount": "{count} instructor | {count} instructors",
@@ -141,6 +142,7 @@
   "hoursMinutes": "{h} hr {m} min",
   "header": {
     "openMenu": "Open main menu",
+    "closeMenu": "Close menu",
     "brandHome": "Minna — home",
     "mainMenu": "Main menu",
     "searchCourses": "Search courses",
@@ -150,6 +152,16 @@
     "categoryCount": "{count} categories",
     "notificationsUnread": "Notifications, {count} new",
     "myAccount": "My account"
+  },
+  "search": {
+    "label": "Search courses, categories or instructors",
+    "placeholder": "Search courses, categories or instructor names",
+    "close": "Close search",
+    "popularCategories": "Popular categories",
+    "coursesCount": "Courses ({count})",
+    "empty": "Nothing matches “{q}”. Try a category name such as Cardiology, or an instructor.",
+    "seeAll": "See all results for “{q}”",
+    "seeAllHint": "Opens the course catalog with this filter"
   },
   "footer": {
     "about": "Minna is an online language school: courses, articles and practice in one place, on any device.",
@@ -2246,6 +2258,30 @@
     "phonePlaceholder": "0812345678",
     "optional": "(optional)",
     "year": "Year",
-    "birthdateRequired": "Please choose your full date of birth."
+    "birthdateRequired": "Please choose your full date of birth.",
+    "rememberMe": "Stay signed in",
+    "forgotPassword": "Forgot password?",
+    "forgotTitle": "Forgot password",
+    "forgotSub": "Enter the email you signed up with and we will send a link to set a new password.",
+    "sendResetLink": "Send reset link",
+    "resetSent": "If that email has an account, a reset link is on its way. Check your inbox, and your spam folder.",
+    "rememberedIt": "Remembered it?",
+    "acceptTerms": "I accept the {terms} and the {privacy}",
+    "termsLink": "terms of use",
+    "privacyLink": "personal data consent",
+    "termsRequired": "Please accept the terms and the privacy notice to register.",
+    "phoneInvalid": "That number is not valid for the country selected.",
+    "memberType": "Account type",
+    "memberStudent": "Student",
+    "memberTeacher": "Teacher",
+    "teacherNotice": "Applying as a teacher creates your account right away. Teaching access is granted after we review your application and get in touch.",
+    "teachSubject": "What you want to teach",
+    "teachSubjectPlaceholder": "e.g. Japanese conversation N5, grammar, JLPT prep",
+    "teachExperience": "Experience, work or what you do now",
+    "teachExperiencePlaceholder": "Tell us about it...",
+    "teachReason": "Why you want to work with us",
+    "teachReasonPlaceholder": "A sentence or two...",
+    "teachContactTime": "When we can reach you",
+    "teachContactTimePlaceholder": "e.g. weekdays after 6pm"
   }
 }

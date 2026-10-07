@@ -16,7 +16,8 @@
   },
   "language": {
     "chooseTitle": "Choose your language",
-    "chooseSub": "Pick the language you want to browse in. You can change it later from the menu at the top right."
+    "chooseSub": "Pick the language you want to browse in. You can change it later from the menu at the top right.",
+    "switch": "Ngôn ngữ: {name}"
   },
   "course": {
     "instructorCount": "{count} instructor | {count} instructors",
@@ -141,6 +142,7 @@
   "hoursMinutes": "{h} hr {m} min",
   "header": {
     "openMenu": "Open main menu",
+    "closeMenu": "Đóng menu",
     "brandHome": "Minna — home",
     "mainMenu": "Main menu",
     "searchCourses": "Search courses",
@@ -150,6 +152,16 @@
     "categoryCount": "{count} categories",
     "notificationsUnread": "Notifications, {count} new",
     "myAccount": "My account"
+  },
+  "search": {
+    "label": "Tìm khóa học, danh mục hoặc giảng viên",
+    "placeholder": "Tìm theo tên khóa học, danh mục hoặc giảng viên",
+    "close": "Đóng tìm kiếm",
+    "popularCategories": "Danh mục phổ biến",
+    "coursesCount": "Khóa học ({count})",
+    "empty": "Không có khóa học nào khớp với “{q}”. Thử tên danh mục như Cardiology, hoặc tên giảng viên.",
+    "seeAll": "Xem tất cả kết quả cho “{q}”",
+    "seeAllHint": "Mở danh sách khóa học kèm bộ lọc"
   },
   "footer": {
     "about": "Minna is an online language school: courses, articles and practice in one place, on any device.",
@@ -2246,6 +2258,30 @@
     "phonePlaceholder": "0812345678",
     "optional": "(optional)",
     "year": "Year",
-    "birthdateRequired": "Please choose your full date of birth."
+    "birthdateRequired": "Please choose your full date of birth.",
+    "rememberMe": "Duy trì đăng nhập",
+    "forgotPassword": "Quên mật khẩu?",
+    "forgotTitle": "Quên mật khẩu",
+    "forgotSub": "Nhập email bạn đã đăng ký, chúng tôi sẽ gửi liên kết đặt lại mật khẩu.",
+    "sendResetLink": "Gửi liên kết đặt lại",
+    "resetSent": "Nếu email đó có tài khoản, liên kết đặt lại đã được gửi. Kiểm tra hộp thư và cả thư rác.",
+    "rememberedIt": "Đã nhớ ra?",
+    "acceptTerms": "Tôi chấp nhận {terms} và {privacy}",
+    "termsLink": "điều khoản sử dụng",
+    "privacyLink": "đồng ý xử lý dữ liệu cá nhân",
+    "termsRequired": "Vui lòng chấp nhận điều khoản và chính sách dữ liệu cá nhân để đăng ký.",
+    "phoneInvalid": "Số này không hợp lệ với quốc gia đã chọn.",
+    "memberType": "Loại tài khoản",
+    "memberStudent": "Học viên",
+    "memberTeacher": "Giảng viên",
+    "teacherNotice": "Đăng ký làm giảng viên sẽ tạo tài khoản ngay. Quyền giảng dạy được cấp sau khi chúng tôi xem xét hồ sơ và liên hệ với bạn.",
+    "teachSubject": "Lĩnh vực bạn muốn dạy",
+    "teachSubjectPlaceholder": "VD: hội thoại tiếng Nhật N5, ngữ pháp, luyện thi JLPT",
+    "teachExperience": "Kinh nghiệm, thành tích hoặc công việc hiện tại",
+    "teachExperiencePlaceholder": "Mô tả chi tiết...",
+    "teachReason": "Lý do bạn muốn cộng tác",
+    "teachReasonPlaceholder": "Một vài câu ngắn...",
+    "teachContactTime": "Thời gian thuận tiện để liên hệ",
+    "teachContactTimePlaceholder": "VD: các ngày sau 18h"
   }
 }

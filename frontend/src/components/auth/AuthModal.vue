@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import AppNotice from '@/components/ui/AppNotice.vue'
+import PhoneField from '@/components/ui/PhoneField.vue'
+import { api } from '@/lib/api'
+import type { AppLocale } from '@/locales'
 import { useAuthStore, ApiError } from '@/stores/auth'
 import { authRequest, closeAuth, type AuthStep } from './authChannel'
 
@@ -26,7 +30,10 @@ const localeTag = computed(
 )
 const auth = useAuthStore()
 
-const step = ref<AuthStep>('login')
+/** 'forgot' is reached from inside the dialog only, so it is not an AuthStep:
+ *  nothing elsewhere should be able to open straight onto it. */
+type Step = AuthStep | 'forgot'
+const step = ref<Step>('login')
 const dialog = ref<HTMLElement | null>(null)
 const titleId = 'auth-modal-title'
 
@@ -49,23 +56,32 @@ const birthYear = ref('')
 
 const phoneCountryCode = ref('+66')
 const phoneNational = ref('')
+/** Null until libphonenumber loads; false only once it says the number is wrong. */
+const phoneValid = ref<boolean | null>(null)
 
-/** The dialling codes a Thai-, English-, Japanese- and Vietnamese-speaking
- *  audience actually needs, rather than all two hundred. */
-const DIAL_CODES = [
-  { code: '+66', name: 'ไทย' },
-  { code: '+81', name: '日本' },
-  { code: '+84', name: 'Việt Nam' },
-  { code: '+44', name: 'United Kingdom' },
-  { code: '+1', name: 'USA / Canada' },
-  { code: '+86', name: '中国' },
-  { code: '+82', name: '한국' },
-  { code: '+65', name: 'Singapore' },
-  { code: '+60', name: 'Malaysia' },
-  { code: '+856', name: 'ລາວ' },
-  { code: '+855', name: 'កម្ពុជា' },
-  { code: '+95', name: 'မြန်မာ' },
-]
+/** Ticked by default, as the design has it. It decides whether the refresh
+ *  cookie survives closing the browser. */
+const remember = ref(true)
+
+/** The terms and the privacy notice, one box. The API refuses a registration
+ *  without it, so this is the same rule on both sides rather than a courtesy. */
+const acceptedTerms = ref(false)
+
+/**
+ * Which registration form to show. Both make the same kind of account —
+ * picking 'teacher' files an application for an admin to approve rather than
+ * handing anyone the role, which is why there is no third option and no
+ * difference in what is created.
+ */
+const memberType = ref<'student' | 'teacher'>('student')
+
+const teachSubject = ref('')
+const teachExperience = ref('')
+const teachReason = ref('')
+const teachContactTime = ref('')
+
+/** Shown after a password-reset request, in place of the form. */
+const resetSent = ref(false)
 
 const thisYear = new Date().getFullYear()
 
@@ -111,6 +127,18 @@ const birthdateValue = computed<string | null>(() => {
   return `${y}-${pad(m)}-${pad(d)}`
 })
 
+const submitIcon = computed(() =>
+  step.value === 'login' ? 'log-in' : step.value === 'register' ? 'user' : 'mail',
+)
+
+const submitLabel = computed(() =>
+  step.value === 'login'
+    ? t('common.login')
+    : step.value === 'register'
+      ? t('common.register')
+      : t('auth.sendResetLink'),
+)
+
 /** Server-side messages, keyed by field, shown under the input that caused them. */
 const fieldErrors = ref<Record<string, string>>({})
 const formError = ref('')
@@ -122,6 +150,7 @@ function reset() {
   password.value = ''
   fieldErrors.value = {}
   formError.value = ''
+  resetSent.value = false
 }
 
 watch(authRequest, async (next) => {
@@ -141,7 +170,7 @@ function dismiss() {
   returnTo = null
 }
 
-function switchTo(next: AuthStep) {
+function switchTo(next: Step) {
   step.value = next
   reset()
   nextTick(() => dialog.value?.querySelector<HTMLInputElement>('input')?.focus())
@@ -153,9 +182,29 @@ async function submit() {
   const done = authRequest.value?.onDone
 
   try {
+    if (step.value === 'forgot') {
+      await api.forgotPassword(email.value.trim())
+      // The API answers the same whether or not the address is registered, and
+      // so does this: saying "no such account" would turn the form into a way
+      // of finding out who has one.
+      resetSent.value = true
+      return
+    }
+
     if (step.value === 'login') {
-      await auth.login(email.value.trim(), password.value)
+      await auth.login(email.value.trim(), password.value, remember.value)
     } else {
+      if (!acceptedTerms.value) {
+        fieldErrors.value = { acceptedTerms: t('auth.termsRequired') }
+        return
+      }
+
+      // Before libphonenumber loads this is null, which is not a rejection.
+      if (phoneValid.value === false) {
+        fieldErrors.value = { phoneNational: t('auth.phoneInvalid') }
+        return
+      }
+
       const birthdate = birthdateValue.value
       if (!birthdate) {
         fieldErrors.value = { birthdate: t('auth.birthdateRequired') }
@@ -170,6 +219,20 @@ async function submit() {
         lastName: lastName.value.trim(),
         birthdate,
         ...(phone ? { phoneCountryCode: phoneCountryCode.value, phoneNational: phone } : {}),
+        acceptedTerms: true,
+        memberType: memberType.value,
+        ...(memberType.value === 'teacher'
+          ? {
+              teacher: {
+                subject: teachSubject.value.trim(),
+                experience: teachExperience.value.trim(),
+                ...(teachReason.value.trim() ? { reason: teachReason.value.trim() } : {}),
+                ...(teachContactTime.value.trim()
+                  ? { contactTime: teachContactTime.value.trim() }
+                  : {}),
+              },
+            }
+          : {}),
       })
     }
     closeAuth()
@@ -242,12 +305,8 @@ onBeforeUnmount(() => {
 
         <div class="modal-head">
           <div style="min-width: 0">
-            <h2 class="modal-title" :id="titleId">
-              {{ step === 'login' ? t('auth.loginTitle') : t('auth.registerTitle') }}
-            </h2>
-            <p class="modal-sub">
-              {{ step === 'login' ? t('auth.loginSub') : t('auth.registerSub') }}
-            </p>
+            <h2 class="modal-title" :id="titleId">{{ t(`auth.${step}Title`) }}</h2>
+            <p class="modal-sub">{{ t(`auth.${step}Sub`) }}</p>
           </div>
           <button
             type="button"
@@ -264,7 +323,27 @@ onBeforeUnmount(() => {
             <AppNotice v-if="authRequest.reason" tone="info" :text="authRequest.reason" />
             <AppNotice v-if="formError" tone="danger" :text="formError" />
 
-            <template v-if="step === 'register'">
+            <template v-if="step === 'register' && !resetSent">
+              <fieldset class="fieldset">
+                <legend>{{ t('auth.memberType') }}</legend>
+                <div class="seg seg--block" role="radiogroup">
+                  <label>
+                    <input v-model="memberType" type="radio" value="student" />
+                    <span><AppIcon name="graduation" />{{ t('auth.memberStudent') }}</span>
+                  </label>
+                  <label>
+                    <input v-model="memberType" type="radio" value="teacher" />
+                    <span><AppIcon name="users" />{{ t('auth.memberTeacher') }}</span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <AppNotice
+                v-if="memberType === 'teacher'"
+                tone="info"
+                :text="t('auth.teacherNotice')"
+              />
+
               <div class="form-grid">
                 <div class="field">
                   <label class="label" for="auth-first">
@@ -299,7 +378,9 @@ onBeforeUnmount(() => {
               </div>
             </template>
 
-            <div class="field">
+            <AppNotice v-if="resetSent" tone="success" :text="t('auth.resetSent')" />
+
+            <div v-if="!resetSent" class="field">
               <label class="label" for="auth-email">
                 {{ t('auth.email') }} <span class="req">*</span>
               </label>
@@ -317,7 +398,7 @@ onBeforeUnmount(() => {
               </span>
             </div>
 
-            <div class="field">
+            <div v-if="step !== 'forgot' && !resetSent" class="field">
               <label class="label" for="auth-password">
                 {{ t('auth.password') }} <span class="req">*</span>
               </label>
@@ -338,7 +419,7 @@ onBeforeUnmount(() => {
               </span>
             </div>
 
-            <template v-if="step === 'register'">
+            <template v-if="step === 'register' && !resetSent">
               <div class="field">
                 <span class="label" id="auth-birth-label">
                   {{ t('auth.birthdate') }} <span class="req">*</span>
@@ -385,45 +466,150 @@ onBeforeUnmount(() => {
 
               <div class="field">
                 <label class="label" for="auth-phone">
-                  {{ t('auth.phone') }} <span class="opt">{{ t('auth.optional') }}</span>
+                  {{ t('auth.phone') }}
+                  <!-- An application is answered by phone, so on that form the
+                       number stops being optional. The API enforces the same. -->
+                  <span v-if="memberType === 'teacher'" class="req">*</span>
+                  <span v-else class="opt">{{ t('auth.optional') }}</span>
                 </label>
-                <div class="auth-phone">
-                  <select
-                    v-model="phoneCountryCode"
-                    class="input"
-                    :aria-label="t('auth.dialCode')"
-                  >
-                    <option v-for="c in DIAL_CODES" :key="c.code" :value="c.code">
-                      {{ c.code }} · {{ c.name }}
-                    </option>
-                  </select>
-                  <input
-                    id="auth-phone"
-                    v-model="phoneNational"
-                    class="input"
-                    type="tel"
-                    inputmode="tel"
-                    autocomplete="tel-national"
-                    :placeholder="t('auth.phonePlaceholder')"
-                    :aria-invalid="fieldErrors.phoneNational ? 'true' : undefined"
-                  />
-                </div>
+                <PhoneField
+                  id="auth-phone"
+                  v-model:country-code="phoneCountryCode"
+                  v-model:national="phoneNational"
+                  :locale="(locale as AppLocale)"
+                  :placeholder="t('auth.phonePlaceholder')"
+                  :invalid="Boolean(fieldErrors.phoneNational)"
+                  @validity="phoneValid = $event"
+                />
                 <span v-if="fieldErrors.phoneNational" class="field-error">
                   <AppIcon name="alert-circle" :size="16" />{{ fieldErrors.phoneNational }}
                 </span>
               </div>
+
+              <!-- The teaching application, following the fields the old
+                   "สมัครสอน" form collected. Submitting it creates an ordinary
+                   account plus a pending application. -->
+              <template v-if="memberType === 'teacher'">
+                <div class="field">
+                  <label class="label" for="auth-teach-cat">
+                    {{ t('auth.teachSubject') }} <span class="req">*</span>
+                  </label>
+                  <input
+                    id="auth-teach-cat"
+                    v-model="teachSubject"
+                    class="input"
+                    maxlength="150"
+                    :placeholder="t('auth.teachSubjectPlaceholder')"
+                    :aria-invalid="fieldErrors['teacher.subject'] ? 'true' : undefined"
+                  />
+                  <span v-if="fieldErrors['teacher.subject']" class="field-error">
+                    <AppIcon name="alert-circle" :size="16" />{{
+                      fieldErrors['teacher.subject']
+                    }}
+                  </span>
+                </div>
+
+                <div class="field">
+                  <label class="label" for="auth-teach-exp">
+                    {{ t('auth.teachExperience') }} <span class="req">*</span>
+                  </label>
+                  <textarea
+                    id="auth-teach-exp"
+                    v-model="teachExperience"
+                    class="textarea"
+                    rows="3"
+                    :placeholder="t('auth.teachExperiencePlaceholder')"
+                    :aria-invalid="fieldErrors['teacher.experience'] ? 'true' : undefined"
+                  />
+                  <span v-if="fieldErrors['teacher.experience']" class="field-error">
+                    <AppIcon name="alert-circle" :size="16" />{{
+                      fieldErrors['teacher.experience']
+                    }}
+                  </span>
+                </div>
+
+                <div class="field">
+                  <label class="label" for="auth-teach-reason">
+                    {{ t('auth.teachReason') }} <span class="opt">{{ t('auth.optional') }}</span>
+                  </label>
+                  <textarea
+                    id="auth-teach-reason"
+                    v-model="teachReason"
+                    class="textarea"
+                    rows="3"
+                    :placeholder="t('auth.teachReasonPlaceholder')"
+                  />
+                </div>
+
+                <div class="field">
+                  <label class="label" for="auth-teach-when">
+                    {{ t('auth.teachContactTime') }}
+                    <span class="opt">{{ t('auth.optional') }}</span>
+                  </label>
+                  <input
+                    id="auth-teach-when"
+                    v-model="teachContactTime"
+                    class="input"
+                    :placeholder="t('auth.teachContactTimePlaceholder')"
+                  />
+                </div>
+              </template>
+
+              <div class="field">
+                <label class="check">
+                  <input v-model="acceptedTerms" type="checkbox" />
+                  <span>
+                    <i18n-t keypath="auth.acceptTerms" tag="span">
+                      <template #terms>
+                        <RouterLink :to="`/${locale}/terms`" class="link" target="_blank">
+                          {{ t('auth.termsLink') }}
+                        </RouterLink>
+                      </template>
+                      <template #privacy>
+                        <RouterLink :to="`/${locale}/privacy`" class="link" target="_blank">
+                          <b>{{ t('auth.privacyLink') }}</b>
+                        </RouterLink>
+                      </template>
+                    </i18n-t>
+                  </span>
+                </label>
+                <span v-if="fieldErrors.acceptedTerms" class="field-error">
+                  <AppIcon name="alert-circle" :size="16" />{{ fieldErrors.acceptedTerms }}
+                </span>
+              </div>
             </template>
 
-            <button type="submit" class="btn btn--primary btn--block btn--lg" :disabled="auth.busy">
-              <AppIcon :name="step === 'login' ? 'log-in' : 'user'" />
-              {{ auth.busy ? t('auth.working') : step === 'login' ? t('common.login') : t('common.register') }}
+            <div v-if="step === 'login' && !resetSent" class="field-row">
+              <label class="check">
+                <input v-model="remember" type="checkbox" />
+                <span>{{ t('auth.rememberMe') }}</span>
+              </label>
+              <button type="button" class="link text-sm" @click="switchTo('forgot')">
+                {{ t('auth.forgotPassword') }}
+              </button>
+            </div>
+
+            <button
+              v-if="!resetSent"
+              type="submit"
+              class="btn btn--primary btn--block btn--lg"
+              :disabled="auth.busy"
+            >
+              <AppIcon :name="submitIcon" />
+              {{ auth.busy ? t('auth.working') : submitLabel }}
             </button>
 
-            <p class="text-center text-sm" style="margin: 0">
+            <p class="auth-switch text-center text-sm">
               <template v-if="step === 'login'">
                 {{ t('auth.noAccount') }}
                 <button type="button" class="link" @click="switchTo('register')">
                   {{ t('common.register') }}
+                </button>
+              </template>
+              <template v-else-if="step === 'forgot'">
+                {{ t('auth.rememberedIt') }}
+                <button type="button" class="link" @click="switchTo('login')">
+                  {{ t('common.login') }}
                 </button>
               </template>
               <template v-else>
@@ -441,6 +627,16 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+/* The line offering the other form. It used to carry `style="margin: 0"` to
+   drop the browser's default <p> margins, but that also beat `.stack > * + *`,
+   so the one thing meant to stand apart from the submit button ended up flush
+   against it. Only the bottom margin needs removing; the top is the stack's
+   own spacing, with a little more because a solid block button crowds whatever
+   follows it. */
+.auth-switch {
+  margin: 24px 0 0;
+}
+
 /* Day / month / year sit on one row, with the year wider because it holds four
    digits. Below 420px they stack rather than squeeze to unusable widths. */
 .auth-birth {

@@ -6,6 +6,7 @@ import {
   passwordResets,
   refreshTokens,
   roles as rolesTable,
+  teacherApplications,
   userRoles,
   users,
 } from '../../db/schema/index'
@@ -64,7 +65,11 @@ export interface DeviceInfo {
 
 /** Issues a fresh refresh token row and returns the plaintext, which is the
  *  only moment it exists outside the client. */
-export async function issueRefreshToken(userId: number, device: DeviceInfo): Promise<string> {
+export async function issueRefreshToken(
+  userId: number,
+  device: DeviceInfo,
+  remember = true,
+): Promise<string> {
   const token = generateToken()
   await db.insert(refreshTokens).values({
     userId,
@@ -73,6 +78,7 @@ export async function issueRefreshToken(userId: number, device: DeviceInfo): Pro
     ip: device.ip ?? null,
     userAgent: device.userAgent?.slice(0, 512) ?? null,
     expiresAt: expiresAt(env.JWT_REFRESH_TTL),
+    remember,
   })
   return token
 }
@@ -86,6 +92,16 @@ export async function register(input: {
   phoneCountryCode?: string | undefined
   phoneNational?: string | undefined
   locale: Locale
+  acceptedTerms: true
+  memberType: 'student' | 'teacher'
+  teacher?:
+    | {
+        subject: string
+        experience: string
+        reason?: string | undefined
+        contactTime?: string | undefined
+      }
+    | undefined
 }): Promise<PublicUser> {
   const email = input.email.trim().toLowerCase()
 
@@ -103,6 +119,9 @@ export async function register(input: {
     phoneCountryCode: input.phoneCountryCode ?? null,
     phoneNational: input.phoneNational ?? null,
     locale: input.locale,
+    // Consent is recorded at the moment it is given; the schema has already
+    // refused anything but true.
+    privacyAcceptedAt: new Date(),
   })
 
   const [created] = await db.select().from(users).where(eq(users.email, email)).limit(1)
@@ -115,6 +134,23 @@ export async function register(input: {
     .limit(1)
   if (studentRole) {
     await db.insert(userRoles).values({ userId: created.id, roleId: studentRole.id })
+  }
+
+  // Applying to teach does not grant the role: it files a request an admin
+  // reviews. The account that exists in the meantime is an ordinary one.
+  if (input.memberType === 'teacher' && input.teacher) {
+    await db.insert(teacherApplications).values({
+      name: `${input.firstName.trim()} ${input.lastName.trim()}`,
+      email,
+      phone: input.phoneNational
+        ? `${input.phoneCountryCode ?? ''}${input.phoneNational}`
+        : null,
+      subject: input.teacher.subject,
+      experience: input.teacher.experience,
+      reason: input.teacher.reason ?? null,
+      contactTime: input.teacher.contactTime ?? null,
+      agreedAt: new Date(),
+    })
   }
 
   return toPublicUser(created, studentRole ? ['student'] : [])
@@ -157,7 +193,7 @@ export async function login(email: string, password: string): Promise<PublicUser
 export async function rotateRefreshToken(
   token: string,
   device: DeviceInfo,
-): Promise<{ user: PublicUser; refreshToken: string }> {
+): Promise<{ user: PublicUser; refreshToken: string; remember: boolean }> {
   const tokenHash = hashToken(token)
   const [row] = await db
     .select()
@@ -184,6 +220,7 @@ export async function rotateRefreshToken(
     ip: device.ip ?? row.ip,
     userAgent: device.userAgent?.slice(0, 512) ?? row.userAgent,
     expiresAt: expiresAt(env.JWT_REFRESH_TTL),
+    remember: row.remember,
   })
 
   const [created] = await db
@@ -197,7 +234,7 @@ export async function rotateRefreshToken(
     .set({ revokedAt: new Date(), replacedBy: created?.id ?? null })
     .where(eq(refreshTokens.id, row.id))
 
-  return { user: await findUser(row.userId), refreshToken: next }
+  return { user: await findUser(row.userId), refreshToken: next, remember: row.remember }
 }
 
 export async function revokeRefreshToken(token: string): Promise<void> {

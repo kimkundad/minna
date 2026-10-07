@@ -4,6 +4,9 @@ import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import AppAvatar from '@/components/ui/AppAvatar.vue'
+import SiteDrawer from '@/components/layout/SiteDrawer.vue'
+import SearchOverlay from '@/components/layout/SearchOverlay.vue'
+import LocaleSwitcher from '@/components/layout/LocaleSwitcher.vue'
 import { data, store } from '@/vendor'
 import { useAuthStore } from '@/stores/auth'
 import { openAuth } from '@/components/auth/authChannel'
@@ -81,6 +84,8 @@ const locale = computed(() => String(route.params.locale ?? 'th'))
 const path = (p: string) => `/${locale.value}${p}`
 
 const megaOpen = ref(false)
+const drawerOpen = ref(false)
+const searchOpen = ref(false)
 const stuck = ref(false)
 
 /** Each tile shows how many published courses sit in that category, which is
@@ -162,6 +167,8 @@ onBeforeUnmount(() => {
           class="icon-btn icon-btn--ghost hdr-burger"
           :aria-label="t('header.openMenu')"
           aria-haspopup="dialog"
+          :aria-expanded="drawerOpen"
+          @click="drawerOpen = true"
         >
           <AppIcon name="menu" />
         </button>
@@ -197,9 +204,18 @@ onBeforeUnmount(() => {
         </nav>
 
         <div class="hdr-actions">
-          <button type="button" class="icon-btn" :aria-label="t('header.searchCourses')">
+          <button
+            type="button"
+            class="icon-btn"
+            :aria-label="t('header.searchCourses')"
+            aria-haspopup="dialog"
+            :aria-expanded="searchOpen"
+            @click="searchOpen = true"
+          >
             <AppIcon name="search" />
           </button>
+
+          <LocaleSwitcher />
 
           <RouterLink
             class="icon-btn"
@@ -335,5 +351,8 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </div>
+
+    <SearchOverlay :open="searchOpen" @close="searchOpen = false" />
+    <SiteDrawer :open="drawerOpen" :active="props.active" @close="drawerOpen = false" />
   </header>
 </template>

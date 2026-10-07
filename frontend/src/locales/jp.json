@@ -16,7 +16,8 @@
   },
   "language": {
     "chooseTitle": "Choose your language",
-    "chooseSub": "Pick the language you want to browse in. You can change it later from the menu at the top right."
+    "chooseSub": "Pick the language you want to browse in. You can change it later from the menu at the top right.",
+    "switch": "言語: {name}"
   },
   "course": {
     "instructorCount": "{count} instructor | {count} instructors",
@@ -141,6 +142,7 @@
   "hoursMinutes": "{h} hr {m} min",
   "header": {
     "openMenu": "Open main menu",
+    "closeMenu": "メニューを閉じる",
     "brandHome": "Minna — home",
     "mainMenu": "Main menu",
     "searchCourses": "Search courses",
@@ -150,6 +152,16 @@
     "categoryCount": "{count} categories",
     "notificationsUnread": "Notifications, {count} new",
     "myAccount": "My account"
+  },
+  "search": {
+    "label": "コース・カテゴリー・講師を検索",
+    "placeholder": "コース名、カテゴリー、講師名で検索",
+    "close": "検索を閉じる",
+    "popularCategories": "人気のカテゴリー",
+    "coursesCount": "コース ({count})",
+    "empty": "「{q}」に一致するコースはありません。Cardiology などのカテゴリー名や講師名でお試しください。",
+    "seeAll": "「{q}」のすべての結果を見る",
+    "seeAllHint": "絞り込んだ状態でコース一覧を開きます"
   },
   "footer": {
     "about": "Minna is an online language school: courses, articles and practice in one place, on any device.",
@@ -2246,6 +2258,30 @@
     "phonePlaceholder": "0812345678",
     "optional": "(optional)",
     "year": "Year",
-    "birthdateRequired": "Please choose your full date of birth."
+    "birthdateRequired": "Please choose your full date of birth.",
+    "rememberMe": "ログイン状態を保持する",
+    "forgotPassword": "パスワードをお忘れですか？",
+    "forgotTitle": "パスワードの再設定",
+    "forgotSub": "ご登録のメールアドレスを入力してください。再設定用のリンクをお送りします。",
+    "sendResetLink": "再設定リンクを送信",
+    "resetSent": "そのアドレスに登録があれば、再設定リンクを送信しました。受信トレイと迷惑メールフォルダーをご確認ください。",
+    "rememberedIt": "思い出しましたか？",
+    "acceptTerms": "{terms}および{privacy}に同意します",
+    "termsLink": "利用規約",
+    "privacyLink": "個人情報の取り扱いへの同意",
+    "termsRequired": "登録するには利用規約と個人情報の取り扱いへの同意が必要です。",
+    "phoneInvalid": "選択した国では有効な番号ではありません。",
+    "memberType": "アカウント種別",
+    "memberStudent": "受講者",
+    "memberTeacher": "講師",
+    "teacherNotice": "講師として申し込むとアカウントはすぐに作成されます。講師権限は申請を確認のうえ、ご連絡してから付与されます。",
+    "teachSubject": "担当したい分野",
+    "teachSubjectPlaceholder": "例：日本語会話N5、文法、JLPT対策",
+    "teachExperience": "経歴・実績・現在の職務",
+    "teachExperiencePlaceholder": "ご記入ください...",
+    "teachReason": "応募の理由",
+    "teachReasonPlaceholder": "簡単にご記入ください...",
+    "teachContactTime": "ご連絡可能な曜日・時間帯",
+    "teachContactTimePlaceholder": "例：平日18時以降"
   }
 }

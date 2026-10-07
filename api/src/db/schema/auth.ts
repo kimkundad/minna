@@ -1,6 +1,7 @@
 import { relations, sql } from 'drizzle-orm'
 import {
   bigint,
+  boolean,
   date,
   datetime,
   index,
@@ -84,6 +85,9 @@ export const refreshTokens = mysqlTable(
     ip: varchar('ip', { length: 45 }),
     userAgent: varchar('user_agent', { length: 512 }),
     expiresAt: datetime('expires_at').notNull(),
+    /** Whether 'stay signed in' was ticked. Rotation has to know, or a cookie
+     *  meant to die with the browser comes back persistent on the next refresh. */
+    remember: boolean('remember').default(true).notNull(),
     revokedAt: datetime('revoked_at'),
     replacedBy: bigint('replaced_by', { mode: 'number', unsigned: true }),
     createdAt: datetime('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),

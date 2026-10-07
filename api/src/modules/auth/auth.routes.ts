@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
+import { audit, record, type AuditActorRole } from '../../lib/audit'
 import { env } from '../../config/env'
 import { badRequest, unauthorized } from '../../lib/errors'
 import { parseDuration } from '../../lib/tokens'
@@ -19,18 +20,29 @@ const REFRESH_COOKIE = 'minna_refresh'
  * The web app uses the cookie, which JavaScript cannot read and so an XSS bug
  * cannot steal; the Flutter app reads the body and keeps it in secure storage.
  */
-function setRefreshCookie(reply: FastifyReply, token: string) {
+function setRefreshCookie(reply: FastifyReply, token: string, remember = true) {
   reply.setCookie(REFRESH_COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
     secure: env.NODE_ENV === 'production',
     path: '/api/v1/auth',
-    maxAge: Math.floor(parseDuration(env.JWT_REFRESH_TTL) / 1000),
+    // Without `remember` the cookie carries no expiry, so the browser drops it
+    // when it closes. The token stays valid server-side either way — this is
+    // about the machine, not the session, and it is what someone signing in on
+    // a borrowed computer is asking for.
+    ...(remember ? { maxAge: Math.floor(parseDuration(env.JWT_REFRESH_TTL) / 1000) } : {}),
   })
 }
 
 function clearRefreshCookie(reply: FastifyReply) {
   reply.clearCookie(REFRESH_COOKIE, { path: '/api/v1/auth' })
+}
+
+/** Highest role wins: an admin who is also a teacher acted as an admin. */
+function actorRoleOf(roles: readonly string[]): AuditActorRole {
+  if (roles.includes('admin')) return 'admin'
+  if (roles.includes('teacher')) return 'teacher'
+  return 'student'
 }
 
 function deviceOf(req: FastifyRequest, label?: string) {
@@ -69,6 +81,15 @@ export default async function authRoutes(app: FastifyInstance) {
     }
 
     setRefreshCookie(reply, refreshToken)
+    void record(
+      { id: user.id, role: 'student', email: user.email, ip: req.ip, userAgent: req.headers['user-agent'] },
+      {
+        action: 'auth.registered',
+        subjectType: 'user',
+        subjectId: user.id,
+        summary: body.memberType === 'teacher' ? 'Registered and applied to teach' : 'Registered',
+      },
+    )
     return reply.status(201).send({ user, accessToken, refreshToken })
   })
 
@@ -76,19 +97,27 @@ export default async function authRoutes(app: FastifyInstance) {
     const body = schemas.loginBody.parse(req.body)
     const user = await service.login(body.email, body.password)
     const accessToken = app.jwt.sign({ sub: user.id, roles: user.roles })
-    const refreshToken = await service.issueRefreshToken(user.id, deviceOf(req, body.deviceLabel))
+    const refreshToken = await service.issueRefreshToken(
+      user.id,
+      deviceOf(req, body.deviceLabel),
+      body.remember,
+    )
 
-    setRefreshCookie(reply, refreshToken)
+    setRefreshCookie(reply, refreshToken, body.remember)
+    void record(
+      { id: user.id, role: actorRoleOf(user.roles), email: user.email, ip: req.ip, userAgent: req.headers['user-agent'] },
+      { action: 'auth.signed_in', subjectType: 'user', subjectId: user.id },
+    )
     return reply.send({ user, accessToken, refreshToken })
   })
 
   app.post('/refresh', async (req, reply) => {
     const body = schemas.refreshBody.parse(req.body ?? {})
     const token = readRefreshToken(req, body.refreshToken)
-    const { user, refreshToken } = await service.rotateRefreshToken(token, deviceOf(req))
+    const { user, refreshToken, remember } = await service.rotateRefreshToken(token, deviceOf(req))
     const accessToken = app.jwt.sign({ sub: user.id, roles: user.roles })
 
-    setRefreshCookie(reply, refreshToken)
+    setRefreshCookie(reply, refreshToken, remember)
     return reply.send({ user, accessToken, refreshToken })
   })
 
@@ -98,6 +127,7 @@ export default async function authRoutes(app: FastifyInstance) {
     if (token) await service.revokeRefreshToken(token)
 
     clearRefreshCookie(reply)
+    audit(req, { action: 'auth.signed_out' })
     return reply.status(204).send()
   })
 

@@ -4,11 +4,12 @@ import AppAvatar from '@/components/ui/AppAvatar.vue'
 import { store } from '@/vendor'
 
 /**
- * The row of instructor faces and names under a course title.
+ * The row of instructor face and name under a course title.
  *
- * It shows at most three avatars and two names, with "และอีก N ท่าน" standing
- * in for the rest — a card has to stay one height whether a course has one
- * teacher or six. The whole row is a button because it opens the full list.
+ * One person, even when a course has several: the card is a glance, and a
+ * stack of faces with "และอีก N ท่าน" after it spent two lines saying something
+ * nobody decides on from a card. The full list is on the course page, and the
+ * row stays a button that opens it.
  */
 const props = withDefaults(
   defineProps<{
@@ -38,14 +39,14 @@ const people = computed<Person[]>(() =>
   ),
 )
 
-const shown = computed(() => people.value.slice(0, 3))
-const names = computed(() =>
-  people.value
-    .slice(0, 2)
-    .map((p) => (props.full ? p.name : p.short))
-    .join(', '),
-)
-const extra = computed(() => Math.max(0, people.value.length - 2))
+/** Whoever the data lists first; the order is the one the course was set up
+ *  with, so it is the lead instructor rather than an arbitrary pick. */
+const lead = computed<Person | null>(() => people.value[0] ?? null)
+
+const name = computed(() => (lead.value ? (props.full ? lead.value.name : lead.value.short) : ''))
+
+/** The label still names everyone, because the button opens all of them and a
+ *  screen reader should not be told less than the button does. */
 const ariaLabel = computed(
   () => `ผู้สอน ${people.value.map((p) => p.name).join(', ')} — ดูรายชื่อผู้สอนทั้งหมด`,
 )
@@ -61,17 +62,14 @@ const ariaLabel = computed(
   >
     <span class="avatar-stack">
       <AppAvatar
-        v-for="p in shown"
-        :key="p.id"
-        :name="p.name"
-        :initials="p.initials"
-        :color="p.color"
-        :photo="p.photo"
+        v-if="lead"
+        :name="lead.name"
+        :initials="lead.initials"
+        :color="lead.color"
+        :photo="lead.photo"
         :size="size"
       />
     </span>
-    <span class="inst-names clamp-2">
-      {{ names }}<span v-if="extra" class="more"> และอีก {{ extra }} ท่าน</span>
-    </span>
+    <span class="inst-names clamp-2">{{ name }}</span>
   </button>
 </template>

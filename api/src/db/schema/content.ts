@@ -100,6 +100,12 @@ export const teacherApplications = mysqlTable(
     name: varchar('name', { length: 150 }).notNull(),
     email: varchar('email', { length: 255 }).notNull(),
     phone: varchar('phone', { length: 32 }),
+    /** What they said they want to teach, in their own words. Free text,
+     *  because someone applying does not know our category tree and should not
+     *  have to pick the nearest wrong answer. */
+    subject: varchar('subject', { length: 150 }),
+    /** Filled in by whoever reviews the application, mapping the subject above
+     *  onto a real category. Null until then. */
     categoryId: bigint('category_id', { mode: 'number', unsigned: true }).references(
       () => categories.id,
       { onDelete: 'set null' },

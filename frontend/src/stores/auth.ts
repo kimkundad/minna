@@ -74,10 +74,10 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function login(email: string, password: string): Promise<void> {
+  async function login(email: string, password: string, remember = true): Promise<void> {
     busy.value = true
     try {
-      adopt(await api.login(email, password, deviceLabel()))
+      adopt(await api.login(email, password, { deviceLabel: deviceLabel(), remember }))
     } finally {
       busy.value = false
     }

@@ -66,6 +66,23 @@
     margin-inline: calc(var(--page-pad) * -1);
     padding: 4px var(--page-pad) 8px;
   }
+
+  /* The other half of the same collision, and the one scoping home's rules
+     under .home-cats did not fix: home.css still matches `.cat-grid` here
+     unscoped, and discovery.css only restates `grid-template-columns`. Every
+     other property of the sideways carousel — the column flow, the 46% track
+     width, the overflow and the negative margins — carried straight over to
+     the catalog, which turned the course results into a two-row strip running
+     off the side of the phone. These put them back. */
+  .cat-results .cat-grid {
+    grid-auto-flow: row;
+    grid-template-rows: none;
+    grid-auto-columns: auto;
+    overflow-x: visible;
+    scroll-snap-type: none;
+    margin-inline: 0;
+    padding: 0;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -125,3 +142,104 @@
    the header, so the title reads the same token rather than relying on where
    the bar happens to sit. */
 .site-header--compact .hdr-title { color: var(--ink-primary); }
+
+/* --------------------------------------------------------------------------
+   Language switcher
+   The prototype has no language of its own, so these are Minna's rules. The
+   header switcher hides at the same width as the pill nav and the account
+   menu; below it the drawer carries the languages instead, which keeps five
+   controls from crowding a 390px header.
+   -------------------------------------------------------------------------- */
+@media (max-width: 959px) {
+  .locale-anchor { display: none !important; }
+}
+
+/* In the drawer the flags sit in a row rather than a list: four of them as
+   full-width items would push the account links below the fold. */
+.drawer-locales {
+  display: flex;
+  gap: 8px;
+  padding: 4px 2px 0;
+}
+
+.drawer-locales button {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+/* The row sits inside .drawer-nav, which sizes every svg it contains to 20px
+   for the menu icons. A flag has to be read as a flag, so it overrides that.
+   Four at 52px plus the gaps come to 238px, inside the 380px drawer. */
+.drawer-locales svg {
+  width: 40px;
+  height: 40px;
+}
+
+.drawer-locales button[aria-checked='true'] {
+  border-color: var(--brand-primary);
+}
+
+/* --------------------------------------------------------------------------
+   Phone country picker (intl-tel-input)
+   It brings its own stylesheet; these make it look like the rest of the form.
+   The library exposes --iti-* variables for the parts worth theming, so most
+   of this is setting those rather than out-shouting its selectors.
+   -------------------------------------------------------------------------- */
+.phone-field {
+  --iti-border-color: var(--border-default);
+  --iti-hover-color: var(--surface-subtle);
+  --iti-icon-color: var(--ink-secondary);
+  /* Not overridden: --iti-country-selector-bg is the open dropdown's own
+     background, not the button's. Setting it to transparent made the country
+     list see-through, with the form showing through the names. */
+}
+
+/* .iti wraps the input in an inline-block, which would stop the field filling
+   the row. */
+.phone-field .iti {
+  display: block;
+  width: 100%;
+}
+
+/* The dial code and flag sit in a button overlaying the input's left edge, so
+   the input needs a divider between them rather than a plain border. */
+.phone-field .iti__selected-country {
+  border-right: 1px solid var(--border-default);
+  padding-inline: 12px;
+}
+
+.phone-field .iti__search-input {
+  font: inherit;
+}
+
+/* The design's invalid state is a red border; the library draws its own. */
+.phone-field.is-invalid .input {
+  border-color: var(--c-danger);
+}
+
+/* The open country list. Its z-index of 2 leaves it under the submit button
+   that follows it in the form, so it is raised above everything else inside
+   the dialog. The class is `__country-selector`, which names the dropdown
+   panel; the button is `__selected-country`. */
+.phone-field .iti__country-selector {
+  z-index: 20;
+  border-radius: 14px;
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+}
+
+.phone-field .iti__country-list {
+  max-height: 240px;
+}
+
+/* `.textarea` is 150px tall, which suits a page but makes the registration
+   dialog scroll for no good reason. Inside it, `rows` decides the height. */
+.modal-body .textarea {
+  min-height: 0;
+}

@@ -16,6 +16,10 @@ import './assets/css/account.css'
 import './assets/css/learning.css'
 import './assets/css/legal.css'
 
+// The country picker's own stylesheet, including the flag sprite. It sits
+// before brand.css so the overrides that make it match our inputs still win.
+import 'intl-tel-input/styles'
+
 // Loaded last so Minna's own decisions win over the ported design.
 import './assets/css/brand.css'
 

@@ -112,6 +112,18 @@ export interface RegisterInput {
   phoneCountryCode?: string
   phoneNational?: string
   locale?: string
+  /** The terms and the privacy notice, accepted together. The API refuses
+   *  anything but true, so the form cannot submit without the box ticked. */
+  acceptedTerms: true
+  /** Which form was filled in. 'teacher' also files an application an admin
+   *  approves; it does not grant the role. */
+  memberType?: 'student' | 'teacher'
+  teacher?: {
+    subject: string
+    experience: string
+    reason?: string
+    contactTime?: string
+  }
 }
 
 /**
@@ -135,10 +147,16 @@ export async function refresh(): Promise<boolean> {
 }
 
 export const api = {
-  login: (email: string, password: string, deviceLabel?: string) =>
+  /** `remember` decides whether the refresh cookie outlives the browser. */
+  login: (email: string, password: string, opts: { deviceLabel?: string; remember?: boolean } = {}) =>
     send<SessionResponse>('/auth/login', {
       method: 'POST',
-      body: { email, password, ...(deviceLabel ? { deviceLabel } : {}) },
+      body: {
+        email,
+        password,
+        ...(opts.deviceLabel ? { deviceLabel: opts.deviceLabel } : {}),
+        ...(opts.remember === undefined ? {} : { remember: opts.remember }),
+      },
     }),
 
   register: (input: RegisterInput) =>
@@ -154,6 +172,11 @@ export const api = {
     send<{ message: string }>('/auth/forgot-password', { method: 'POST', body: { email } }),
 
   sessions: () => send<{ data: unknown[] }>('/auth/sessions'),
+
+  categories: () =>
+    send<{ data: { id: number; parentId: number | null; name: string; slug: string }[] }>(
+      '/categories',
+    ),
 
   acceptPrivacy: () => send<{ user: SessionUser }>('/auth/accept-privacy', { method: 'POST', body: {} }),
 }
