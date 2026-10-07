@@ -17,6 +17,8 @@ export const quizBody = z.object({
   timerMinutes: z.coerce.number().int().min(1).max(600).nullable().optional(),
   /** The lesson of type `quiz` this sits behind, so it counts toward progress. */
   lessonId: z.coerce.number().int().positive().nullable().optional(),
+  /** A picture the whole test is about. A path, never a URL. */
+  imagePath: z.string().max(512).nullable().optional(),
 })
 
 const choice = z.object({
@@ -36,6 +38,8 @@ export const questionBody = z
   .object({
     type: z.enum(QUESTION_TYPES),
     text: z.string().min(1, 'Ask something.').max(5000),
+    /** Shown with the question — a diagram, a sentence to read, a photo. */
+    imagePath: z.string().max(512).nullable().optional(),
     /** Essay only: how long an answer may be. */
     maxLength: z.coerce.number().int().min(50).max(20000).default(1000),
     /** Essay only: whether a file may be attached to the answer. */

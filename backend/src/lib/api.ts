@@ -496,6 +496,7 @@ export interface QuizQuestion {
   id: number
   type: QuestionType
   text: string
+  imagePath: string | null
   maxLength: number
   attachmentAllowed: boolean
   sortOrder: number
@@ -507,6 +508,7 @@ export interface Quiz {
   courseId: number
   lessonId: number | null
   title: string
+  imagePath: string | null
   passPct: number
   timerMinutes: number | null
   questions: QuizQuestion[]
@@ -517,11 +519,13 @@ export interface QuizInput {
   passPct: number
   timerMinutes?: number | null
   lessonId?: number | null
+  imagePath?: string | null
 }
 
 export interface QuestionInput {
   type: QuestionType
   text: string
+  imagePath?: string | null
   maxLength?: number
   attachmentAllowed?: boolean
   sortOrder?: number
@@ -619,4 +623,29 @@ export const essays = {
     id: number,
     body: { result: 'passed' | 'revision'; comment: string; attachmentPath?: string | null },
   ) => send<{ data: EssaySubmission }>(`/essay-reviews/${id}`, { method: 'POST', body }),
+}
+
+export interface QuizOverviewRow {
+  courseId: number
+  courseTitle: string
+  courseStatus: CourseStatus
+  /** Null when that course has no quiz yet — the row worth seeing. */
+  quizId: number | null
+  title: string | null
+  passPct: number | null
+  timerMinutes: number | null
+  lessonId: number | null
+  questionCount: number
+  essayCount: number
+}
+
+export interface QuizListQuery extends Record<string, string | number | boolean | undefined> {
+  page?: number
+  perPage?: number
+  q?: string
+  has?: 'with' | 'without'
+}
+
+export const quizzes = {
+  list: (query: QuizListQuery = {}) => send<Paged<QuizOverviewRow>>('/quizzes', { query }),
 }

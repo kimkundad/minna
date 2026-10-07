@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, inArray } from 'drizzle-orm'
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, like, sql } from 'drizzle-orm'
 import { db } from '../../db/client'
-import { lessons, quizChoices, quizQuestions, quizzes } from '../../db/schema/index'
+import { courses, lessons, quizChoices, quizQuestions, quizzes } from '../../db/schema/index'
 import { conflict, notFound } from '../../lib/errors'
 
 /**
@@ -17,12 +17,14 @@ export interface QuizDetail {
   courseId: number
   lessonId: number | null
   title: string
+  imagePath: string | null
   passPct: number
   timerMinutes: number | null
   questions: {
     id: number
     type: 'single' | 'multiple' | 'essay'
     text: string
+    imagePath: string | null
     maxLength: number
     attachmentAllowed: boolean
     sortOrder: number
@@ -55,12 +57,14 @@ export async function getQuiz(courseId: number): Promise<QuizDetail | null> {
     courseId: quiz.courseId,
     lessonId: quiz.lessonId,
     title: quiz.title,
+    imagePath: quiz.imagePath,
     passPct: quiz.passPct,
     timerMinutes: quiz.timerMinutes,
     questions: questions.map((q) => ({
       id: q.id,
       type: q.type,
       text: q.text,
+      imagePath: q.imagePath,
       maxLength: q.maxLength,
       attachmentAllowed: q.attachmentAllowed,
       sortOrder: q.sortOrder,
@@ -95,6 +99,7 @@ export async function saveQuiz(
     passPct: number
     timerMinutes?: number | null | undefined
     lessonId?: number | null | undefined
+    imagePath?: string | null | undefined
   },
 ) {
   await assertLessonBelongs(courseId, input.lessonId)
@@ -109,6 +114,7 @@ export async function saveQuiz(
         passPct: input.passPct,
         timerMinutes: input.timerMinutes ?? null,
         lessonId: input.lessonId ?? null,
+        imagePath: input.imagePath ?? null,
       })
       .where(eq(quizzes.courseId, courseId))
   } else {
@@ -118,6 +124,7 @@ export async function saveQuiz(
       passPct: input.passPct,
       timerMinutes: input.timerMinutes ?? null,
       lessonId: input.lessonId ?? null,
+      imagePath: input.imagePath ?? null,
     })
   }
 
@@ -142,6 +149,7 @@ async function requireQuiz(courseId: number) {
 type QuestionInput = {
   type: 'single' | 'multiple' | 'essay'
   text: string
+  imagePath?: string | null
   maxLength: number
   attachmentAllowed: boolean
   sortOrder: number
@@ -169,6 +177,7 @@ export async function createQuestion(courseId: number, input: QuestionInput) {
     quizId: quiz.id,
     type: input.type,
     text: input.text,
+    imagePath: input.imagePath ?? null,
     maxLength: input.maxLength,
     attachmentAllowed: input.attachmentAllowed,
     sortOrder: input.sortOrder,
@@ -201,6 +210,7 @@ export async function updateQuestion(courseId: number, questionId: number, input
     .set({
       type: input.type,
       text: input.text,
+      imagePath: input.imagePath ?? null,
       maxLength: input.maxLength,
       attachmentAllowed: input.attachmentAllowed,
       sortOrder: input.sortOrder,
@@ -237,5 +247,79 @@ export async function reorderQuestions(courseId: number, ids: number[]) {
       .update(quizQuestions)
       .set({ sortOrder: index })
       .where(and(eq(quizQuestions.id, id), eq(quizQuestions.quizId, quiz.id)))
+  }
+}
+
+/**
+ * Every course and the state of its quiz, including the courses that have
+ * none.
+ *
+ * "Which courses are still missing a test" is the question this screen exists
+ * to answer, and a list of quizzes alone cannot answer it — the ones worth
+ * knowing about are exactly the rows that would not be there.
+ */
+export async function listQuizzes(opts: {
+  page: number
+  perPage: number
+  q?: string | undefined
+  /** 'with' and 'without' narrow it to courses that have a quiz or do not. */
+  has?: 'with' | 'without' | undefined
+  /** Set for a teacher: only the courses they are on. */
+  instructorId?: number | undefined
+}) {
+  const where = [
+    opts.q ? like(courses.title, `%${opts.q}%`) : undefined,
+    opts.has === 'with' ? isNotNull(quizzes.id) : undefined,
+    opts.has === 'without' ? isNull(quizzes.id) : undefined,
+    opts.instructorId
+      ? sql`EXISTS (
+          SELECT 1 FROM course_instructors ci
+          WHERE ci.course_id = ${courses.id} AND ci.user_id = ${opts.instructorId}
+        )`
+      : undefined,
+  ].filter(Boolean)
+
+  const filter = where.length ? and(...(where as never[])) : undefined
+
+  const [{ value: total } = { value: 0 }] = await db
+    .select({ value: count() })
+    .from(courses)
+    .leftJoin(quizzes, eq(quizzes.courseId, courses.id))
+    .where(filter)
+
+  const rows = await db
+    .select({
+      courseId: courses.id,
+      courseTitle: courses.title,
+      courseStatus: courses.status,
+      quizId: quizzes.id,
+      title: quizzes.title,
+      passPct: quizzes.passPct,
+      timerMinutes: quizzes.timerMinutes,
+      lessonId: quizzes.lessonId,
+      // Counted here rather than in a second round trip per row.
+      questionCount: sql<number>`(
+        SELECT COUNT(*) FROM quiz_questions qq WHERE qq.quiz_id = ${quizzes.id}
+      )`,
+      essayCount: sql<number>`(
+        SELECT COUNT(*) FROM quiz_questions qq
+        WHERE qq.quiz_id = ${quizzes.id} AND qq.type = 'essay'
+      )`,
+    })
+    .from(courses)
+    .leftJoin(quizzes, eq(quizzes.courseId, courses.id))
+    .where(filter)
+    .orderBy(asc(courses.title))
+    .limit(opts.perPage)
+    .offset((opts.page - 1) * opts.perPage)
+
+  return {
+    data: rows,
+    meta: {
+      page: opts.page,
+      perPage: opts.perPage,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / opts.perPage)),
+    },
   }
 }

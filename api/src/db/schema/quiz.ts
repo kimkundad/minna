@@ -36,6 +36,9 @@ export const quizzes = mysqlTable(
       onDelete: 'set null',
     }),
     title: varchar('title', { length: 255 }).notNull(),
+    /** A picture the whole test is about — a diagram, a scene, a passage.
+     *  Stored by path like every other file; a URL would expire. */
+    imagePath: varchar('image_path', { length: 512 }),
     passPct: smallint('pass_pct', { unsigned: true }).default(80).notNull(),
     /** Null means untimed. The clock keeps running while the tab is closed. */
     timerMinutes: smallint('timer_minutes', { unsigned: true }),
@@ -56,6 +59,8 @@ export const quizQuestions = mysqlTable(
       .references(() => quizzes.id, { onDelete: 'cascade' }),
     type: mysqlEnum('type', QUESTION_TYPES).notNull(),
     text: text('text').notNull(),
+    /** Shown with the question. Some questions cannot be asked without one. */
+    imagePath: varchar('image_path', { length: 512 }),
     /** Essay only. */
     maxLength: int('max_length').default(1000).notNull(),
     attachmentAllowed: boolean('attachment_allowed').default(false).notNull(),

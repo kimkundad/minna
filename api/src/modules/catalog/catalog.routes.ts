@@ -297,6 +297,24 @@ export default async function catalogRoutes(app: FastifyInstance) {
   })
   /* ---------------- quiz ---------------- */
 
+  // Every course and the state of its quiz, including the ones with none:
+  // "which courses still need a test" is the question this answers.
+  app.get('/quizzes', staffOnly, async (req) => {
+    const query = z
+      .object({
+        page: z.coerce.number().int().min(1).default(1),
+        perPage: z.coerce.number().int().min(1).max(100).default(20),
+        q: z.string().max(200).optional(),
+        has: z.enum(['with', 'without']).optional(),
+      })
+      .parse(req.query)
+
+    return quiz.listQuizzes({
+      ...query,
+      instructorId: isAdmin(req) ? undefined : req.user.sub,
+    })
+  })
+
   // Staff only, including the read: this returns which choices are correct,
   // and the learner's side of the app must never see that.
   app.get('/courses/:id/quiz', staffOnly, async (req) => {

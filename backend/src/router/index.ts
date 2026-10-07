@@ -55,6 +55,12 @@ const router = createRouter({
       meta: { title: 'Quiz', roles: ['superadmin', 'admin', 'teacher'] },
     },
     {
+      path: '/quizzes',
+      name: 'Quizzes',
+      component: () => import('@/views/Learning/Quizzes.vue'),
+      meta: { title: 'Quizzes', roles: ['superadmin', 'admin', 'teacher'] },
+    },
+    {
       path: '/essay-review',
       name: 'EssayReview',
       component: () => import('@/views/Learning/EssayReview.vue'),

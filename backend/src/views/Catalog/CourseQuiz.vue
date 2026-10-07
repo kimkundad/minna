@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import FileField from '@/components/forms/FileField.vue'
 import {
   ApiError,
   api,
@@ -39,11 +40,18 @@ const loading = ref(true)
 const error = ref('')
 
 /* --- quiz settings --- */
-const settings = ref<{ title: string; passPct: number; timerMinutes: number | null; lessonId: number | null }>({
+const settings = ref<{
+  title: string
+  passPct: number
+  timerMinutes: number | null
+  lessonId: number | null
+  imagePath: string | null
+}>({
   title: '',
   passPct: 80,
   timerMinutes: null,
   lessonId: null,
+  imagePath: null,
 })
 const savingSettings = ref(false)
 
@@ -58,6 +66,7 @@ function blank(): QuestionInput & { choices: { text: string; isCorrect: boolean 
   return {
     type: 'single',
     text: '',
+    imagePath: null,
     maxLength: 1000,
     attachmentAllowed: false,
     choices: [
@@ -86,6 +95,20 @@ const markedCount = computed(
 )
 const essayCount = computed(() => data.value?.questions.filter((q) => q.type === 'essay').length ?? 0)
 
+const previews = ref<Record<string, string>>({})
+
+async function loadPreviews(paths: (string | null)[]) {
+  for (const path of paths) {
+    if (!path || previews.value[path]) continue
+    try {
+      previews.value[path] = (await api.signPath(path, 900)).data.url
+    } catch {
+      // No preview is better than a broken image; the row still says there
+      // is one.
+    }
+  }
+}
+
 async function load() {
   loading.value = true
   error.value = ''
@@ -109,9 +132,19 @@ async function load() {
         passPct: got.data.passPct,
         timerMinutes: got.data.timerMinutes,
         lessonId: got.data.lessonId,
+        imagePath: got.data.imagePath,
       }
     } else {
-      settings.value = { title: `${course.data.title} — test`, passPct: 80, timerMinutes: null, lessonId: null }
+      settings.value = {
+        title: `${course.data.title} — test`,
+        passPct: 80,
+        timerMinutes: null,
+        lessonId: null,
+        imagePath: null,
+      }
+    }
+    if (got.data) {
+      void loadPreviews([got.data.imagePath, ...got.data.questions.map((q) => q.imagePath)])
     }
   } catch (err) {
     error.value = err instanceof ApiError ? err.message : 'Could not load this quiz.'
@@ -162,6 +195,7 @@ function openEdit(q: QuizQuestion) {
   form.value = {
     type: q.type,
     text: q.text,
+    imagePath: q.imagePath,
     maxLength: q.maxLength,
     attachmentAllowed: q.attachmentAllowed,
     choices: q.choices.map((c) => ({ text: c.text, isCorrect: c.isCorrect })),
@@ -337,6 +371,18 @@ onMounted(load)
             />
             <p class="mt-1 text-xs text-gray-400">The clock runs even if the tab is closed.</p>
           </div>
+          <div v-if="data" class="sm:col-span-2 xl:col-span-4">
+            <FileField
+              v-model="settings.imagePath"
+              :course-id="courseId"
+              purpose="course-thumbnail"
+              label="Picture for the whole test"
+              accept="image/*"
+              hint="A diagram or a passage every question refers to. Optional."
+              preview
+            />
+          </div>
+
           <div class="sm:col-span-2">
             <label :class="labelClass">Sits behind the lesson</label>
             <select v-model="settings.lessonId" :class="inputClass">
@@ -404,6 +450,16 @@ onMounted(load)
                 {{ fieldErrors.text }}
               </p>
             </div>
+
+            <FileField
+              v-model="form.imagePath"
+              :course-id="courseId"
+              purpose="course-thumbnail"
+              label="Picture for this question"
+              accept="image/*"
+              hint="Some questions cannot be asked without one — a diagram, a photo, a sentence to read."
+              preview
+            />
 
             <!-- Choices, for everything but a written answer. -->
             <div v-if="form.type !== 'essay'">
@@ -560,6 +616,15 @@ onMounted(load)
                 <div class="min-w-0 flex-1">
                   <p class="whitespace-pre-line text-sm text-gray-800 dark:text-white/90">
                     {{ i + 1 }}. {{ q.text }}
+                  </p>
+                  <img
+                    v-if="q.imagePath && previews[q.imagePath]"
+                    :src="previews[q.imagePath]"
+                    alt=""
+                    class="mt-2 max-h-40 rounded-lg border border-gray-200 dark:border-gray-700"
+                  />
+                  <p v-else-if="q.imagePath" class="mt-1 text-xs text-gray-400">
+                    Has a picture
                   </p>
                   <ul v-if="q.choices.length" class="mt-2 space-y-1">
                     <li
