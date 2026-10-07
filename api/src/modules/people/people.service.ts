@@ -10,6 +10,7 @@ import {
 } from '../../db/schema/index'
 import { conflict, notFound } from '../../lib/errors'
 import { hashPassword } from '../../lib/password'
+import { revokeAllSessions } from '../auth/auth.service'
 import type { RoleName } from '../../plugins/auth'
 
 export interface Paged<T> {
@@ -32,7 +33,7 @@ export interface MemberListOptions {
   q?: string | undefined
   role?: RoleName | undefined
   status?: 'active' | 'suspended' | undefined
-  group?: 'staff' | 'learners' | undefined
+  group?: 'students' | 'teachers' | 'admins' | undefined
   sort: 'newest' | 'name' | 'email'
 }
 
@@ -53,22 +54,31 @@ export async function listMembers(opts: MemberListOptions): Promise<Paged<unknow
           WHERE ur.user_id = ${users.id} AND r.name = ${opts.role}
         )`
       : undefined,
-    // Staff is anyone who can sign in to the admin. Learners are the rest,
-    // including an account with no role at all — which still belongs on a
-    // screen, or it is invisible to everyone.
-    opts.group === 'staff'
+    // Three screens, three questions. A student is anyone who cannot open the
+    // admin, which includes an account with no role at all — it still has to
+    // appear somewhere or nobody can find it.
+    //
+    // The groups overlap on purpose: someone who teaches and administers is
+    // listed under both, because both screens have something to do with them.
+    opts.group === 'teachers'
       ? sql`EXISTS (
           SELECT 1 FROM user_roles ur
           JOIN roles r ON r.id = ur.role_id
-          WHERE ur.user_id = ${users.id} AND r.name IN ('superadmin','admin','teacher')
+          WHERE ur.user_id = ${users.id} AND r.name = 'teacher'
         )`
-      : opts.group === 'learners'
-        ? sql`NOT EXISTS (
+      : opts.group === 'admins'
+        ? sql`EXISTS (
             SELECT 1 FROM user_roles ur
             JOIN roles r ON r.id = ur.role_id
-            WHERE ur.user_id = ${users.id} AND r.name IN ('superadmin','admin','teacher')
+            WHERE ur.user_id = ${users.id} AND r.name IN ('superadmin','admin')
           )`
-        : undefined,
+        : opts.group === 'students'
+          ? sql`NOT EXISTS (
+              SELECT 1 FROM user_roles ur
+              JOIN roles r ON r.id = ur.role_id
+              WHERE ur.user_id = ${users.id} AND r.name IN ('superadmin','admin','teacher')
+            )`
+          : undefined,
   ].filter(Boolean)
 
   const filter = where.length ? and(...(where as never[])) : undefined
@@ -333,4 +343,19 @@ export async function createMember(input: {
 
   await setRoles(created.id, input.roles)
   return getMember(created.id)
+}
+
+/**
+ * Sets someone else's password.
+ *
+ * Every session of theirs ends with it. Two reasons: if the account was being
+ * misused, leaving the intruder signed in defeats the point; and the person
+ * whose password just changed finds out immediately rather than discovering it
+ * days later.
+ */
+export async function setPassword(userId: number, password: string) {
+  const member = await getMember(userId)
+  await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, userId))
+  await revokeAllSessions(userId)
+  return member
 }

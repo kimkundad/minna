@@ -38,7 +38,13 @@ export default async function catalogRoutes(app: FastifyInstance) {
 
   /* ---------------- categories ---------------- */
 
-  app.get('/categories', async () => ({ data: await service.listCategories() }))
+  app.get('/categories', async (req) => {
+    const query = schemas.listQuery.parse(req.query)
+    // The public site and every select box want the whole list; the admin
+    // table wants a page of it. `all=1` is which.
+    if ((req.query as { all?: string }).all) return { data: await service.listCategories() }
+    return service.listCategoriesPaged(query)
+  })
 
   app.post('/categories', adminOnly, async (req, reply) => {
     const body = schemas.categoryBody.parse(req.body)

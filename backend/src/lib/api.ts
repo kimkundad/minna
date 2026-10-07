@@ -155,7 +155,13 @@ export const api = {
 
   /* ---------------- catalog ---------------- */
 
-  categories: () => send<{ data: Category[] }>('/categories'),
+  /** Every category, for a select box. */
+  categories: () => send<{ data: Category[] }>('/categories', { query: { all: 1 } }),
+
+  /** A page of them, for the admin table. Paged by top-level category, so a
+   *  parent and its children never land on different pages. */
+  categoryPage: (query: { page?: number; perPage?: number; q?: string } = {}) =>
+    send<Paged<Category>>('/categories', { query }),
 
   createCategory: (body: CategoryInput) =>
     send<{ data: Category }>('/categories', { method: 'POST', body }),
@@ -387,8 +393,8 @@ export interface MemberListQuery extends Record<string, string | number | boolea
   q?: string
   role?: RoleName
   status?: 'active' | 'suspended'
-  /** 'staff' is anyone who can sign in here; 'learners' is everyone else. */
-  group?: 'staff' | 'learners'
+  /** Which screen is asking: three jobs, three lists. */
+  group?: 'students' | 'teachers' | 'admins'
   sort?: 'newest' | 'name' | 'email'
 }
 
@@ -429,6 +435,12 @@ export const people = {
   create: (body: CreateMemberInput) =>
     send<{ data: Member; inviteUrl: string | null }>('/members', { method: 'POST', body }),
 
+  setPassword: (id: number, password: string, confirmPassword: string) =>
+    send<{ data: { id: number; email: string } }>(`/members/${id}/password`, {
+      method: 'PUT',
+      body: { password, confirmPassword },
+    }),
+
   sendPasswordReset: (id: number) =>
     send<{ sent: boolean }>(`/members/${id}/password-reset`, { method: 'POST', body: {} }),
 
@@ -465,4 +477,6 @@ export interface CreateMemberInput {
   locale?: 'th' | 'en' | 'jp' | 'vn'
   /** False returns the set-password link instead of emailing it. */
   sendInvite?: boolean
+  /** Set one and the account works immediately, with no link involved. */
+  password?: string
 }

@@ -35,45 +35,53 @@ export default async function peopleRoutes(app: FastifyInstance) {
   })
 
   /**
-   * Creates a staff account. No password is set: the person follows a link and
-   * chooses their own, so nobody else ever knows it.
+   * Creates a staff account with the password its creator typed.
    *
-   * When mail cannot be sent the link comes back in the response instead, for
-   * the creator to pass on. It is shown once and not stored anywhere readable,
-   * the same as the emailed one.
+   * A link to the person's own inbox would be better — nobody else would ever
+   * know the password — but the page that link lands on does not exist yet, so
+   * a link would create accounts that cannot be opened. Until it does, the
+   * creator types one and the audit log records that they did.
    */
   app.post('/members', superOnly, async (req, reply) => {
     const body = schemas.createMemberBody.parse(req.body)
     const created = await service.createMember(body)
-
-    const reset = await authService.createPasswordReset(created.email)
-    const url = reset ? `${env.APP_URL}/reset-password?token=${reset.token}` : null
-
-    if (url && body.sendInvite) {
-      void sendMail({ ...passwordResetMail(created.firstName, url), to: created.email }, req.log)
-    }
+    await service.setPassword(created.id, body.password)
 
     audit(req, {
       action: 'member.created',
       subjectType: 'user',
       subjectId: created.id,
-      summary: `${created.email} as ${created.roles.join(', ')}`,
+      summary: `${created.email} as ${created.roles.join(', ')}, password set by its creator`,
     })
 
-    return reply.status(201).send({
-      data: created,
-      // Only when the creator asked to hand it over themselves.
-      inviteUrl: body.sendInvite ? null : url,
-    })
+    return reply.status(201).send({ data: created })
   })
 
   /**
-   * Sends a set-password link to an existing member.
+   * Sets a member's password outright.
    *
-   * This is the answer to the sign-in page's "ask another administrator": the
-   * link goes to the member's own address, so an administrator starts the reset
-   * without ever learning the password that comes out of it.
+   * The set-password link is the better route and stays available, but it has
+   * to reach an inbox. Until mail is working a team would otherwise have no way
+   * to get a new administrator in at all, so a superadmin can type one.
+   *
+   * It is a loud action by design: every session of theirs ends, and the audit
+   * log names who did it. A password two people know is not a password, and the
+   * record is what makes that recoverable rather than invisible.
    */
+  app.put('/members/:id/password', superOnly, async (req) => {
+    const { id } = idParam.parse(req.params)
+    const body = schemas.setPasswordBody.parse(req.body)
+    const member = await service.setPassword(id, body.password)
+
+    audit(req, {
+      action: 'member.password_set',
+      subjectType: 'user',
+      subjectId: id,
+      summary: `${member.email} — set by another administrator`,
+    })
+    return { data: { id, email: member.email } }
+  })
+
   app.post('/members/:id/password-reset', superOnly, async (req, reply) => {
     const { id } = idParam.parse(req.params)
     const member = await service.getMember(id)

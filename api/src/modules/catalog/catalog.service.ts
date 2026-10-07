@@ -33,6 +33,41 @@ function paged<T>(data: T[], total: number, page: number, perPage: number): Page
 
 /* ---------------- categories ---------------- */
 
+/**
+ * Categories, paged by their top level.
+ *
+ * A page boundary falling between a parent and its children would show
+ * orphaned sub-categories with nothing to belong to, so the page counts
+ * top-level rows and brings each one's children along with it. The totals
+ * therefore describe top-level categories, which is also what someone paging
+ * through them is counting.
+ */
+export async function listCategoriesPaged(opts: { page: number; perPage: number; q?: string }) {
+  const all = await listCategories()
+  const match = opts.q?.trim().toLowerCase()
+
+  const roots = all.filter(
+    (c) =>
+      c.parentId === null &&
+      (!match ||
+        c.name.toLowerCase().includes(match) ||
+        c.slug.toLowerCase().includes(match) ||
+        // A parent stays in the list when one of its children matches, or the
+        // child would have nowhere to appear.
+        all.some(
+          (k) =>
+            k.parentId === c.id &&
+            (k.name.toLowerCase().includes(match) || k.slug.toLowerCase().includes(match)),
+        )),
+  )
+
+  const page = roots.slice((opts.page - 1) * opts.perPage, opts.page * opts.perPage)
+  const ids = new Set(page.map((c) => c.id))
+  const data = all.filter((c) => ids.has(c.id) || (c.parentId !== null && ids.has(c.parentId)))
+
+  return paged(data, roots.length, opts.page, opts.perPage)
+}
+
 export async function listCategories() {
   // A join rather than a correlated subquery: inside a raw `sql` fragment
   // drizzle renders a column unqualified, so `c.category_id = ${categories.id}`

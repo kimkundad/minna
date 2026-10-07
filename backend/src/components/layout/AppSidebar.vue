@@ -257,19 +257,26 @@ const allGroups = [
     title: 'People',
     roles: ['superadmin', 'admin'],
     items: [
+      // Three entries, not one list with a filter: they are three different
+      // jobs. Students is where you look up a customer, Teachers is who is
+      // producing the courses, Administrators is who can get in at all.
       {
         icon: UserGroupIcon,
-        name: 'Members',
+        name: 'Students',
         subItems: [
-          { name: 'All members', path: '/members' },
-          { name: 'Teacher applications', path: '/teacher-applications' },
+          { name: 'All students', path: '/students' },
           { name: 'Access rights', path: '/entitlements', soon: true },
         ],
       },
-      // Separate from members because it answers a different question — who
-      // can get in, rather than what a customer bought — and there will be a
-      // handful of these and thousands of those.
-      { icon: SettingsIcon, name: 'Team', path: '/staff', roles: ['superadmin'] },
+      {
+        icon: DocsIcon,
+        name: 'Teachers',
+        subItems: [
+          { name: 'All teachers', path: '/teachers' },
+          { name: 'Applications', path: '/teacher-applications' },
+        ],
+      },
+      { icon: SettingsIcon, name: 'Administrators', path: '/admins', roles: ['superadmin'] },
     ],
   },
   {

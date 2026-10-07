@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import TablePager from '@/components/common/TablePager.vue'
 import { ApiError, api, type Category, type CategoryInput } from '@/lib/api'
 
 /**
@@ -18,6 +19,15 @@ import { ApiError, api, type Category, type CategoryInput } from '@/lib/api'
 const rows = ref<Category[]>([])
 const loading = ref(true)
 const error = ref('')
+
+const page = ref(1)
+const totalPages = ref(1)
+const total = ref(0)
+const q = ref('')
+
+/** Parents hold their children, so a page is counted in top-level categories
+ *  rather than rows — the number people are actually scrolling through. */
+const PER_PAGE = 10
 
 /** The row being edited, or 'new'. Null means nothing is open. */
 const editing = ref<number | 'new' | null>(null)
@@ -50,15 +60,33 @@ const ordered = computed(() => {
   ])
 })
 
+/** Every top-level category, not only those on this page: a child can be
+ *  moved under a parent that is paged out of sight. */
+const allRoots = ref<Category[]>([])
 const parentOptions = computed(() =>
-  rows.value.filter((c) => c.parentId === null && c.id !== editing.value),
+  allRoots.value.filter((c) => c.id !== editing.value),
 )
+
+async function loadRoots() {
+  try {
+    allRoots.value = (await api.categories()).data.filter((c) => c.parentId === null)
+  } catch {
+    // The select falls back to empty; the table still works.
+  }
+}
 
 async function load() {
   loading.value = true
   error.value = ''
   try {
-    rows.value = (await api.categories()).data
+    const res = await api.categoryPage({
+      page: page.value,
+      perPage: PER_PAGE,
+      ...(q.value ? { q: q.value } : {}),
+    })
+    rows.value = res.data
+    total.value = res.meta.total
+    totalPages.value = res.meta.totalPages
   } catch (err) {
     error.value = err instanceof ApiError ? err.message : 'Could not load categories.'
   } finally {
@@ -105,7 +133,7 @@ async function save() {
     if (editing.value === 'new') await api.createCategory(form.value)
     else if (editing.value != null) await api.updateCategory(editing.value, form.value)
     close()
-    await load()
+    await Promise.all([load(), loadRoots()])
   } catch (err) {
     if (err instanceof ApiError) {
       fieldErrors.value = err.fields
@@ -124,13 +152,25 @@ async function remove(row: Category) {
   if (!window.confirm(`Delete “${row.name}”?`)) return
   try {
     await api.deleteCategory(row.id)
-    await load()
+    await Promise.all([load(), loadRoots()])
   } catch (err) {
     error.value = err instanceof ApiError ? err.message : 'Could not delete that category.'
   }
 }
 
-onMounted(load)
+let debounce: ReturnType<typeof setTimeout> | undefined
+watch(q, () => {
+  clearTimeout(debounce)
+  debounce = setTimeout(() => {
+    page.value = 1
+    void load()
+  }, 300)
+})
+watch(page, load)
+
+onMounted(async () => {
+  await Promise.all([load(), loadRoots()])
+})
 </script>
 
 <template>
@@ -143,7 +183,7 @@ onMounted(load)
       <div class="flex items-center justify-between gap-4 px-5 py-4 sm:px-6">
         <div>
           <h3 class="text-base font-medium text-gray-800 dark:text-white/90">
-            {{ rows.length }} categories
+            {{ total }} categories
           </h3>
           <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
             Courses are filed under these on the public site.
@@ -256,6 +296,15 @@ onMounted(load)
         </div>
       </form>
 
+      <div class="border-y border-gray-100 px-5 py-4 dark:border-gray-800 sm:px-6">
+        <input
+          v-model="q"
+          type="search"
+          placeholder="Search name or slug"
+          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+        />
+      </div>
+
       <div class="overflow-x-auto">
         <table class="w-full min-w-[720px] text-left">
           <thead class="border-b border-gray-100 dark:border-gray-800">
@@ -317,6 +366,14 @@ onMounted(load)
           </tbody>
         </table>
       </div>
+
+      <TablePager
+        v-model:page="page"
+        :total-pages="totalPages"
+        :total="total"
+        :per-page="PER_PAGE"
+        noun="categories"
+      />
     </div>
   </admin-layout>
 </template>

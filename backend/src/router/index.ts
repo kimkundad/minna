@@ -56,19 +56,24 @@ const router = createRouter({
     },
 
     {
-      // Who can sign in here. Superadmin only: creating staff and granting
-      // roles are the two powers that could be turned on the people who hold
-      // them.
-      path: '/staff',
-      name: 'Staff',
-      component: () => import('@/views/People/Staff.vue'),
-      meta: { title: 'Team', roles: ['superadmin'] },
+      path: '/students',
+      name: 'Students',
+      component: () => import('@/views/People/Students.vue'),
+      meta: { title: 'Students', roles: ['superadmin', 'admin'] },
     },
     {
-      path: '/members',
-      name: 'Members',
-      component: () => import('@/views/People/Members.vue'),
-      meta: { title: 'Members', roles: ['superadmin', 'admin'] },
+      path: '/teachers',
+      name: 'Teachers',
+      component: () => import('@/views/People/Teachers.vue'),
+      meta: { title: 'Teachers', roles: ['superadmin', 'admin'] },
+    },
+    {
+      // Creating staff and granting roles are the two powers that could be
+      // turned on the people who hold them, so this one is superadmin only.
+      path: '/admins',
+      name: 'Admins',
+      component: () => import('@/views/People/Admins.vue'),
+      meta: { title: 'Administrators', roles: ['superadmin'] },
     },
     {
       path: '/teacher-applications',

@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import TablePager from '@/components/common/TablePager.vue'
 import {
   ApiError,
   api,
@@ -235,30 +236,13 @@ onMounted(async () => {
         </table>
       </div>
 
-      <div
-        v-if="totalPages > 1"
-        class="flex items-center justify-between gap-4 border-t border-gray-100 px-5 py-4 dark:border-gray-800 sm:px-6"
-      >
-        <p class="text-sm text-gray-500 dark:text-gray-400">{{ pageLabel }}</p>
-        <div class="flex gap-2">
-          <button
-            type="button"
-            :disabled="page <= 1"
-            class="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300"
-            @click="page -= 1"
-          >
-            Previous
-          </button>
-          <button
-            type="button"
-            :disabled="page >= totalPages"
-            class="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300"
-            @click="page += 1"
-          >
-            Next
-          </button>
-        </div>
-      </div>
+    <TablePager
+      v-model:page="page"
+      :total-pages="totalPages"
+      :total="total"
+      :per-page="20"
+      noun="courses"
+    />
     </div>
   </admin-layout>
 </template>

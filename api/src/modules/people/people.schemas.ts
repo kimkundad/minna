@@ -9,9 +9,10 @@ export const memberListQuery = z.object({
   perPage: z.coerce.number().int().min(1).max(100).default(20),
   q: z.string().max(200).optional(),
   role: z.enum(['superadmin', 'admin', 'teacher', 'student']).optional(),
-  /** 'staff' is anyone who can sign in to the admin; 'learners' is everyone
-   *  else. Two screens, because they answer different questions. */
-  group: z.enum(['staff', 'learners']).optional(),
+  /** Which screen is asking. Three, because they are three different jobs:
+   *  finding a customer, looking after the people who teach, and controlling
+   *  who can get in. */
+  group: z.enum(['students', 'teachers', 'admins']).optional(),
   status: z.enum(['active', 'suspended']).optional(),
   sort: z.enum(['newest', 'name', 'email']).default('newest'),
 })
@@ -50,12 +51,12 @@ export const decideApplicationBody = z.object({
 /**
  * A staff account created from the admin.
  *
- * No password field on purpose. The person sets their own through a link, so
- * nobody else ever knows it — an administrator who types a colleague's
- * password knows it, and a password two people know is not one.
+ * The creator sets the password. A link to an inbox would be better — nobody
+ * else would ever know it — but the page that link lands on does not exist
+ * yet, so a link would create accounts that cannot be opened.
  *
- * `sendInvite: false` exists for the case where mail is not working yet: the
- * API then returns a one-time link for the creator to pass on by hand.
+ * The confirmation is checked here as well as in the form: a mistyped password
+ * locks someone out of an account only a superadmin can rescue.
  */
 export const createMemberBody = z.object({
   email: z.string().email('Enter a valid email address.').max(255),
@@ -63,5 +64,41 @@ export const createMemberBody = z.object({
   lastName: z.string().min(1, 'Enter a last name.').max(100),
   roles: z.array(z.enum(['superadmin', 'admin', 'teacher', 'student'])).min(1, 'Pick at least one role.'),
   locale: z.enum(['th', 'en', 'jp', 'vn']).default('th'),
-  sendInvite: z.boolean().default(true),
+  password: z
+    .string()
+    .min(8, 'Use at least 8 characters.')
+    .max(200)
+    .regex(/[A-Za-z]/, 'Include at least one letter.')
+    .regex(/[0-9]/, 'Include at least one number.'),
+  confirmPassword: z.string(),
 })
+  .refine((v) => v.password === v.confirmPassword, {
+    message: 'The two passwords do not match.',
+    path: ['confirmPassword'],
+  })
+
+/**
+ * A password set for someone else by a superadmin.
+ *
+ * Normally nobody but the account holder picks their password. This exists
+ * because the set-password link has to reach an inbox, and a team that cannot
+ * send mail yet would otherwise have no way to get a new administrator in.
+ *
+ * The confirmation is checked here as well as in the form: a mistyped password
+ * locks the person out of an account only a superadmin can rescue, and the
+ * check costs nothing.
+ */
+export const setPasswordBody = z
+  .object({
+    password: z
+      .string()
+      .min(8, 'Use at least 8 characters.')
+      .max(200)
+      .regex(/[A-Za-z]/, 'Include at least one letter.')
+      .regex(/[0-9]/, 'Include at least one number.'),
+    confirmPassword: z.string(),
+  })
+  .refine((v) => v.password === v.confirmPassword, {
+    message: 'The two passwords do not match.',
+    path: ['confirmPassword'],
+  })
