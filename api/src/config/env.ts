@@ -33,14 +33,22 @@ const schema = z.object({
   JWT_REFRESH_TTL: z.string().default('30d'),
 
   // Third-party credentials are optional while developing so the server still
-  // boots before anyone has wired up a Spaces bucket or a Stripe account. The
-  // check below makes them mandatory in production.
-  SPACES_ENDPOINT: z.string().url().optional(),
-  SPACES_REGION: z.string().optional(),
-  SPACES_BUCKET: z.string().optional(),
-  SPACES_KEY: z.string().optional(),
-  SPACES_SECRET: z.string().optional(),
-  SIGNED_URL_TTL: z.coerce.number().int().positive().default(300),
+  // boots before anyone has wired up storage or a Stripe account. The check
+  // below makes them mandatory in production.
+
+  // space-kim: self-hosted file storage with expiring signed URLs.
+  SPACE_BASE_URL: z.string().url().optional(),
+  /** Format: <keyId>.<secret>. The secret signs URLs; the id names the key. */
+  SPACE_API_KEY: z.string().optional(),
+  /** The folder the key is scoped to. Every path has to sit inside it, and the
+   *  service will not say what the scope is, so it has to be stated here. */
+  SPACE_FOLDER: z
+    .string()
+    .default('minna')
+    .transform((v) => v.replace(/^\/+|\/+$/g, '')),
+  /** How long a signed URL lasts. Six hours by default, so a lesson video
+   *  outlives watching it — and a pause over lunch. The service caps it at 7 days. */
+  SIGNED_URL_TTL: z.coerce.number().int().positive().max(604800).default(21600),
 
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
@@ -57,11 +65,8 @@ const schema = z.object({
 })
 
 const REQUIRED_IN_PRODUCTION = [
-  'SPACES_ENDPOINT',
-  'SPACES_REGION',
-  'SPACES_BUCKET',
-  'SPACES_KEY',
-  'SPACES_SECRET',
+  'SPACE_BASE_URL',
+  'SPACE_API_KEY',
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
   // Without this, password resets and receipts silently go nowhere.
