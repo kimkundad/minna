@@ -246,7 +246,9 @@ const allGroups = [
         icon: TaskIcon,
         name: 'Learning',
         subItems: [
-          { name: 'Quizzes', path: '/quizzes', soon: true },
+          // A quiz belongs to one course and is edited from it, so there is no
+          // list of quizzes to link to — the list of courses is the way in.
+          { name: 'Quizzes', path: '/courses' },
           { name: 'Essay review', path: '/essay-review', soon: true },
           { name: 'Lesson Q&A', path: '/lesson-questions', soon: true },
         ],

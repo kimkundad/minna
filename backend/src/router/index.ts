@@ -49,6 +49,12 @@ const router = createRouter({
       meta: { title: 'Curriculum', roles: ['superadmin', 'admin', 'teacher'] },
     },
     {
+      path: '/courses/:id/quiz',
+      name: 'CourseQuiz',
+      component: () => import('@/views/Catalog/CourseQuiz.vue'),
+      meta: { title: 'Quiz', roles: ['superadmin', 'admin', 'teacher'] },
+    },
+    {
       path: '/categories',
       name: 'Categories',
       component: () => import('@/views/Catalog/Categories.vue'),

@@ -480,3 +480,74 @@ export interface CreateMemberInput {
   /** Set one and the account works immediately, with no link involved. */
   password?: string
 }
+
+/* ---------------- quiz ---------------- */
+
+export type QuestionType = 'single' | 'multiple' | 'essay'
+
+export interface QuizChoice {
+  id?: number
+  text: string
+  /** Staff-only. The learner's side of the app never receives this. */
+  isCorrect: boolean
+}
+
+export interface QuizQuestion {
+  id: number
+  type: QuestionType
+  text: string
+  maxLength: number
+  attachmentAllowed: boolean
+  sortOrder: number
+  choices: (QuizChoice & { id: number; sortOrder: number })[]
+}
+
+export interface Quiz {
+  id: number
+  courseId: number
+  lessonId: number | null
+  title: string
+  passPct: number
+  timerMinutes: number | null
+  questions: QuizQuestion[]
+}
+
+export interface QuizInput {
+  title: string
+  passPct: number
+  timerMinutes?: number | null
+  lessonId?: number | null
+}
+
+export interface QuestionInput {
+  type: QuestionType
+  text: string
+  maxLength?: number
+  attachmentAllowed?: boolean
+  sortOrder?: number
+  choices?: { text: string; isCorrect: boolean }[]
+}
+
+export const quiz = {
+  get: (courseId: number) => send<{ data: Quiz | null }>(`/courses/${courseId}/quiz`),
+
+  save: (courseId: number, body: QuizInput) =>
+    send<{ data: Quiz }>(`/courses/${courseId}/quiz`, { method: 'PUT', body }),
+
+  remove: (courseId: number) => send<void>(`/courses/${courseId}/quiz`, { method: 'DELETE' }),
+
+  addQuestion: (courseId: number, body: QuestionInput) =>
+    send<{ data: QuizQuestion }>(`/courses/${courseId}/quiz/questions`, { method: 'POST', body }),
+
+  updateQuestion: (courseId: number, questionId: number, body: QuestionInput) =>
+    send<{ data: QuizQuestion }>(`/courses/${courseId}/quiz/questions/${questionId}`, {
+      method: 'PUT',
+      body,
+    }),
+
+  deleteQuestion: (courseId: number, questionId: number) =>
+    send<void>(`/courses/${courseId}/quiz/questions/${questionId}`, { method: 'DELETE' }),
+
+  reorder: (courseId: number, ids: number[]) =>
+    send<void>(`/courses/${courseId}/quiz/reorder`, { method: 'POST', body: { ids } }),
+}

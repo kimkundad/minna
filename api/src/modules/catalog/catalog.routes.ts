@@ -4,6 +4,8 @@ import { audit, diff } from '../../lib/audit'
 import { forbidden } from '../../lib/errors'
 import * as schemas from './catalog.schemas'
 import * as service from './catalog.service'
+import * as quizSchemas from './quiz.schemas'
+import * as quiz from './quiz.service'
 
 /**
  * The catalog: categories and courses.
@@ -291,6 +293,110 @@ export default async function catalogRoutes(app: FastifyInstance) {
       subjectType: 'course',
       subjectId: id,
     })
+    return reply.status(204).send()
+  })
+  /* ---------------- quiz ---------------- */
+
+  // Staff only, including the read: this returns which choices are correct,
+  // and the learner's side of the app must never see that.
+  app.get('/courses/:id/quiz', staffOnly, async (req) => {
+    const { id } = idParam.parse(req.params)
+    await assertMayEditCourse(req, id)
+    return { data: await quiz.getQuiz(id) }
+  })
+
+  app.put('/courses/:id/quiz', staffOnly, async (req) => {
+    const { id } = idParam.parse(req.params)
+    await assertMayEditCourse(req, id)
+
+    const body = quizSchemas.quizBody.parse(req.body)
+    const existed = Boolean(await quiz.getQuiz(id))
+    const saved = await quiz.saveQuiz(id, body)
+
+    audit(req, {
+      action: existed ? 'quiz.updated' : 'quiz.created',
+      subjectType: 'course',
+      subjectId: id,
+      summary: saved.title,
+    })
+    return { data: saved }
+  })
+
+  app.delete('/courses/:id/quiz', adminOnly, async (req, reply) => {
+    const { id } = idParam.parse(req.params)
+    const removed = await quiz.deleteQuiz(id)
+
+    audit(req, {
+      action: 'quiz.deleted',
+      subjectType: 'course',
+      subjectId: id,
+      // Worth spelling out in the record: this took the attempts with it.
+      summary: `${removed.title} — ${removed.questions.length} question(s) and every attempt`,
+    })
+    return reply.status(204).send()
+  })
+
+  app.post('/courses/:id/quiz/questions', staffOnly, async (req, reply) => {
+    const { id } = idParam.parse(req.params)
+    await assertMayEditCourse(req, id)
+
+    const body = quizSchemas.questionBody.parse(req.body)
+    const created = await quiz.createQuestion(id, body)
+
+    audit(req, {
+      action: 'quiz.question_added',
+      subjectType: 'course',
+      subjectId: id,
+      summary: created.text.slice(0, 120),
+    })
+    return reply.status(201).send({ data: created })
+  })
+
+  app.put('/courses/:id/quiz/questions/:questionId', staffOnly, async (req) => {
+    const { id } = idParam.parse(req.params)
+    const { questionId } = z
+      .object({ questionId: z.coerce.number().int().positive() })
+      .parse(req.params)
+    await assertMayEditCourse(req, id)
+
+    const body = quizSchemas.questionBody.parse(req.body)
+    const { after } = await quiz.updateQuestion(id, questionId, body)
+
+    audit(req, {
+      action: 'quiz.question_updated',
+      subjectType: 'course',
+      subjectId: id,
+      summary: after.text.slice(0, 120),
+    })
+    return { data: after }
+  })
+
+  app.delete('/courses/:id/quiz/questions/:questionId', staffOnly, async (req, reply) => {
+    const { id } = idParam.parse(req.params)
+    const { questionId } = z
+      .object({ questionId: z.coerce.number().int().positive() })
+      .parse(req.params)
+    await assertMayEditCourse(req, id)
+
+    const removed = await quiz.deleteQuestion(id, questionId)
+
+    audit(req, {
+      action: 'quiz.question_deleted',
+      subjectType: 'course',
+      subjectId: id,
+      summary: removed.text.slice(0, 120),
+    })
+    return reply.status(204).send()
+  })
+
+  app.post('/courses/:id/quiz/reorder', staffOnly, async (req, reply) => {
+    const { id } = idParam.parse(req.params)
+    await assertMayEditCourse(req, id)
+
+    const { ids } = quizSchemas.reorderQuestionsBody.parse(req.body)
+    await quiz.reorderQuestions(id, ids)
+
+    audit(req, { action: 'quiz.reordered', subjectType: 'course', subjectId: id })
     return reply.status(204).send()
   })
 }
