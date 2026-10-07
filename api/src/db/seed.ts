@@ -35,7 +35,7 @@ const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe!2026'
 const baht = (n: number) => Math.round(n * 100)
 
 async function seedRoles() {
-  const names = ['admin', 'teacher', 'student'] as const
+  const names = ['superadmin', 'admin', 'teacher', 'student'] as const
   for (const name of names) {
     const existing = await db.select().from(roles).where(eq(roles.name, name)).limit(1)
     if (existing.length === 0) await db.insert(roles).values({ name })
@@ -61,8 +61,12 @@ async function seedAdmin(roleIds: Map<string, number>) {
   const [created] = await db.select().from(users).where(eq(users.email, ADMIN_EMAIL)).limit(1)
   if (!created) throw new Error('admin user was not created')
 
-  const adminRole = roleIds.get('admin')
-  if (adminRole) await db.insert(userRoles).values({ userId: created.id, roleId: adminRole })
+  // The first account is a superadmin as well as an admin: without one,
+  // nobody can grant roles, including the role that grants roles.
+  for (const name of ['admin', 'superadmin'] as const) {
+    const roleId = roleIds.get(name)
+    if (roleId) await db.insert(userRoles).values({ userId: created.id, roleId })
+  }
   return created.id
 }
 

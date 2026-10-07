@@ -40,13 +40,17 @@ interface Actor {
  *  failed attempt, both of which are worth a row with no actor id. */
 export function actorOf(req: FastifyRequest, email?: string | null): Actor {
   const roles = req.user?.roles ?? []
-  const role: AuditActorRole = roles.includes('admin')
-    ? 'admin'
-    : roles.includes('teacher')
-      ? 'teacher'
-      : roles.includes('student')
-        ? 'student'
-        : 'system'
+  // The highest role held. Someone who is both a superadmin and a teacher was
+  // acting as a superadmin, and that is what the record should say.
+  const role: AuditActorRole = roles.includes('superadmin')
+    ? 'superadmin'
+    : roles.includes('admin')
+      ? 'admin'
+      : roles.includes('teacher')
+        ? 'teacher'
+        : roles.includes('student')
+          ? 'student'
+          : 'system'
 
   return {
     id: req.user?.sub ?? null,

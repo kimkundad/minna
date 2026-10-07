@@ -9,6 +9,7 @@ import errorHandler from './plugins/error-handler'
 import authRoutes from './modules/auth/auth.routes'
 import catalogRoutes from './modules/catalog/catalog.routes'
 import uploadRoutes from './modules/uploads/uploads.routes'
+import peopleRoutes from './modules/people/people.routes'
 
 export async function buildApp() {
   const app = Fastify({
@@ -47,6 +48,7 @@ export async function buildApp() {
   await app.register(authRoutes, { prefix: '/api/v1/auth' })
   await app.register(catalogRoutes, { prefix: '/api/v1' })
   await app.register(uploadRoutes, { prefix: '/api/v1' })
+  await app.register(peopleRoutes, { prefix: '/api/v1' })
 
   return app
 }

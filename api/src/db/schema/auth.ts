@@ -44,7 +44,13 @@ export const roles = mysqlTable(
   'roles',
   {
     id: bigint('id', { mode: 'number', unsigned: true }).autoincrement().primaryKey(),
-    name: mysqlEnum('name', ['admin', 'teacher', 'student']).notNull(),
+    /**
+     * superadmin is a superset of admin, not a sibling: it does everything an
+     * admin does, plus the things an admin must not be able to do to itself —
+     * granting roles, changing site settings, reading the audit log, and the
+     * deletions that cannot be undone.
+     */
+    name: mysqlEnum('name', ['superadmin', 'admin', 'teacher', 'student']).notNull(),
   },
   (t) => [uniqueIndex('roles_name_unique').on(t.name)],
 )

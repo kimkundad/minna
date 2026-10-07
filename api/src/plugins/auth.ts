@@ -4,7 +4,7 @@ import fp from 'fastify-plugin'
 import { env } from '../config/env'
 import { forbidden, unauthorized } from '../lib/errors'
 
-export type RoleName = 'admin' | 'teacher' | 'student'
+export type RoleName = 'superadmin' | 'admin' | 'teacher' | 'student'
 
 export interface AccessTokenPayload {
   /** User id. */
@@ -63,7 +63,11 @@ export default fp(async function auth(app: FastifyInstance) {
       async (req: FastifyRequest, reply: FastifyReply) => {
         await app.authenticate(req, reply)
         const held = req.user?.roles ?? []
-        if (!roles.some((r) => held.includes(r))) {
+        // A superadmin can do anything an admin can, so it satisfies any check
+        // that asks for 'admin'. Spelling out both at every call site would
+        // mean one forgotten pair silently locking a superadmin out.
+        const effective: RoleName[] = held.includes('superadmin') ? [...held, 'admin'] : held
+        if (!roles.some((r) => effective.includes(r))) {
           throw forbidden('You do not have access to this.')
         }
       },

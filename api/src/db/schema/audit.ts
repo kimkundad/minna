@@ -37,7 +37,7 @@ export const auditLogs = mysqlTable(
     }),
     /** The role held at the time. Roles change; the record of what someone was
      *  allowed to do when they did it must not change with them. */
-    actorRole: mysqlEnum('actor_role', ['admin', 'teacher', 'student', 'system']).notNull(),
+    actorRole: mysqlEnum('actor_role', ['superadmin', 'admin', 'teacher', 'student', 'system']).notNull(),
     /** Kept as text so the row still reads after the account is deleted. */
     actorEmail: varchar('actor_email', { length: 255 }),
 

@@ -33,26 +33,39 @@ const router = createRouter({
       path: '/courses',
       name: 'Courses',
       component: () => import('@/views/Catalog/Courses.vue'),
-      meta: { title: 'Courses', roles: ['admin', 'teacher'] },
+      meta: { title: 'Courses', roles: ['superadmin', 'admin', 'teacher'] },
     },
     {
       // 'new' and an id share one form; the view decides from the param.
       path: '/courses/:id',
       name: 'Course',
       component: () => import('@/views/Catalog/CourseForm.vue'),
-      meta: { title: 'Course', roles: ['admin', 'teacher'] },
+      meta: { title: 'Course', roles: ['superadmin', 'admin', 'teacher'] },
     },
     {
       path: '/courses/:id/curriculum',
       name: 'CourseCurriculum',
       component: () => import('@/views/Catalog/CourseCurriculum.vue'),
-      meta: { title: 'Curriculum', roles: ['admin', 'teacher'] },
+      meta: { title: 'Curriculum', roles: ['superadmin', 'admin', 'teacher'] },
     },
     {
       path: '/categories',
       name: 'Categories',
       component: () => import('@/views/Catalog/Categories.vue'),
-      meta: { title: 'Categories', roles: ['admin'] },
+      meta: { title: 'Categories', roles: ['superadmin', 'admin'] },
+    },
+
+    {
+      path: '/members',
+      name: 'Members',
+      component: () => import('@/views/People/Members.vue'),
+      meta: { title: 'Members', roles: ['superadmin', 'admin'] },
+    },
+    {
+      path: '/teacher-applications',
+      name: 'TeacherApplications',
+      component: () => import('@/views/People/TeacherApplications.vue'),
+      meta: { title: 'Teacher applications', roles: ['superadmin', 'admin'] },
     },
 
     {

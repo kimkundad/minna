@@ -231,15 +231,15 @@ const allGroups = [
   },
   {
     title: 'Catalog',
-    roles: ['admin', 'teacher'],
+    roles: ['superadmin', 'admin', 'teacher'],
     items: [
       {
         icon: DocsIcon,
         name: 'Courses',
         subItems: [
           { name: 'All courses', path: '/courses' },
-          { name: 'Categories', path: '/categories', roles: ['admin'] },
-          { name: 'Packages', path: '/packages', soon: true, roles: ['admin'] },
+          { name: 'Categories', path: '/categories', roles: ['superadmin', 'admin'] },
+          { name: 'Packages', path: '/packages', soon: true, roles: ['superadmin', 'admin'] },
         ],
       },
       {
@@ -255,14 +255,14 @@ const allGroups = [
   },
   {
     title: 'People',
-    roles: ['admin'],
+    roles: ['superadmin', 'admin'],
     items: [
       {
         icon: UserGroupIcon,
         name: 'Members',
         subItems: [
-          { name: 'All members', path: '/members', soon: true },
-          { name: 'Teacher applications', path: '/teacher-applications', soon: true },
+          { name: 'All members', path: '/members' },
+          { name: 'Teacher applications', path: '/teacher-applications' },
           { name: 'Access rights', path: '/entitlements', soon: true },
         ],
       },
@@ -270,7 +270,7 @@ const allGroups = [
   },
   {
     title: 'Sales',
-    roles: ['admin'],
+    roles: ['superadmin', 'admin'],
     items: [
       {
         icon: CartIcon,
@@ -285,7 +285,7 @@ const allGroups = [
   },
   {
     title: 'Content',
-    roles: ['admin'],
+    roles: ['superadmin', 'admin'],
     items: [
       {
         icon: PageIcon,

@@ -199,7 +199,7 @@ const handleSubmit = async () => {
   try {
     const user = await auth.login(email.value.trim(), password.value, keepLoggedIn.value)
 
-    if (!user.roles.some((r) => r === 'admin' || r === 'teacher')) {
+    if (!user.roles.some((r) => r === 'superadmin' || r === 'admin' || r === 'teacher')) {
       // Signed in, but not for here. Drop the session rather than leaving a
       // student holding an admin-app token.
       await auth.logout()

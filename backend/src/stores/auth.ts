@@ -17,7 +17,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = computed(() => user.value !== null)
   const roles = computed<RoleName[]>(() => user.value?.roles ?? [])
-  const isAdmin = computed(() => roles.value.includes('admin'))
+  const isSuperadmin = computed(() => roles.value.includes('superadmin'))
+  // A superadmin does everything an admin does, so every 'is this an admin'
+  // check has to say yes for one. The API decides the same way.
+  const isAdmin = computed(() => isSuperadmin.value || roles.value.includes('admin'))
   const isTeacher = computed(() => roles.value.includes('teacher'))
 
   /** Everyone who may use this app at all. A student account has no business
@@ -82,6 +85,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoggedIn,
     roles,
     isAdmin,
+    isSuperadmin,
     isTeacher,
     canUseAdmin,
     displayName,

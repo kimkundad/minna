@@ -94,7 +94,7 @@ export async function send<T>(path: string, options: RequestOptions = {}): Promi
   return body as T
 }
 
-export type RoleName = 'admin' | 'teacher' | 'student'
+export type RoleName = 'superadmin' | 'admin' | 'teacher' | 'student'
 
 export interface SessionUser {
   id: number
@@ -364,4 +364,87 @@ export interface UploadTicket {
   baseUrl: string
   folder: string
   maxSize: number
+}
+
+/* ---------------- people ---------------- */
+
+export interface Member {
+  id: number
+  email: string
+  firstName: string
+  lastName: string
+  status: 'active' | 'suspended'
+  locale: string
+  avatarPath: string | null
+  emailVerifiedAt: string | null
+  createdAt: string
+  roles: RoleName[]
+}
+
+export interface MemberListQuery extends Record<string, string | number | boolean | undefined> {
+  page?: number
+  perPage?: number
+  q?: string
+  role?: RoleName
+  status?: 'active' | 'suspended'
+  sort?: 'newest' | 'name' | 'email'
+}
+
+export type ApplicationStatus = 'pending' | 'approved' | 'rejected'
+
+export interface TeacherApplication {
+  id: number
+  name: string
+  email: string
+  phone: string | null
+  subject: string | null
+  categoryId: number | null
+  categoryName?: string | null
+  status: ApplicationStatus
+  contactTime: string | null
+  createdAt: string
+  approvedAt: string | null
+  /** Only on the detail read. */
+  experience?: string | null
+  reason?: string | null
+  resumePath?: string | null
+  account?: { id: number; email: string; status: string } | null
+}
+
+export interface ApplicationListQuery
+  extends Record<string, string | number | boolean | undefined> {
+  page?: number
+  perPage?: number
+  status?: ApplicationStatus
+  q?: string
+}
+
+export const people = {
+  members: (query: MemberListQuery = {}) => send<Paged<Member>>('/members', { query }),
+
+  member: (id: number) => send<{ data: Member }>(`/members/${id}`),
+
+  setRoles: (id: number, roles: RoleName[]) =>
+    send<{ data: Member }>(`/members/${id}/roles`, { method: 'PUT', body: { roles } }),
+
+  setStatus: (id: number, status: 'active' | 'suspended', reason?: string) =>
+    send<{ data: Member }>(`/members/${id}/status`, {
+      method: 'PUT',
+      body: { status, ...(reason ? { reason } : {}) },
+    }),
+
+  applications: (query: ApplicationListQuery = {}) =>
+    send<Paged<TeacherApplication>>('/teacher-applications', { query }),
+
+  application: (id: number) =>
+    send<{ data: TeacherApplication }>(`/teacher-applications/${id}`),
+
+  decide: (
+    id: number,
+    body: { decision: 'approved' | 'rejected'; categoryId?: number | null; note?: string },
+  ) =>
+    send<{ data: TeacherApplication; granted: boolean }>(
+      `/teacher-applications/${id}/decision`,
+      { method: 'POST', body },
+    ),
 }

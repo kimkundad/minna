@@ -40,6 +40,7 @@ function clearRefreshCookie(reply: FastifyReply) {
 
 /** Highest role wins: an admin who is also a teacher acted as an admin. */
 function actorRoleOf(roles: readonly string[]): AuditActorRole {
+  if (roles.includes('superadmin')) return 'superadmin'
   if (roles.includes('admin')) return 'admin'
   if (roles.includes('teacher')) return 'teacher'
   return 'student'
