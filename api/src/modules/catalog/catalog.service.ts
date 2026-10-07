@@ -27,6 +27,9 @@ function paged<T>(data: T[], total: number, page: number, perPage: number): Page
 /* ---------------- categories ---------------- */
 
 export async function listCategories() {
+  // A join rather than a correlated subquery: inside a raw `sql` fragment
+  // drizzle renders a column unqualified, so `c.category_id = ${categories.id}`
+  // became `c.category_id = c.id` and every count came back zero.
   return db
     .select({
       id: categories.id,
@@ -36,9 +39,18 @@ export async function listCategories() {
       icon: categories.icon,
       sortOrder: categories.sortOrder,
       // What the admin list wants to know before deleting one.
-      courseCount: sql<number>`(SELECT COUNT(*) FROM courses c WHERE c.category_id = ${categories.id})`,
+      courseCount: sql<number>`CAST(COUNT(${courses.id}) AS SIGNED)`,
     })
     .from(categories)
+    .leftJoin(courses, eq(courses.categoryId, categories.id))
+    .groupBy(
+      categories.id,
+      categories.parentId,
+      categories.name,
+      categories.slug,
+      categories.icon,
+      categories.sortOrder,
+    )
     .orderBy(asc(categories.sortOrder), asc(categories.name))
 }
 

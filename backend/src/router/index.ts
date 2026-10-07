@@ -30,6 +30,26 @@ const router = createRouter({
       meta: { title: 'Dashboard' },
     },
     {
+      path: '/courses',
+      name: 'Courses',
+      component: () => import('@/views/Catalog/Courses.vue'),
+      meta: { title: 'Courses', roles: ['admin', 'teacher'] },
+    },
+    {
+      // 'new' and an id share one form; the view decides from the param.
+      path: '/courses/:id',
+      name: 'Course',
+      component: () => import('@/views/Catalog/CourseForm.vue'),
+      meta: { title: 'Course', roles: ['admin', 'teacher'] },
+    },
+    {
+      path: '/categories',
+      name: 'Categories',
+      component: () => import('@/views/Catalog/Categories.vue'),
+      meta: { title: 'Categories', roles: ['admin'] },
+    },
+
+    {
       path: '/profile',
       name: 'Profile',
       component: () => import('@/views/Others/UserProfile.vue'),

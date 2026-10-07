@@ -152,4 +152,116 @@ export const api = {
 
   forgotPassword: (email: string) =>
     send<{ message: string }>('/auth/forgot-password', { method: 'POST', body: { email } }),
+
+  /* ---------------- catalog ---------------- */
+
+  categories: () => send<{ data: Category[] }>('/categories'),
+
+  createCategory: (body: CategoryInput) =>
+    send<{ data: Category }>('/categories', { method: 'POST', body }),
+
+  updateCategory: (id: number, body: Partial<CategoryInput>) =>
+    send<{ data: Category }>(`/categories/${id}`, { method: 'PATCH', body }),
+
+  deleteCategory: (id: number) => send<void>(`/categories/${id}`, { method: 'DELETE' }),
+
+  courses: (query: CourseListQuery) => send<Paged<CourseRow>>('/courses', { query }),
+
+  course: (id: number) => send<{ data: CourseDetail }>(`/courses/${id}`),
+
+  createCourse: (body: CourseInput) =>
+    send<{ data: CourseDetail }>('/courses', { method: 'POST', body }),
+
+  updateCourse: (id: number, body: Partial<CourseInput>) =>
+    send<{ data: CourseDetail }>(`/courses/${id}`, { method: 'PATCH', body }),
+
+  deleteCourse: (id: number) => send<void>(`/courses/${id}`, { method: 'DELETE' }),
+}
+
+export interface Paged<T> {
+  data: T[]
+  meta: { page: number; perPage: number; total: number; totalPages: number }
+}
+
+export interface Category {
+  id: number
+  parentId: number | null
+  name: string
+  slug: string
+  icon: string | null
+  sortOrder: number
+  /** Only on the list; how many courses would lose their category. */
+  courseCount?: number
+}
+
+export interface CategoryInput {
+  name: string
+  slug: string
+  parentId?: number | null
+  icon?: string | null
+  sortOrder?: number
+}
+
+export type CourseStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'ended'
+export type CourseLevel = 'beginner' | 'intermediate' | 'advanced'
+
+export interface CourseListQuery extends Record<string, string | number | boolean | undefined> {
+  page?: number
+  perPage?: number
+  q?: string
+  status?: CourseStatus
+  categoryId?: number
+  sort?: 'newest' | 'title' | 'price' | 'popularity'
+}
+
+export interface CourseRow {
+  id: number
+  title: string
+  slug: string
+  categoryId: number | null
+  categoryName: string | null
+  thumbnailPath: string | null
+  level: CourseLevel | null
+  /** Satang. Divide by 100 only when showing it. */
+  price: number
+  normalPrice: number | null
+  status: CourseStatus
+  sellable: boolean
+  featured: boolean
+  durationSeconds: number
+  publishedAt: string | null
+  createdAt: string
+}
+
+export interface CourseInput {
+  title: string
+  slug: string
+  categoryId?: number | null
+  shortDesc?: string | null
+  description?: string | null
+  outcomes?: string[]
+  audience?: string[]
+  thumbnailPath?: string | null
+  sampleVideoPath?: string | null
+  level?: CourseLevel | null
+  contentLocale?: 'th' | 'en' | 'jp' | 'vn'
+  price?: number
+  normalPrice?: number | null
+  accessType?: 'lifetime' | 'limited'
+  accessDurationDays?: number | null
+  status?: CourseStatus
+  sellable?: boolean
+  repurchase?: boolean
+  badge?: 'bestseller' | 'recommended' | 'new' | 'free' | null
+  featured?: boolean
+  instructorIds?: number[]
+}
+
+export interface CourseDetail extends CourseInput {
+  id: number
+  durationSeconds: number
+  publishedAt: string | null
+  createdAt: string
+  updatedAt: string
+  instructors?: { id: number; firstName: string; lastName: string; avatarPath: string | null }[]
 }

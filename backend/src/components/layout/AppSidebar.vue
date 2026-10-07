@@ -237,8 +237,8 @@ const allGroups = [
         icon: DocsIcon,
         name: 'Courses',
         subItems: [
-          { name: 'All courses', path: '/courses', soon: true },
-          { name: 'Categories', path: '/categories', soon: true, roles: ['admin'] },
+          { name: 'All courses', path: '/courses' },
+          { name: 'Categories', path: '/categories', roles: ['admin'] },
           { name: 'Packages', path: '/packages', soon: true, roles: ['admin'] },
         ],
       },
