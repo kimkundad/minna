@@ -4,11 +4,13 @@
       class="flex items-center text-gray-700 dark:text-gray-400"
       @click.prevent="toggleDropdown"
     >
-      <span class="mr-3 overflow-hidden rounded-full h-11 w-11">
-        <img src="/images/user/owner.png" alt="User" />
+      <span
+        class="mr-3 grid h-11 w-11 place-items-center overflow-hidden rounded-full bg-brand-500 text-sm font-semibold text-white"
+      >
+        {{ auth.initials }}
       </span>
 
-      <span class="block mr-1 font-medium text-theme-sm">Musharof</span>
+      <span class="block mr-1 font-medium text-theme-sm">{{ auth.user?.firstName }}</span>
 
       <ChevronDownIcon :class="{ 'rotate-180': dropdownOpen }" />
     </button>
@@ -20,10 +22,13 @@
     >
       <div>
         <span class="block font-medium text-gray-700 text-theme-sm dark:text-gray-400">
-          Musharof Chowdhury
+          {{ auth.displayName }}
         </span>
         <span class="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">
-          randomuser@pimjo.com
+          {{ auth.user?.email }}
+        </span>
+        <span class="mt-1 block text-theme-xs uppercase tracking-wide text-brand-500">
+          {{ auth.roles.join(', ') }}
         </span>
       </div>
 
@@ -58,18 +63,20 @@
 </template>
 
 <script setup>
-import { UserCircleIcon, ChevronDownIcon, LogoutIcon, SettingsIcon, InfoCircleIcon } from '@/icons'
-import { RouterLink } from 'vue-router'
+import { UserCircleIcon, ChevronDownIcon, LogoutIcon } from '@/icons'
+import { RouterLink, useRouter } from 'vue-router'
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
+const router = useRouter()
 
 const dropdownOpen = ref(false)
 const dropdownRef = ref(null)
 
-const menuItems = [
-  { href: '/profile', icon: UserCircleIcon, text: 'Edit profile' },
-  { href: '/chat', icon: SettingsIcon, text: 'Account settings' },
-  { href: '/profile', icon: InfoCircleIcon, text: 'Support' },
-]
+// Only what exists. The template's 'Account settings' and 'Support' pointed at
+// a chat demo and at this same page.
+const menuItems = [{ href: '/profile', icon: UserCircleIcon, text: 'My profile' }]
 
 const toggleDropdown = () => {
   dropdownOpen.value = !dropdownOpen.value
@@ -79,10 +86,12 @@ const closeDropdown = () => {
   dropdownOpen.value = false
 }
 
-const signOut = () => {
-  // Implement sign out logic here
-  console.log('Signing out...')
+const signOut = async () => {
   closeDropdown()
+  await auth.logout()
+  // replace, not push: the back button should not return to a page this
+  // session can no longer load.
+  await router.replace({ name: 'Signin' })
 }
 
 const handleClickOutside = (event) => {

@@ -23,6 +23,9 @@ declare module 'fastify' {
   interface FastifyInstance {
     /** preHandler: rejects the request unless a valid access token is present. */
     authenticate: (req: FastifyRequest, reply: FastifyReply) => Promise<void>
+    /** preHandler: reads a token when one is sent and ignores it when not.
+     *  For routes that answer everyone but answer staff differently. */
+    optionalAuth: (req: FastifyRequest, reply: FastifyReply) => Promise<void>
     /** preHandler factory: authenticates, then checks for one of these roles. */
     requireRole: (
       ...roles: RoleName[]
@@ -42,6 +45,15 @@ export default fp(async function auth(app: FastifyInstance) {
     } catch {
       // Expired and malformed both read the same to a client: log in again.
       throw unauthorized('Your session has expired. Please sign in again.')
+    }
+  })
+
+  app.decorate('optionalAuth', async (req: FastifyRequest) => {
+    try {
+      await req.jwtVerify()
+    } catch {
+      // No token, or a bad one. Both mean "treat this as a guest" — the route
+      // decides what a guest is allowed to see.
     }
   })
 

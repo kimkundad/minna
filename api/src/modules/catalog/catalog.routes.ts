@@ -1,0 +1,166 @@
+import type { FastifyInstance, FastifyRequest } from 'fastify'
+import { z } from 'zod'
+import { audit, diff } from '../../lib/audit'
+import { forbidden } from '../../lib/errors'
+import * as schemas from './catalog.schemas'
+import * as service from './catalog.service'
+
+/**
+ * The catalog: categories and courses.
+ *
+ * Reads are public but only ever return approved courses. Writes need a staff
+ * role, and a teacher is further limited to the courses they are actually on —
+ * checked per request against the pivot, not taken from the body.
+ */
+
+const idParam = z.object({ id: z.coerce.number().int().positive() })
+
+/** True when the caller may see drafts: staff only. */
+function staff(req: FastifyRequest): boolean {
+  const roles = req.user?.roles ?? []
+  return roles.includes('admin') || roles.includes('teacher')
+}
+
+function isAdmin(req: FastifyRequest): boolean {
+  return (req.user?.roles ?? []).includes('admin')
+}
+
+/** A teacher may only touch a course they teach. Admins may touch any. */
+async function assertMayEditCourse(req: FastifyRequest, courseId: number) {
+  if (isAdmin(req)) return
+  if (await service.isCourseInstructor(courseId, req.user.sub)) return
+  throw forbidden('You are not an instructor on this course.')
+}
+
+export default async function catalogRoutes(app: FastifyInstance) {
+  const staffOnly = { preHandler: app.requireRole('admin', 'teacher') }
+  const adminOnly = { preHandler: app.requireRole('admin') }
+
+  /* ---------------- categories ---------------- */
+
+  app.get('/categories', async () => ({ data: await service.listCategories() }))
+
+  app.post('/categories', adminOnly, async (req, reply) => {
+    const body = schemas.categoryBody.parse(req.body)
+    const created = await service.createCategory(body)
+
+    audit(req, {
+      action: 'category.created',
+      subjectType: 'category',
+      subjectId: created.id,
+      summary: created.name,
+    })
+    return reply.status(201).send({ data: created })
+  })
+
+  app.patch('/categories/:id', adminOnly, async (req) => {
+    const { id } = idParam.parse(req.params)
+    const body = schemas.categoryPatch.parse(req.body)
+    const { before, after } = await service.updateCategory(id, body)
+
+    audit(req, {
+      action: 'category.updated',
+      subjectType: 'category',
+      subjectId: id,
+      summary: after.name,
+      changes: diff(before as never, body as never),
+    })
+    return { data: after }
+  })
+
+  app.delete('/categories/:id', adminOnly, async (req, reply) => {
+    const { id } = idParam.parse(req.params)
+    const removed = await service.deleteCategory(id)
+
+    audit(req, {
+      action: 'category.deleted',
+      subjectType: 'category',
+      subjectId: id,
+      summary: removed.name,
+    })
+    return reply.status(204).send()
+  })
+
+  /* ---------------- courses ---------------- */
+
+  app.get('/courses', { preHandler: app.optionalAuth }, async (req) => {
+    const query = schemas.courseListQuery.parse(req.query)
+    const canSeeDrafts = staff(req)
+
+    return service.listCourses({
+      ...query,
+      includeUnpublished: canSeeDrafts,
+      // A teacher's list is their own courses. An admin's is everything.
+      instructorId: canSeeDrafts && !isAdmin(req) ? req.user.sub : undefined,
+    })
+  })
+
+  app.get('/courses/:id', { preHandler: app.optionalAuth }, async (req) => {
+    const { id } = idParam.parse(req.params)
+    return { data: await service.getCourse(id, staff(req)) }
+  })
+
+  app.post('/courses', staffOnly, async (req, reply) => {
+    const body = schemas.courseBody.parse(req.body)
+
+    // A teacher who leaves themselves off their own course cannot open it
+    // again, so they are added when they did not say otherwise.
+    const instructorIds =
+      body.instructorIds ?? (isAdmin(req) ? [] : [req.user.sub])
+
+    const created = await service.createCourse({ ...body, instructorIds }, req.user.sub)
+
+    audit(req, {
+      action: 'course.created',
+      subjectType: 'course',
+      subjectId: created.id,
+      summary: created.title,
+    })
+    return reply.status(201).send({ data: created })
+  })
+
+  app.patch('/courses/:id', staffOnly, async (req) => {
+    const { id } = idParam.parse(req.params)
+    await assertMayEditCourse(req, id)
+
+    const body = schemas.coursePatch.parse(req.body)
+
+    // Approving is a decision about what the public sees and what can be sold.
+    // A teacher proposes by setting 'pending'; only an admin approves.
+    if (body.status && !isAdmin(req) && !['draft', 'pending'].includes(body.status)) {
+      throw forbidden('Only an administrator can approve or end a course.')
+    }
+
+    const { before, after } = await service.updateCourse(id, body)
+    const changes = diff(before as never, body as never)
+
+    audit(req, {
+      // Price and status changes are the ones people come looking for, so they
+      // get their own action rather than hiding inside 'course.updated'.
+      action:
+        changes && 'status' in changes
+          ? 'course.status_changed'
+          : changes && ('price' in changes || 'normalPrice' in changes)
+            ? 'course.price_changed'
+            : 'course.updated',
+      subjectType: 'course',
+      subjectId: id,
+      summary: after.title,
+      changes,
+    })
+    return { data: after }
+  })
+
+  app.delete('/courses/:id', adminOnly, async (req, reply) => {
+    const { id } = idParam.parse(req.params)
+    const removed = await service.deleteCourse(id)
+
+    audit(req, {
+      action: 'course.deleted',
+      subjectType: 'course',
+      subjectId: id,
+      summary: removed.title,
+    })
+    return reply.status(204).send()
+  })
+}

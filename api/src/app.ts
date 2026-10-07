@@ -7,6 +7,7 @@ import { pool } from './db/client'
 import authPlugin from './plugins/auth'
 import errorHandler from './plugins/error-handler'
 import authRoutes from './modules/auth/auth.routes'
+import catalogRoutes from './modules/catalog/catalog.routes'
 
 export async function buildApp() {
   const app = Fastify({
@@ -43,6 +44,7 @@ export async function buildApp() {
   })
 
   await app.register(authRoutes, { prefix: '/api/v1/auth' })
+  await app.register(catalogRoutes, { prefix: '/api/v1' })
 
   return app
 }

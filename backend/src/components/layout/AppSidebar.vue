@@ -102,6 +102,19 @@
                     ]"
                   />
                 </button>
+                <span
+                  v-else-if="item.soon"
+                  class="menu-item group menu-item-inactive cursor-not-allowed opacity-50"
+                >
+                  <span class="menu-item-icon-inactive"><component :is="item.icon" /></span>
+                  <span
+                    v-if="isExpanded || isHovered || isMobileOpen"
+                    class="menu-item-text flex w-full items-center gap-2"
+                  >
+                    {{ item.name }}
+                    <span class="ml-auto text-xs uppercase tracking-wide">soon</span>
+                  </span>
+                </span>
                 <router-link
                   v-else-if="item.path"
                   :to="item.path"
@@ -145,9 +158,16 @@
                   >
                     <ul class="mt-2 space-y-1 ml-9">
                       <li v-for="subItem in item.subItems" :key="subItem.name">
+                        <span
+                          v-if="subItem.soon"
+                          class="menu-dropdown-item menu-dropdown-item-inactive cursor-not-allowed opacity-50"
+                        >
+                          {{ subItem.name }}
+                          <span class="ml-auto text-xs uppercase tracking-wide">soon</span>
+                        </span>
                         <router-link
+                          v-else
                           :to="subItem.path"
-                          :target="subItem.target"
                           :class="[
                             'menu-dropdown-item',
                             {
@@ -157,32 +177,6 @@
                           ]"
                         >
                           {{ subItem.name }}
-                          <span class="flex items-center gap-1 ml-auto">
-                            <span
-                              v-if="subItem.new"
-                              :class="[
-                                'menu-dropdown-badge',
-                                {
-                                  'menu-dropdown-badge-active': isActive(subItem.path),
-                                  'menu-dropdown-badge-inactive': !isActive(subItem.path),
-                                },
-                              ]"
-                            >
-                              new
-                            </span>
-                            <span
-                              v-if="subItem.pro"
-                              :class="[
-                                'menu-dropdown-badge-pro',
-                                {
-                                  'menu-dropdown-badge-pro-active': isActive(subItem.path),
-                                  'menu-dropdown-badge-pro-inactive': !isActive(subItem.path),
-                                },
-                              ]"
-                            >
-                              pro
-                            </span>
-                          </span>
                         </router-link>
                       </li>
                     </ul>
@@ -193,7 +187,6 @@
           </div>
         </div>
       </nav>
-      <SidebarWidget v-if="isExpanded || isHovered || isMobileOpen" />
     </div>
   </aside>
 </template>
@@ -203,226 +196,130 @@ import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 import {
-  CartIcon,
   GridIcon,
-  CalenderIcon,
-  UserCircleIcon,
+  DocsIcon,
+  UserGroupIcon,
+  CartIcon,
   TaskIcon,
-  ChatIcon,
-  MailIcon,
-  PieChartIcon,
-  ChevronDownIcon,
   PageIcon,
-  TableIcon,
-  ListIcon,
-  PlugInIcon,
+  SettingsIcon,
+  ChevronDownIcon,
   MoreDots,
-  BotIcon,
-  CallIcon,
-  LayoutIcon,
 } from '../../icons'
-import SidebarWidget from './SidebarWidget.vue'
-import BoxCubeIcon from '@/icons/BoxCubeIcon.vue'
 import { useSidebar } from '@/composables/useSidebar'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const auth = useAuthStore()
 
 const { isExpanded, isMobileOpen, isHovered, openSubmenu } = useSidebar()
 
-const menuGroups = [
+/**
+ * The admin's real sections. Every entry that is not built yet is marked
+ * `soon`, which renders it disabled rather than leaving it out: the shape of
+ * the system is useful to see, and a link that 404s is worse than one that
+ * says it is not ready.
+ *
+ * `roles` limits an entry to those roles. A teacher signs in to the same app
+ * but only owns their own courses and the essays waiting on them, so they see
+ * that and nothing else.
+ */
+const allGroups = [
   {
-    title: 'Menu',
+    title: 'Overview',
+    items: [{ icon: GridIcon, name: 'Dashboard', path: '/' }],
+  },
+  {
+    title: 'Catalog',
+    roles: ['admin', 'teacher'],
     items: [
       {
-        icon: GridIcon,
-        name: 'Dashboard',
+        icon: DocsIcon,
+        name: 'Courses',
         subItems: [
-          { name: 'Ecommerce', path: '/' },
-          { name: 'Analytics', path: '/analytics' },
-          { name: 'Marketing', path: '/marketing' },
-          { name: 'CRM', path: '/crm' },
-          { name: 'Stocks', path: '/stocks' },
-          { name: 'SaaS', path: '/saas' },
-          { name: 'Logistics', path: '/logistics' },
-          { name: 'AI', path: '/ai', new: true },
-          { name: 'Sales', path: '/sales', new: true },
-          { name: 'Finance', path: '/finance', new: true },
+          { name: 'All courses', path: '/courses', soon: true },
+          { name: 'Categories', path: '/categories', soon: true, roles: ['admin'] },
+          { name: 'Packages', path: '/packages', soon: true, roles: ['admin'] },
         ],
       },
       {
-        icon: BotIcon,
-        name: 'AI Assistant',
-        new: true,
+        icon: TaskIcon,
+        name: 'Learning',
         subItems: [
-          { name: 'Text Generator', path: '/text-generator' },
-          { name: 'Image Generator', path: '/image-generator' },
-          { name: 'Code Generator', path: '/code-generator' },
-          { name: 'Video Generator', path: '/video-generator' },
+          { name: 'Quizzes', path: '/quizzes', soon: true },
+          { name: 'Essay review', path: '/essay-review', soon: true },
+          { name: 'Lesson Q&A', path: '/lesson-questions', soon: true },
         ],
       },
+    ],
+  },
+  {
+    title: 'People',
+    roles: ['admin'],
+    items: [
+      {
+        icon: UserGroupIcon,
+        name: 'Members',
+        subItems: [
+          { name: 'All members', path: '/members', soon: true },
+          { name: 'Teacher applications', path: '/teacher-applications', soon: true },
+          { name: 'Access rights', path: '/entitlements', soon: true },
+        ],
+      },
+    ],
+  },
+  {
+    title: 'Sales',
+    roles: ['admin'],
+    items: [
       {
         icon: CartIcon,
-        name: 'E-commerce',
-        new: true,
+        name: 'Orders',
         subItems: [
-          { name: 'Products', path: '/products-list' },
-          { name: 'Add Product', path: '/add-product' },
-          { name: 'Billing', path: '/billing' },
-          { name: 'Invoices', path: '/invoices' },
-          { name: 'Single Invoice', path: '/single-invoice' },
-          { name: 'Create Invoice', path: '/create-invoice' },
-          { name: 'Transactions', path: '/transactions' },
-          { name: 'Single Transaction', path: '/single-transaction' },
+          { name: 'Orders', path: '/orders', soon: true },
+          { name: 'Invoices', path: '/invoices', soon: true },
+          { name: 'Coupons', path: '/coupons', soon: true },
         ],
       },
+    ],
+  },
+  {
+    title: 'Content',
+    roles: ['admin'],
+    items: [
       {
-        icon: CalenderIcon,
-        name: 'Calendar',
-        path: '/calendar',
-      },
-      {
-        icon: UserCircleIcon,
-        name: 'User Profile',
-        path: '/profile',
-      },
-      {
-        name: 'Task',
-        icon: TaskIcon,
-        subItems: [
-          { name: 'List', path: '/task-list', pro: false },
-          { name: 'Kanban', path: '/task-kanban', pro: false },
-        ],
-      },
-      {
-        name: 'Forms',
-        icon: ListIcon,
-        subItems: [
-          { name: 'Form Elements', path: '/form-elements', pro: false },
-          { name: 'Form Layout', path: '/form-layout', pro: false },
-        ],
-      },
-      {
-        name: 'Tables',
-        icon: TableIcon,
-        subItems: [
-          { name: 'Basic Tables', path: '/basic-tables', pro: false },
-          { name: 'Data Tables', path: '/data-tables', pro: false },
-        ],
-      },
-      {
-        name: 'Pages',
         icon: PageIcon,
+        name: 'Site',
         subItems: [
-          { name: 'File Manager', path: '/file-manager' },
-          { name: 'Pricing Tables', path: '/pricing-tables' },
-          { name: 'FAQ', path: '/faq' },
-          { name: 'Black Page', path: '/blank', pro: false },
-          { name: 'API Keys', path: '/api-keys', new: true },
-          { name: 'Integrations', path: '/integrations', new: true },
-          { name: '404 Page', path: '/error-404', pro: false },
-          { name: '500 Page', path: '/error-500', pro: false },
-          { name: '503 Page', path: '/error-503', pro: false },
-          { name: 'Coming Soon', path: '/coming-soon', pro: false },
-          { name: 'Maintenance', path: '/maintenance', pro: false },
-          { name: 'Success', path: '/success', pro: false },
+          { name: 'Articles', path: '/posts', soon: true },
+          { name: 'Testimonials', path: '/testimonials', soon: true },
+          { name: 'Enquiries', path: '/contact-messages', soon: true },
+          { name: 'Subscribers', path: '/subscribers', soon: true },
         ],
       },
-      {
-        name: 'Layouts',
-        icon: LayoutIcon,
-        new: true,
-        subItems: [
-          { name: 'Layout One', path: '/layout-one', target: '_blank' },
-          { name: 'Layout Two', path: '/layout-two', target: '_blank' },
-          { name: 'Layout Three', path: '/layout-three', target: '_blank' },
-          { name: 'Layout Four', path: '/layout-four', target: '_blank' },
-          { name: 'Layout Five', path: '/layout-five', target: '_blank' },
-          { name: 'Layout Six', path: '/layout-six', target: '_blank' },
-        ],
-      },
-    ],
-  },
-  {
-    title: 'Support',
-    items: [
-      {
-        icon: ChatIcon,
-        name: 'Chat',
-        path: '/chat',
-      },
-      {
-        icon: MailIcon,
-        name: 'Email',
-        subItems: [
-          { name: 'Inbox', path: '/inbox', pro: false },
-          { name: 'Details', path: '/inbox-details', pro: false },
-        ],
-      },
-      {
-        icon: CallIcon,
-        name: 'Support Ticket',
-        new: true,
-        subItems: [
-          { name: 'Ticket List', path: '/support-tickets' },
-          { name: 'Ticket Reply', path: '/support-ticket-reply' },
-        ],
-      },
-    ],
-  },
-  {
-    title: 'Others',
-    items: [
-      {
-        icon: PieChartIcon,
-        name: 'Charts',
-        subItems: [
-          { name: 'Line Chart', path: '/line-chart', pro: false },
-          { name: 'Bar Chart', path: '/bar-chart', pro: false },
-          { name: 'Doughnut Chart', path: '/doughnut-chart', pro: false },
-        ],
-      },
-      {
-        icon: BoxCubeIcon,
-        name: 'UI Elements',
-        subItems: [
-          { name: 'Alerts', path: '/alerts', pro: false },
-          { name: 'Avatars', path: '/avatars', pro: false },
-          { name: 'Badge', path: '/badge', pro: false },
-          { name: 'Breadcrumb', path: '/breadcrumb', pro: true },
-          { name: 'Buttons', path: '/buttons', pro: false },
-          { name: 'Buttons Group', path: '/buttons-group', pro: true },
-          { name: 'Cards', path: '/cards', pro: true },
-          { name: 'Carousel', path: '/carousel', pro: true },
-          { name: 'Dropdowns', path: '/dropdowns', pro: true },
-          { name: 'Images', path: '/images', pro: false },
-          { name: 'Links', path: '/links', pro: true },
-          { name: 'List', path: '/list', pro: true },
-          { name: 'Modals', path: '/modals', pro: true },
-          { name: 'Notifications', path: '/notifications', pro: true },
-          { name: 'Pagination', path: '/pagination', pro: true },
-          { name: 'Popovers', path: '/popovers', pro: true },
-          { name: 'Progress Bars', path: '/progress-bar', pro: true },
-          { name: 'Ribbons', path: '/ribbons', pro: true },
-          { name: 'Spinners', path: '/spinners', pro: true },
-          { name: 'Tabs', path: '/tabs', pro: true },
-          { name: 'Tooltips', path: '/tooltips', pro: true },
-          { name: 'Videos', path: '/videos', pro: false },
-        ],
-      },
-      {
-        icon: PlugInIcon,
-        name: 'Authentication',
-        subItems: [
-          { name: 'Sign In', path: '/signin', pro: false },
-          { name: 'Sign Up', path: '/signup', pro: false },
-          { name: 'Reset Password', path: '/reset-password', pro: true },
-          { name: 'Two Step Verification', path: '/two-step-verification', pro: true },
-        ],
-      },
-      // ... Add other menu items here
+      { icon: SettingsIcon, name: 'Settings', path: '/settings', soon: true },
     ],
   },
 ]
+
+/** What this signed-in person may see. Hiding a menu entry is presentation,
+ *  not security — the router guard and the API decide what is allowed. */
+const menuGroups = computed(() =>
+  allGroups
+    .filter((group) => !group.roles || group.roles.some((r) => auth.roles.includes(r)))
+    .map((group) => ({
+      ...group,
+      items: group.items
+        .filter((item) => !item.roles || item.roles.some((r) => auth.roles.includes(r)))
+        .map((item) => ({
+          ...item,
+          subItems: item.subItems?.filter(
+            (sub) => !sub.roles || sub.roles.some((r) => auth.roles.includes(r)),
+          ),
+        })),
+    }))
+    .filter((group) => group.items.length > 0),
+)
 
 const isActive = (path) => route.path === path
 
@@ -432,7 +329,7 @@ const toggleSubmenu = (groupIndex, itemIndex) => {
 }
 
 const isAnySubmenuRouteActive = computed(() => {
-  return menuGroups.some((group) =>
+  return menuGroups.value.some((group) =>
     group.items.some(
       (item) => item.subItems && item.subItems.some((subItem) => isActive(subItem.path)),
     ),
@@ -444,7 +341,7 @@ const isSubmenuOpen = (groupIndex, itemIndex) => {
   return (
     openSubmenu.value === key ||
     (isAnySubmenuRouteActive.value &&
-      menuGroups[groupIndex].items[itemIndex].subItems?.some((subItem) => isActive(subItem.path)))
+      menuGroups.value[groupIndex].items[itemIndex].subItems?.some((subItem) => isActive(subItem.path)))
   )
 }
 

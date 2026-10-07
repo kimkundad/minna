@@ -29,6 +29,7 @@
     "floating-vue": "^5.2.2",
     "jsvectormap": "^1.6.0",
     "lucide-vue-next": "^0.474.0",
+    "pinia": "^4.0.3",
     "prismjs": "^1.30.0",
     "simplebar-vue": "^2.4.0",
     "swiper": "^11.2.1",

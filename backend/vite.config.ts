@@ -17,4 +17,13 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  server: {
+    // 5174 belongs to the public site, which usually runs alongside this.
+    port: 5173,
+    proxy: {
+      // Same origin as the app, so the refresh cookie — httpOnly, SameSite=Lax
+      // — is sent on every call without needing cross-site cookie rules.
+      '/api': { target: 'http://127.0.0.1:3000', changeOrigin: true },
+    },
+  },
 })

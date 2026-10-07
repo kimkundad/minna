@@ -12,13 +12,17 @@ import 'simplebar-vue/dist/simplebar.min.css'
 import 'floating-vue/dist/style.css'
 
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import VueApexCharts from 'vue3-apexcharts'
 import FloatingVue from 'floating-vue'
+import { useAuthStore } from '@/stores/auth'
 
 const app = createApp(App)
+const pinia = createPinia()
 
+app.use(pinia)
 app.use(router)
 app.use(VueApexCharts)
 app.use(FloatingVue, {
@@ -29,4 +33,9 @@ app.use(FloatingVue, {
   },
 })
 
-app.mount('#app')
+// Trade the refresh cookie for a token before the first navigation, so the
+// route guard sees the session that already exists rather than bouncing an
+// admin to sign-in on every reload.
+useAuthStore(pinia)
+  .bootstrap()
+  .finally(() => app.mount('#app'))
