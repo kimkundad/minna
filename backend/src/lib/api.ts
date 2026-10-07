@@ -551,3 +551,72 @@ export const quiz = {
   reorder: (courseId: number, ids: number[]) =>
     send<void>(`/courses/${courseId}/quiz/reorder`, { method: 'POST', body: { ids } }),
 }
+
+/* ---------------- essay review ---------------- */
+
+export type EssayStatus = 'pending' | 'revision' | 'resubmitted' | 'passed'
+
+export interface EssayQueueRow {
+  id: number
+  status: EssayStatus
+  currentVersion: number
+  submittedAt: string
+  resolvedAt: string | null
+  questionId: number
+  questionText: string
+  courseId: number
+  courseTitle: string
+  learnerId: number
+  learnerName: string
+  learnerEmail: string
+}
+
+export interface EssayVersion {
+  id: number
+  version: number
+  body: string
+  attachmentPath: string | null
+  attachmentName: string | null
+  sizeBytes: number | null
+  submittedAt: string
+}
+
+export interface EssayReviewRow {
+  id: number
+  version: number
+  result: 'passed' | 'revision'
+  comment: string
+  attachmentPath: string | null
+  reviewedAt: string
+  reviewerId: number | null
+  reviewerName: string | null
+}
+
+export interface EssaySubmission extends EssayQueueRow {
+  quizId: number
+  maxLength: number
+  attachmentAllowed: boolean
+  versions: EssayVersion[]
+  reviews: EssayReviewRow[]
+}
+
+export interface EssayQueueQuery extends Record<string, string | number | boolean | undefined> {
+  page?: number
+  perPage?: number
+  status?: 'todo' | EssayStatus
+  courseId?: number
+  q?: string
+}
+
+export const essays = {
+  queue: (query: EssayQueueQuery = {}) => send<Paged<EssayQueueRow>>('/essay-reviews', { query }),
+
+  waiting: () => send<{ waiting: number }>('/essay-reviews/waiting'),
+
+  one: (id: number) => send<{ data: EssaySubmission }>(`/essay-reviews/${id}`),
+
+  review: (
+    id: number,
+    body: { result: 'passed' | 'revision'; comment: string; attachmentPath?: string | null },
+  ) => send<{ data: EssaySubmission }>(`/essay-reviews/${id}`, { method: 'POST', body }),
+}
