@@ -115,6 +115,12 @@ const router = createRouter({
       meta: { title: 'Orders', roles: ['superadmin', 'admin'] },
     },
     {
+      path: '/invoices',
+      name: 'Invoices',
+      component: () => import('@/views/Sales/Invoices.vue'),
+      meta: { title: 'Invoices', roles: ['superadmin', 'admin'] },
+    },
+    {
       path: '/coupons',
       name: 'Coupons',
       component: () => import('@/views/Sales/Coupons.vue'),

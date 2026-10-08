@@ -13,6 +13,9 @@ import {
 } from '../../db/schema/index'
 import { conflict, notFound } from '../../lib/errors'
 import { getVatRules, vatOf } from '../../lib/settings'
+// By name rather than as a namespace: invoices.service imports nothing from
+// here, so the one-way edge is visible at the import.
+import { issueForOrder as issueInvoiceForOrder } from './invoices.service'
 
 /**
  * Buying things.
@@ -311,6 +314,10 @@ export async function markPaid(
     couponId: order.orderCouponId,
     discount: order.orderDiscount,
   })
+  // Now, and not before: a document number is only spent on a sale that
+  // happened. Does nothing when no tax invoice was asked for, and nothing on a
+  // second webhook for an order that already has its number.
+  await issueInvoiceForOrder(orderId)
   return true
 }
 

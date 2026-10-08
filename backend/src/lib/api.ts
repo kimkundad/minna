@@ -856,3 +856,64 @@ export const coupons = {
 
   remove: (id: number) => send<void>(`/coupons/${id}`, { method: 'DELETE' }),
 }
+
+/** Requested but not yet paid for, or issued with a document number. */
+export type InvoiceStatus = 'requested' | 'issued'
+
+export interface InvoiceRow {
+  id: number
+  orderId: number
+  orderNo: string
+  orderStatus: OrderStatus
+  orderTotal: number
+  orderVat: number
+  paidAt: string | null
+  type: 'corporate' | 'individual'
+  /** The registered company name, or the person's full name. */
+  name: string
+  taxId: string
+  branchType: 'head' | 'branch' | null
+  branchCode: string | null
+  /** Null until the order is paid. */
+  documentNo: string | null
+  issuedAt: string | null
+  createdAt: string
+  buyerEmail: string
+}
+
+export interface InvoiceDetail extends InvoiceRow {
+  address: string
+  buyerFirstName: string
+  buyerLastName: string
+}
+
+export interface InvoiceInput {
+  type: 'corporate' | 'individual'
+  name: string
+  taxId: string
+  branchType: 'head' | 'branch' | null
+  branchCode: string | null
+  address: string
+}
+
+export interface InvoiceListQuery extends Record<string, string | number | boolean | undefined> {
+  page?: number
+  perPage?: number
+  status?: InvoiceStatus
+  type?: 'corporate' | 'individual'
+  q?: string
+}
+
+export const invoices = {
+  list: (query: InvoiceListQuery = {}) => send<Paged<InvoiceRow>>('/invoices', { query }),
+
+  get: (id: number) => send<{ data: InvoiceDetail }>(`/invoices/${id}`),
+
+  /** Allocates a document number by hand, for an order paid while something
+   *  was wrong. Payment normally does this by itself. */
+  issue: (id: number) => send<{ data: InvoiceDetail }>(`/invoices/${id}/issue`, { method: 'POST' }),
+
+  /** Only possible while the number is still unspent. */
+  amend: (id: number, body: InvoiceInput) =>
+    send<{ data: InvoiceDetail }>(`/invoices/${id}`, { method: 'PATCH', body }),
+}

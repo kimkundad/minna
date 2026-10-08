@@ -291,11 +291,7 @@ const allGroups = [
         name: 'Orders',
         subItems: [
           { name: 'Orders', path: '/orders' },
-          // Waiting on a decision rather than on code: a Thai full tax invoice
-          // needs the company name, tax ID and branch, and nothing asks the
-          // customer for them yet. The table is there; what goes in it is not
-          // settled.
-          { name: 'Invoices', path: '/invoices', soon: true },
+          { name: 'Invoices', path: '/invoices' },
           { name: 'Coupons', path: '/coupons' },
         ],
       },

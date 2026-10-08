@@ -324,11 +324,18 @@ export const invoices = mysqlTable(
     branchType: mysqlEnum('branch_type', ['head', 'branch']),
     branchCode: varchar('branch_code', { length: 10 }),
     address: text('address').notNull(),
+    /** Allocated when the order is paid, not when the details are typed: a
+     *  basket that is abandoned must not burn a document number. */
     documentNo: varchar('document_no', { length: 32 }),
     issuedAt: datetime('issued_at'),
     createdAt: datetime('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
   },
-  (t) => [uniqueIndex('invoices_order_unique').on(t.orderId)],
+  (t) => [
+    uniqueIndex('invoices_order_unique').on(t.orderId),
+    // Two documents sharing a number is the Revenue Department's problem and
+    // then ours, so the database refuses it rather than trusting the allocator.
+    uniqueIndex('invoices_document_no_unique').on(t.documentNo),
+  ],
 )
 
 export const packagesRelations = relations(packages, ({ many }) => ({

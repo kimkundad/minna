@@ -12,6 +12,7 @@ import {
 } from '../../lib/stripe'
 import * as authService from '../auth/auth.service'
 import * as service from './commerce.service'
+import * as invoices from './invoices.service'
 
 /**
  * Checkout, and what happens after it.
@@ -47,8 +48,29 @@ const quoteBody = z.object({
   couponCode: z.string().max(60).optional(),
 })
 
+/**
+ * The full tax invoice, when the buyer asks for one.
+ *
+ * Asked at checkout rather than afterwards because these are the buyer's own
+ * registered details, and the only moment they are there to be asked is before
+ * they pay. Leaving it out is the ordinary case: everyone gets a receipt by
+ * email either way.
+ *
+ * Shape only — whether the tax ID's check digit adds up, and whether a branch
+ * code suits the branch type, is `validateInvoice`'s business.
+ */
+const invoiceBody = z.object({
+  type: z.enum(['corporate', 'individual']),
+  name: z.string().trim().min(1).max(255),
+  taxId: z.string().trim().min(13).max(20),
+  branchType: z.enum(['head', 'branch']).nullish(),
+  branchCode: z.string().trim().max(10).nullish(),
+  address: z.string().trim().min(1).max(1000),
+})
+
 const checkoutBody = quoteBody.extend({
   method: z.enum(['card', 'promptpay']),
+  invoice: invoiceBody.nullish(),
 })
 
 const idParam = z.object({ id: z.coerce.number().int().positive() })
@@ -87,6 +109,10 @@ export default async function commerceRoutes(app: FastifyInstance) {
     )
     if (owned.length) throw conflict('You already have access to one of those courses.')
 
+    // Before anything is created: invoice details that do not add up should
+    // send the buyer back to the form, not leave a stranded order behind them.
+    if (body.invoice) invoices.validateInvoice(body.invoice)
+
     const q = await service.quote(body.lines, body.couponCode)
     // The token carries an id and roles; Stripe wants an address to send the
     // receipt to.
@@ -96,6 +122,9 @@ export default async function commerceRoutes(app: FastifyInstance) {
     // done, rather than sending someone to Stripe to pay zero.
     if (q.total === 0) {
       const order = await service.createOrder(req.user.sub, q, 'free')
+      // Attached before the order is paid, because paying is what allocates the
+      // document number and it needs something to allocate one for.
+      if (body.invoice) await invoices.request(order.id, body.invoice)
       await service.markPaid(order.id, { providerRef: null })
       audit(req, {
         action: 'order.paid',
@@ -111,6 +140,7 @@ export default async function commerceRoutes(app: FastifyInstance) {
     }
 
     const order = await service.createOrder(req.user.sub, q, body.method)
+    if (body.invoice) await invoices.request(order.id, body.invoice)
 
     try {
       const session = await createCheckoutSession({
