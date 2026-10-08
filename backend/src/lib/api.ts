@@ -1081,3 +1081,108 @@ export const member = {
       { method: 'POST' },
     ),
 }
+
+/* ---------------- dashboard ---------------- */
+
+export interface DashboardData {
+  /** Things sitting in somebody's queue right now. */
+  waiting: {
+    essays: number
+    oldestEssayHours: number | null
+    applications: number
+    enquiries: number
+    invoicesToIssue: number
+    lessonQuestions: number
+  }
+  /** Things the admin can create that the public site cannot show. */
+  problems: {
+    coursesWithoutTeacher: number
+    lessonsWithoutModule: number
+    coursesWithoutLessons: number
+    teachersWithoutProfile: number
+  } | null
+  counts: {
+    students: number
+    studentsThisMonth: number
+    teachers: number
+    publishedCourses: number
+    draftCourses: number
+    /** Satang. */
+    revenueThisMonth: number
+    revenueAllTime: number
+    refundedAllTime: number
+    ordersAwaitingPayment: number
+    activeEnrolments: number
+  } | null
+  recentOrders: {
+    id: number
+    orderNo: string
+    total: number
+    status: OrderStatus
+    createdAt: string
+    firstName: string
+    lastName: string
+  }[]
+  essayQueue: {
+    id: number
+    userId: number
+    firstName: string
+    lastName: string
+    prompt: string
+    courseId: number | null
+    courseTitle: string | null
+    status: string
+    submittedAt: string | null
+  }[]
+}
+
+export const dashboard = {
+  load: () => send<{ data: DashboardData }>('/dashboard'),
+}
+
+/* ---------------- audit log ---------------- */
+
+export interface AuditRow {
+  id: number
+  actorId: number | null
+  actorRole: 'superadmin' | 'admin' | 'teacher' | 'student' | 'system'
+  /** Copied in at the time, so it survives the account being deleted. */
+  actorEmail: string | null
+  action: string
+  subjectType: string | null
+  subjectId: number | null
+  summary: string | null
+  changes: Record<string, [unknown, unknown]> | null
+  ip: string | null
+  userAgent: string | null
+  createdAt: string
+}
+
+export interface AuditFilters {
+  actions: { action: string; count: number }[]
+  actors: { id: number | null; email: string | null; role: string; count: number }[]
+}
+
+export interface AuditListQuery extends Record<string, string | number | boolean | undefined> {
+  page?: number
+  perPage?: number
+  /** Action prefixes, comma separated. `coupon.` is every coupon change. */
+  prefix?: string
+  /** The inverse, for "everything except sign-ins". */
+  notPrefix?: string
+  actorId?: number
+  subjectType?: string
+  subjectId?: number
+  q?: string
+  since?: string
+}
+
+export const audit = {
+  list: (query: AuditListQuery = {}) => send<Paged<AuditRow>>('/audit', { query }),
+
+  filters: () => send<{ data: AuditFilters }>('/audit/filters'),
+
+  /** Everything that has happened to one thing. */
+  subject: (type: string, id: number) =>
+    send<{ data: AuditRow[] }>(`/audit/subject/${type}/${id}`),
+}

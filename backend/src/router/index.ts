@@ -145,6 +145,15 @@ const router = createRouter({
     },
 
     {
+      // Superadmin only: the log is about what administrators do, and the
+      // people most likely to want a row gone are the ones it is about.
+      path: '/audit',
+      name: 'AuditLog',
+      component: () => import('@/views/Others/AuditLog.vue'),
+      meta: { title: 'Audit log', roles: ['superadmin'] },
+    },
+
+    {
       path: '/profile',
       name: 'Profile',
       component: () => import('@/views/Others/UserProfile.vue'),

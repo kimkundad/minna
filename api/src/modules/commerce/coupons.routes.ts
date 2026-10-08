@@ -85,8 +85,12 @@ export default async function couponRoutes(app: FastifyInstance) {
       action: 'coupon.created',
       subjectType: 'coupon',
       subjectId: coupon.id,
+      // Baht, not satang. The summary is read by people, and the audit log is
+      // the one place these lines get quoted into an email.
       summary: `${coupon.code} — ${
-        coupon.discountType === 'percent' ? `${coupon.value}%` : `${coupon.value} satang`
+        coupon.discountType === 'percent'
+          ? `${coupon.value}%`
+          : `฿${(coupon.value / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
       } off ${coupon.scope === 'course' ? (coupon.courseTitle ?? 'a course') : 'the basket'}`,
     })
     return reply.status(201).send({ data: coupon })

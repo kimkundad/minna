@@ -202,6 +202,7 @@ import {
   CartIcon,
   TaskIcon,
   PageIcon,
+  ListIcon,
   SettingsIcon,
   ChevronDownIcon,
   MoreDots,
@@ -312,6 +313,7 @@ const allGroups = [
         ],
       },
       { icon: SettingsIcon, name: 'Settings', path: '/settings' },
+      { icon: ListIcon, name: 'Audit log', path: '/audit', roles: ['superadmin'] },
     ],
   },
 ]
