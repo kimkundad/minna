@@ -239,6 +239,9 @@ const allGroups = [
         subItems: [
           { name: 'All courses', path: '/courses' },
           { name: 'Categories', path: '/categories', roles: ['superadmin', 'admin'] },
+          // Held until the terms are agreed with the customer: what a package
+          // costs, how long it lasts and what happens to access when it ends.
+          // The tables and the pricing are built; only the decision is missing.
           { name: 'Packages', path: '/packages', soon: true, roles: ['superadmin', 'admin'] },
         ],
       },

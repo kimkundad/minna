@@ -22,8 +22,22 @@ import * as service from './commerce.service'
  * course is that the server does the sum itself.
  */
 
+/**
+ * Packages are off until their terms are agreed with the customer — what a
+ * package costs, how long it lasts and what happens to access when it ends are
+ * not settled, and selling one before they are would be a promise nobody has
+ * made.
+ *
+ * The tables, the pricing and the entitlement granting all stay, because the
+ * decision is pending rather than abandoned. This is the one line that reopens
+ * them.
+ */
+const SELLABLE_KINDS = ['course'] as const
+
 const cartLine = z.object({
-  kind: z.enum(['course', 'package']),
+  kind: z.enum(['course', 'package']).refine((k) => SELLABLE_KINDS.includes(k as never), {
+    message: 'Packages are not on sale yet.',
+  }),
   id: z.coerce.number().int().positive(),
   couponCode: z.string().max(60).optional(),
 })
