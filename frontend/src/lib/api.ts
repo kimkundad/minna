@@ -180,3 +180,40 @@ export const api = {
 
   acceptPrivacy: () => send<{ user: SessionUser }>('/auth/accept-privacy', { method: 'POST', body: {} }),
 }
+
+/* ---------------- the home slideshow ---------------- */
+
+export interface PublicHeroSlide {
+  id: number
+  eyebrow: string | null
+  /** The headline is two parts: the second is styled differently. */
+  titleA: string
+  titleB: string | null
+  subtitle: string | null
+  /** A store path. Pass it through `mediaUrl` to get something loadable. */
+  imagePath: string | null
+  imageAlt: string | null
+  /** Percentages. Which part of the picture to keep when it is cropped. */
+  focalX: number
+  focalY: number
+  ctaLabel: string | null
+  ctaHref: string | null
+  cta2Label: string | null
+  cta2Href: string | null
+}
+
+/**
+ * A permanent address for a picture the school uploaded.
+ *
+ * The store is private and signs its URLs, which expire. This one does not: the
+ * API signs the real address when the browser follows it, so the link in a page
+ * stays good.
+ */
+export function mediaUrl(path: string): string {
+  return `${BASE}/media/${path.replace(/^\/+/, '')}`
+}
+
+/** The slides for one language. Published, inside their dates, in order. */
+export function heroSlides(locale: string): Promise<{ data: PublicHeroSlide[] }> {
+  return send<{ data: PublicHeroSlide[] }>(`/hero-slides/public?locale=${encodeURIComponent(locale)}`)
+}

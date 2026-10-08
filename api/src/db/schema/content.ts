@@ -192,11 +192,20 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
  * come back and switch it off, which is the kind of thing that is remembered
  * three weeks late.
  */
+/**
+ * A slide is written for one language, or for all of them.
+ *
+ * 'all' is for a slide whose words work everywhere — a picture with a short
+ * line on it, a promotion with a price. Most slides are not that: a headline is
+ * language-specific, which is why the default is one language at a time.
+ */
+export const HERO_LOCALES = [...LOCALES, 'all'] as const
+
 export const heroSlides = mysqlTable(
   'hero_slides',
   {
     id: bigint('id', { mode: 'number', unsigned: true }).autoincrement().primaryKey(),
-    locale: mysqlEnum('locale', LOCALES).default('th').notNull(),
+    locale: mysqlEnum('locale', HERO_LOCALES).default('th').notNull(),
     /** The small line above the headline. */
     eyebrow: varchar('eyebrow', { length: 120 }),
     /** The headline is two lines by design: the second is styled differently. */

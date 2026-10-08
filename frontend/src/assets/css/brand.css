@@ -13,10 +13,23 @@
 
 /* The Minna mark sets its name on two lines, so it needs more height than the
    single-line wordmark the header was measured against. At 34px its letters are
-   too small to read. */
-.brand-logo { height: 42px; }
-.site-header--compact .brand-logo { height: 34px; }
+   too small to read.
+
+   52px is as large as it goes without moving anything: .hdr-inner has a 56px
+   floor and centres its children, so a logo under 56px changes the mark's size
+   and nothing else. Past that the header grows and every page below it shifts.
+
+   Phones keep 42px. The mark is sized by height and scales its width with it,
+   so the larger size would take another 24px of a 360px row that already holds
+   a burger, search, cart and profile. */
+.brand-logo { height: 52px; }
+.site-header--compact .brand-logo { height: 42px; }
 .ft-top .brand-logo { height: 52px; }
+
+@media (max-width: 959px) {
+  .brand-logo { height: 42px; }
+  .site-header--compact .brand-logo { height: 38px; }
+}
 
 /* The legal pages' table of contents follows the reading position, which the
    reference's static list did not do — ten sections of policy is far enough to

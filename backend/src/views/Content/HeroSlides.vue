@@ -4,7 +4,15 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import FileField from '@/components/forms/FileField.vue'
 import { useConfirm } from '@/composables/useConfirm'
-import { ApiError, api, hero, mediaUrl, type HeroSlide, type HeroSlideInput, type HeroState } from '@/lib/api'
+import {
+  ApiError,
+  hero,
+  mediaUrl,
+  type HeroLocale,
+  type HeroSlide,
+  type HeroSlideInput,
+  type HeroState,
+} from '@/lib/api'
 
 /**
  * The slideshow on the home page.
@@ -31,14 +39,39 @@ const IMAGE = {
   maxMb: 8,
 }
 
+/**
+ * 'all' is not a view of everything — it is a slide's own setting, for one
+ * whose words work in any language: a picture with a short line on it, a
+ * promotion with a price. Those slides appear on every language's home page.
+ *
+ * Most slides are not that. A headline is language-specific, which is why the
+ * list opens on Thai rather than on 'all'.
+ */
 const LOCALES = [
+  { value: 'all', label: 'ทุกภาษา · every language' },
   { value: 'th', label: 'ไทย' },
   { value: 'en', label: 'English' },
   { value: 'jp', label: '日本語' },
   { value: 'vn', label: 'Tiếng Việt' },
 ] as const
 
-const locale = ref<'th' | 'en' | 'jp' | 'vn'>('th')
+const locale = ref<HeroLocale>('th')
+
+/** How many every-language slides also show on whichever language is open, so
+ *  the count on screen is not quietly short of what a visitor sees. */
+const alsoShown = ref(0)
+
+async function countEveryLanguage() {
+  if (locale.value === 'all') {
+    alsoShown.value = 0
+    return
+  }
+  try {
+    alsoShown.value = (await hero.list('all')).data.length
+  } catch {
+    alsoShown.value = 0
+  }
+}
 const rows = ref<HeroSlide[]>([])
 const loading = ref(true)
 const error = ref('')
@@ -76,6 +109,7 @@ async function load() {
   error.value = ''
   try {
     rows.value = (await hero.list(locale.value)).data
+    await countEveryLanguage()
   } catch (err) {
     error.value = err instanceof ApiError ? err.message : 'Could not load the slides.'
   } finally {
@@ -264,7 +298,15 @@ onMounted(load)
             {{ rows.length }} slides
           </h3>
           <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-            Shown at the top of the home page, in this order. Written per language.
+            <template v-if="locale === 'all'">
+              These appear on every language's home page, mixed into its own slides by the order
+              below.
+            </template>
+            <template v-else>
+              Shown at the top of the home page, in this order.<template v-if="alsoShown">
+                {{ alsoShown }} every-language
+                {{ alsoShown === 1 ? 'slide also appears' : 'slides also appear' }} here.</template>
+            </template>
           </p>
         </div>
         <div class="flex items-center gap-3">

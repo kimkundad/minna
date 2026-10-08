@@ -39,6 +39,14 @@ const props = withDefaults(
     /** Skip lazy loading for images above the fold. */
     eager?: boolean
     priority?: boolean
+    /**
+     * Which part of the picture to keep when CSS crops it, as percentages.
+     *
+     * Unsplash is told to crop around a focal point before it sends the file,
+     * but a picture the school uploaded arrives whole and is cropped by
+     * `object-fit: cover` — which keeps the middle unless it is told otherwise.
+     */
+    focal?: { x: number; y: number } | null
   }>(),
   { width: 640, height: 360, artIcon: 'paw', artPalette: 0 },
 )
@@ -73,6 +81,12 @@ function photo(width: number, height: number): string {
     : '&crop=entropy'
   return `https://images.unsplash.com/${img.id}?auto=format&fit=crop&w=${width}&h=${height}&q=70${crop}`
 }
+
+/** Only when there is a focal point and a real picture: the fallback art is
+ *  drawn to fit and has nothing to crop. */
+const focalStyle = computed(() =>
+  props.focal && !failed.value ? { objectPosition: `${props.focal.x}% ${props.focal.y}%` } : undefined,
+)
 
 const failed = ref(false)
 const baseSrc = computed(() => photo(props.width, props.height))
@@ -142,6 +156,7 @@ const altText = computed(() => props.alt ?? props.image?.alt ?? '')
     :loading="eager ? undefined : 'lazy'"
     :fetchpriority="eager && priority ? 'high' : undefined"
     decoding="async"
+    :style="focalStyle"
     :data-art-icon="artIcon"
     :data-art-pal="artPalette"
     @error="onError"

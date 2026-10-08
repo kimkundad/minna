@@ -1502,9 +1502,12 @@ export function mediaUrl(path: string): string {
 /** Whether it would be on the site right now — not the same as `status`. */
 export type HeroState = 'live' | 'scheduled' | 'finished' | 'draft'
 
+/** A site language, or every one of them. */
+export type HeroLocale = 'th' | 'en' | 'jp' | 'vn' | 'all'
+
 export interface HeroSlide {
   id: number
-  locale: 'th' | 'en' | 'jp' | 'vn'
+  locale: HeroLocale
   eyebrow: string | null
   /** The headline is two lines by design; the second is styled differently. */
   titleA: string

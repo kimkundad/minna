@@ -82,6 +82,8 @@ async function pictureStatus(path) {
 }
 
 const made = []
+/** The order of whatever was already published, so it can be restored. */
+let orderBefore = []
 
 async function main() {
   const login = await call('POST', '/api/v1/auth/login', { email: EMAIL, password: PASSWORD })
@@ -90,6 +92,8 @@ async function main() {
     process.exit(2)
   }
   token = login.body.accessToken
+
+  orderBefore = (await call('GET', '/api/v1/hero-slides?locale=th')).body.data.map((s) => s.id)
 
   const base = {
     locale: 'th',
@@ -197,20 +201,59 @@ async function main() {
     String((otherLanguage.body?.data ?? []).length),
   )
 
+  /* ---- a slide written for every language ---- */
+
+  const everywhere = await call('POST', '/api/v1/hero-slides', {
+    locale: 'all',
+    titleA: 'ทุกภาษา',
+    status: 'published',
+    sortOrder: 99,
+  })
+  if (everywhere.body?.data?.id) made.push(everywhere.body.data.id)
+  check('a slide can be written for every language', everywhere.status === 201, String(everywhere.status))
+
+  const everyLocale = await Promise.all(
+    ['th', 'en', 'jp', 'vn'].map(async (l) => {
+      const r = await call('GET', `/api/v1/hero-slides/public?locale=${l}`)
+      return (r.body?.data ?? []).some((x) => x.id === everywhere.body.data.id)
+    }),
+  )
+  check('and it appears on all four home pages', everyLocale.every(Boolean), JSON.stringify(everyLocale))
+
+  const visitorAll = await call('GET', '/api/v1/hero-slides/public?locale=all')
+  check(
+    'a visitor cannot ask for "all" as if it were a language',
+    visitorAll.status === 422,
+    String(visitorAll.status),
+  )
+
+  const bucket = await call('GET', '/api/v1/hero-slides?locale=all')
+  check(
+    'the admin lists them in their own bucket',
+    (bucket.body?.data ?? []).every((x) => x.locale === 'all'),
+  )
+
   /* ---- order ---- */
 
-  const all = (await call('GET', '/api/v1/hero-slides?locale=th')).body.data.map((s) => s.id)
-  const swapped = all.filter((id) => id !== one.body.data.id && id !== two.body.data.id)
+  // Reorder the way the admin does — the whole list, not a fragment, which
+  // would renumber these on top of whatever else is there. The order before is
+  // kept and put back afterwards: a test that leaves the school's slideshow in
+  // a different order than it found it has broken something it was only meant
+  // to look at.
+  const before = (await call('GET', '/api/v1/hero-slides?locale=th')).body.data.map((s) => s.id)
+  const swapped = before.filter((id) => id !== one.body.data.id && id !== two.body.data.id)
   swapped.push(two.body.data.id, one.body.data.id)
   const reordered = await call('PUT', '/api/v1/hero-slides/order', { locale: 'th', ids: swapped })
   check('reordering answers', reordered.status === 200)
 
   const afterOrder = await call('GET', '/api/v1/hero-slides/public?locale=th')
   const order = (afterOrder.body?.data ?? []).map((s) => s.titleA)
+  // Only the relative order of the two that were swapped. Anything else in the
+  // list sits where its own sortOrder puts it, which is not this test's
+  // business.
   check(
     'and the home page order follows it',
-    order.indexOf('สไลด์สอง') < order.indexOf('สไลด์หนึ่ง') &&
-      order[order.length - 1] === 'สไลด์หนึ่ง',
+    order.indexOf('สไลด์สอง') < order.indexOf('สไลด์หนึ่ง'),
     order.join(' | '),
   )
 
@@ -229,6 +272,11 @@ async function main() {
 }
 
 async function cleanup() {
+  // Put the order back before removing anything, so whatever was here already
+  // is left exactly as it was found.
+  if (orderBefore.length) {
+    await call('PUT', '/api/v1/hero-slides/order', { locale: 'th', ids: orderBefore })
+  }
   for (const id of made.filter(Boolean)) {
     const res = await call('DELETE', `/api/v1/hero-slides/${id}`)
     if (res.status !== 204) console.log(`  NOTE  slide ${id} left behind (${res.status})`)

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import CourseImage from '@/components/course/CourseImage.vue'
-import { data } from '@/vendor'
+import { heroSlides, mediaUrl, type PublicHeroSlide } from '@/lib/api'
 
 /**
  * The home carousel.
@@ -15,18 +16,41 @@ import { data } from '@/vendor'
  * Only the active slide is reachable: the rest carry `inert` and `aria-hidden`,
  * so tabbing does not wander into copy nobody can see.
  */
-interface HeroSlide {
-  id: string
-  eyebrow: string
-  titleA: string
-  titleB: string
-  subtitle: string
-  image: { src?: string; id?: string; alt?: string; fp?: string }
-  cta?: { label: string; href?: string; action?: string }
-  cta2?: { label: string; href?: string; action?: string }
+const route = useRoute()
+const locale = computed(() => String(route.params.locale ?? 'th'))
+
+const slides = ref<PublicHeroSlide[]>([])
+/**
+ * Until the first answer comes back there is nothing to show and no way to know
+ * whether there will be. The section renders nothing at all rather than a
+ * placeholder that collapses a moment later and shoves the page down.
+ */
+const loaded = ref(false)
+
+async function load() {
+  try {
+    slides.value = (await heroSlides(locale.value)).data
+  } catch {
+    // A home page with no carousel is a home page. One stuck on a spinner, or
+    // showing an error where the welcome should be, is not.
+    slides.value = []
+  } finally {
+    loaded.value = true
+    index.value = 0
+    restart()
+  }
 }
 
-const slides = computed(() => (data.heroSlides ?? []) as unknown as HeroSlide[])
+/** The picture, or nothing — a slide may be words alone. */
+function imageOf(s: PublicHeroSlide) {
+  return s.imagePath ? { src: mediaUrl(s.imagePath), alt: s.imageAlt ?? '' } : null
+}
+
+/** Links inside the site go through the router, so a click does not reload the
+ *  whole application. Anything else is left to the browser. */
+function isInternal(href: string | null): boolean {
+  return Boolean(href && href.startsWith('/'))
+}
 
 const index = ref(0)
 const playing = ref(true)
@@ -111,9 +135,11 @@ function onPointerUp(e: PointerEvent) {
   if (wasDragging && Math.abs(dx) > 50) go(index.value + (dx < 0 ? 1 : -1), true)
 }
 
+watch(locale, load)
+
 onMounted(() => {
   if (prefersReducedMotion) playing.value = false
-  restart()
+  void load()
 })
 onBeforeUnmount(() => {
   if (timer) clearInterval(timer)
@@ -122,6 +148,7 @@ onBeforeUnmount(() => {
 
 <template>
   <section
+    v-if="loaded && slides.length"
     class="hero"
     :class="{ 'is-dragging': dragging }"
     id="hero"
@@ -153,17 +180,17 @@ onBeforeUnmount(() => {
           :class="{ 'is-active': i === index }"
           role="group"
           aria-roledescription="slide"
-          :aria-label="`${i + 1} จาก ${slides.length}: ${s.titleA} ${s.titleB}`"
-          :id="s.id"
+          :aria-label="`${i + 1} จาก ${slides.length}: ${s.titleA} ${s.titleB ?? ''}`"
+          :id="`hero-slide-${s.id}`"
           :aria-hidden="i === index ? undefined : 'true'"
           :inert="i === index ? undefined : true"
         >
           <div class="hero-media">
             <CourseImage
-              :image="s.image"
-              sizes="(max-width: 767px) 92vw, 56vw"
-              :width="1000"
-              :height="740"
+              :image="imageOf(s)"
+              :focal="{ x: s.focalX, y: s.focalY }"
+              :width="1600"
+              :height="1000"
               art-icon="book-open"
               :art-palette="i"
               eager
@@ -172,25 +199,44 @@ onBeforeUnmount(() => {
           </div>
           <div class="container hero-inner">
             <div class="hero-copy">
-              <p class="eyebrow">{{ s.eyebrow }}</p>
+              <p v-if="s.eyebrow" class="eyebrow">{{ s.eyebrow }}</p>
               <component :is="i === 0 ? 'h1' : 'h2'" :class="i === 0 ? undefined : 'h1'">
-                {{ s.titleA }} <span class="accent-grad">{{ s.titleB }}</span>
+                {{ s.titleA }}
+                <span v-if="s.titleB" class="accent-grad">{{ s.titleB }}</span>
               </component>
-              <p>{{ s.subtitle }}</p>
-              <div class="hero-ctas">
-                <a v-if="s.cta?.href" class="btn btn--lg btn--primary" :href="s.cta.href">
-                  {{ s.cta.label }}<AppIcon name="arrow-right" />
+              <p v-if="s.subtitle">{{ s.subtitle }}</p>
+              <div v-if="s.ctaLabel || s.cta2Label" class="hero-ctas">
+                <!-- A button with no link is not rendered at all. The prototype
+                     drew one that did nothing when clicked. -->
+                <RouterLink
+                  v-if="s.ctaLabel && isInternal(s.ctaHref)"
+                  class="btn btn--lg btn--primary"
+                  :to="s.ctaHref!"
+                >
+                  {{ s.ctaLabel }}<AppIcon name="arrow-right" />
+                </RouterLink>
+                <a
+                  v-else-if="s.ctaLabel && s.ctaHref"
+                  class="btn btn--lg btn--primary"
+                  :href="s.ctaHref"
+                >
+                  {{ s.ctaLabel }}<AppIcon name="arrow-right" />
                 </a>
-                <button v-else-if="s.cta" type="button" class="btn btn--lg btn--primary">
-                  {{ s.cta.label }}<AppIcon name="arrow-right" />
-                </button>
 
-                <a v-if="s.cta2?.href" class="btn btn--lg btn--secondary" :href="s.cta2.href">
-                  {{ s.cta2.label }}
+                <RouterLink
+                  v-if="s.cta2Label && isInternal(s.cta2Href)"
+                  class="btn btn--lg btn--secondary"
+                  :to="s.cta2Href!"
+                >
+                  {{ s.cta2Label }}
+                </RouterLink>
+                <a
+                  v-else-if="s.cta2Label && s.cta2Href"
+                  class="btn btn--lg btn--secondary"
+                  :href="s.cta2Href"
+                >
+                  {{ s.cta2Label }}
                 </a>
-                <button v-else-if="s.cta2" type="button" class="btn btn--lg btn--secondary">
-                  {{ s.cta2.label }}
-                </button>
               </div>
             </div>
           </div>
@@ -206,7 +252,7 @@ onBeforeUnmount(() => {
             :key="s.id"
             type="button"
             class="hero-dot"
-            :aria-label="`ไปที่สไลด์ ${i + 1}: ${s.titleA} ${s.titleB}`"
+            :aria-label="`ไปที่สไลด์ ${i + 1}: ${s.titleA} ${s.titleB ?? ''}`"
             :aria-current="i === index ? 'true' : undefined"
             @click="go(i, true)"
           />

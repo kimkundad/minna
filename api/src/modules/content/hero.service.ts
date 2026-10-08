@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from 'drizzle-orm'
+import { and, asc, eq, or, sql } from 'drizzle-orm'
 import { db } from '../../db/client'
 import { heroSlides } from '../../db/schema/index'
 import { notFound } from '../../lib/errors'
@@ -12,8 +12,12 @@ import { removeOrphanedPath } from '../../lib/media'
  * is a list they can order by eye.
  */
 
+/** A site language, or every one of them. */
+export type HeroLocale = 'th' | 'en' | 'jp' | 'vn' | 'all'
+export type SiteLocale = 'th' | 'en' | 'jp' | 'vn'
+
 export interface HeroSlideInput {
-  locale: 'th' | 'en' | 'jp' | 'vn'
+  locale: HeroLocale
   eyebrow: string | null
   titleA: string
   titleB: string | null
@@ -72,7 +76,7 @@ const columns = {
   updatedAt: heroSlides.updatedAt,
 }
 
-export async function list(locale?: 'th' | 'en' | 'jp' | 'vn') {
+export async function list(locale?: HeroLocale) {
   return db
     .select({ ...columns, state: stateSql() })
     .from(heroSlides)
@@ -120,7 +124,7 @@ export async function remove(id: number) {
  * position of several, and sending them one at a time would leave the order
  * briefly wrong if a request were lost.
  */
-export async function reorder(locale: 'th' | 'en' | 'jp' | 'vn', ids: number[]) {
+export async function reorder(locale: HeroLocale, ids: number[]) {
   const existing = await db
     .select({ id: heroSlides.id })
     .from(heroSlides)
@@ -145,7 +149,7 @@ export async function reorder(locale: 'th' | 'en' | 'jp' | 'vn', ids: number[]) 
  * Published, inside its dates, in order. Nothing here is filtered in the
  * browser — a draft slide must never reach it at all.
  */
-export async function published(locale: 'th' | 'en' | 'jp' | 'vn') {
+export async function published(locale: SiteLocale) {
   return db
     .select({
       id: heroSlides.id,
@@ -165,7 +169,10 @@ export async function published(locale: 'th' | 'en' | 'jp' | 'vn') {
     .from(heroSlides)
     .where(
       and(
-        eq(heroSlides.locale, locale),
+        // This language, plus the ones written for every language. They sort
+        // together by `sortOrder`, so a slide meant for everybody can sit
+        // anywhere in the run rather than being stuck at one end.
+        or(eq(heroSlides.locale, locale), eq(heroSlides.locale, 'all')),
         eq(heroSlides.status, 'published'),
         sql`(${heroSlides.startsAt} IS NULL OR ${heroSlides.startsAt} <= NOW())`,
         sql`(${heroSlides.endsAt} IS NULL OR ${heroSlides.endsAt} >= NOW())`,

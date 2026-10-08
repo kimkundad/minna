@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { LOCALES } from '../../db/schema/auth'
+import { HERO_LOCALES } from '../../db/schema/content'
 import { audit, diff } from '../../lib/audit'
 import * as service from './hero.service'
 
@@ -27,7 +28,8 @@ const text = (max: number) =>
 
 const slideBody = z
   .object({
-    locale: z.enum(LOCALES).default('th'),
+    // A slide belongs to one language, or to all of them.
+    locale: z.enum(HERO_LOCALES).default('th'),
     eyebrow: text(120),
     titleA: z.string().trim().min(1, 'The headline cannot be empty.').max(200),
     titleB: text(200),
@@ -79,7 +81,7 @@ export default async function heroRoutes(app: FastifyInstance) {
   })
 
   app.get('/hero-slides', adminOnly, async (req) => {
-    const { locale } = z.object({ locale: z.enum(LOCALES).optional() }).parse(req.query)
+    const { locale } = z.object({ locale: z.enum(HERO_LOCALES).optional() }).parse(req.query)
     return { data: await service.list(locale) }
   })
 
@@ -135,7 +137,7 @@ export default async function heroRoutes(app: FastifyInstance) {
   app.put('/hero-slides/order', adminOnly, async (req) => {
     const { locale, ids } = z
       .object({
-        locale: z.enum(LOCALES),
+        locale: z.enum(HERO_LOCALES),
         ids: z.array(z.coerce.number().int().positive()).max(50),
       })
       .parse(req.body)
