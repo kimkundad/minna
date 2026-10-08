@@ -1186,3 +1186,64 @@ export const audit = {
   subject: (type: string, id: number) =>
     send<{ data: AuditRow[] }>(`/audit/subject/${type}/${id}`),
 }
+
+/* ---------------- your own account ---------------- */
+
+export interface MyProfile extends Member {
+  birthdate: string | null
+  phoneCountryCode: string | null
+  phoneNational: string | null
+  privacyAcceptedAt: string | null
+  updatedAt: string
+}
+
+export interface MyProfileInput {
+  firstName: string
+  lastName: string
+  phoneCountryCode: string | null
+  phoneNational: string | null
+  locale: 'th' | 'en' | 'jp' | 'vn'
+  /** Omit to leave the photo alone; null removes it. */
+  avatarPath?: string | null
+}
+
+/** What a teacher may change about their own public page. The slug and whether
+ *  they are listed are not theirs to set. */
+export interface MyTeacherProfileInput {
+  displayName: string
+  shortName: string
+  headline?: string | null
+  bio?: string | null
+  languages?: ('th' | 'en' | 'jp' | 'vn')[]
+  credentials?: string | null
+  yearsExperience?: number | null
+}
+
+export const me = {
+  profile: () => send<{ data: MyProfile }>('/me/profile'),
+
+  save: (body: MyProfileInput) =>
+    send<{ data: MyProfile }>('/me/profile', { method: 'PATCH', body }),
+
+  /** Null when the signed-in person is not a teacher. */
+  teacherProfile: () => send<{ data: TeacherProfile | null }>('/me/teacher-profile'),
+
+  saveTeacherProfile: (body: MyTeacherProfileInput) =>
+    send<{ data: TeacherProfile }>('/me/teacher-profile', { method: 'PUT', body }),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    send<{ message: string }>('/auth/change-password', {
+      method: 'POST',
+      body: { currentPassword, newPassword },
+    }),
+
+  sessions: () =>
+    send<{ data: { id: number; deviceLabel: string | null; ip: string | null; createdAt: string; expiresAt: string; current: boolean }[] }>(
+      '/auth/sessions',
+    ),
+
+  endSession: (id: number) => send<void>(`/auth/sessions/${id}`, { method: 'DELETE' }),
+
+  /** Signs out everywhere, including here. */
+  endAllSessions: () => send<{ message: string }>('/auth/logout-all', { method: 'POST' }),
+}
