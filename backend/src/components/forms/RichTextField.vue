@@ -46,7 +46,9 @@ import { mediaUrl } from '@/lib/api'
  */
 const props = withDefaults(
   defineProps<{
-    modelValue: string | null
+    /** Undefined as well as null: a PATCH shape leaves the field optional, and
+     *  "not set" and "set to nothing" are the same empty editor. */
+    modelValue: string | null | undefined
     label?: string
     help?: string
     required?: boolean

@@ -73,6 +73,39 @@ export async function listCategoriesPaged(opts: { page: number; perPage: number;
 }
 
 export async function listCategories() {
+  const rows = await categoryRows()
+
+  /**
+   * Two counts, because two callers mean different things by "how many".
+   *
+   * `courseCount` is what is filed on this category itself, which is what the
+   * admin needs before deleting one. `totalCourseCount` adds everything
+   * beneath it, which is what a visitor means by "ภาษาญี่ปุ่น" — nothing is
+   * filed on a parent, so its own count is always zero and showing that would
+   * say a language with six courses has none.
+   */
+  const parentOf = new Map(rows.map((c) => [c.id, c.parentId]))
+  const totals = new Map<number, number>()
+  for (const row of rows) {
+    const n = Number(row.courseCount)
+    if (!n) continue
+    let at: number | null | undefined = row.id
+    const seen = new Set<number>()
+    while (at != null && !seen.has(at)) {
+      seen.add(at)
+      totals.set(at, (totals.get(at) ?? 0) + n)
+      at = parentOf.get(at)
+    }
+  }
+
+  return rows.map((r) => ({
+    ...r,
+    courseCount: Number(r.courseCount),
+    totalCourseCount: totals.get(r.id) ?? 0,
+  }))
+}
+
+async function categoryRows() {
   // A join rather than a correlated subquery: inside a raw `sql` fragment
   // drizzle renders a column unqualified, so `c.category_id = ${categories.id}`
   // became `c.category_id = c.id` and every count came back zero.
@@ -245,6 +278,85 @@ function bandClause(
  */
 export type FacetGroup = 'category' | 'level' | 'locale' | 'duration' | 'price' | 'access'
 
+/**
+ * Every category id under these, the ones given included.
+ *
+ * Courses are filed on the leaves — "ภาษาญี่ปุ่น · คันจิ", never "ภาษาญี่ปุ่น"
+ * — so filtering by a parent on its own matches nothing, and a visitor who
+ * clicks "ภาษาญี่ปุ่น" expecting Japanese courses gets an empty catalog. A
+ * parent therefore means itself and everything beneath it, which is what
+ * choosing a parent has always looked like it would do.
+ *
+ * Walks down a level at a time rather than assuming two, because nothing stops
+ * an administrator nesting further.
+ */
+export async function expandCategories(ids: number[]): Promise<number[]> {
+  if (!ids.length) return ids
+
+  const all = await db
+    .select({ id: categories.id, parentId: categories.parentId })
+    .from(categories)
+
+  const byParent = new Map<number, number[]>()
+  for (const c of all) {
+    if (c.parentId === null) continue
+    const list = byParent.get(c.parentId) ?? []
+    list.push(c.id)
+    byParent.set(c.parentId, list)
+  }
+
+  const out = new Set<number>(ids)
+  const queue = [...ids]
+  while (queue.length) {
+    for (const child of byParent.get(queue.shift()!) ?? []) {
+      if (out.has(child)) continue
+      out.add(child)
+      queue.push(child)
+    }
+  }
+  return [...out]
+}
+
+/**
+ * Adds each category's descendants into its own count.
+ *
+ * `GROUP BY category_id` counts the courses filed on exactly that category,
+ * and nothing is filed on a parent — so without this the checkbox for
+ * "ภาษาญี่ปุ่น" would read 0 beside six Japanese courses, and ticking it would
+ * then return all six. The number has to promise what the click does.
+ *
+ * A category with nothing under it anywhere is left out, so "no courses" still
+ * reads as absent rather than as a zero.
+ */
+async function rollUpCategories(direct: Record<string, number>): Promise<Record<string, number>> {
+  const all = await db
+    .select({ id: categories.id, parentId: categories.parentId })
+    .from(categories)
+
+  // Walk up from each category that has courses, adding its count to every
+  // ancestor. One pass, rather than resolving a subtree per category.
+  const parentOf = new Map(all.map((c) => [c.id, c.parentId]))
+  const out: Record<string, number> = {}
+
+  for (const [id, n] of Object.entries(direct)) {
+    if (!n) continue
+    let at: number | null | undefined = Number(id)
+    const seen = new Set<number>()
+    while (at != null && !seen.has(at)) {
+      seen.add(at)
+      out[String(at)] = (out[String(at)] ?? 0) + n
+      at = parentOf.get(at)
+    }
+  }
+  return out
+}
+
+/** The same options with any parent category widened to its whole subtree. */
+async function withCategoryTree(opts: CourseListOptions): Promise<CourseListOptions> {
+  if (!opts.categoryIds?.length) return opts
+  return { ...opts, categoryIds: await expandCategories(opts.categoryIds) }
+}
+
 function courseWhere(opts: CourseListOptions, skip?: FacetGroup) {
   const where = [
     opts.includeUnpublished ? undefined : eq(courses.status, 'approved'),
@@ -305,7 +417,8 @@ function courseWhere(opts: CourseListOptions, skip?: FacetGroup) {
   return where.length ? and(...(where as never[])) : undefined
 }
 
-export async function listCourses(opts: CourseListOptions): Promise<Paged<unknown>> {
+export async function listCourses(input: CourseListOptions): Promise<Paged<unknown>> {
+  const opts = await withCategoryTree(input)
   const filter = courseWhere(opts)
 
   const order =
@@ -440,7 +553,9 @@ export interface CourseFacets {
  * built from a second, similar clause is a count that disagrees with the list
  * it sits next to.
  */
-export async function courseFacets(opts: CourseListOptions): Promise<CourseFacets> {
+export async function courseFacets(input: CourseListOptions): Promise<CourseFacets> {
+  const opts = await withCategoryTree(input)
+
   const tally = async (
     group: FacetGroup,
     key: SQL<string> | typeof courses.level | typeof courses.contentLocale | typeof courses.categoryId,
@@ -495,7 +610,7 @@ export async function courseFacets(opts: CourseListOptions): Promise<CourseFacet
     })),
   ])
 
-  return { total, category, level, locale, duration, price, access }
+  return { total, category: await rollUpCategories(category), level, locale, duration, price, access }
 }
 
 /**

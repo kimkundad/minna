@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import HeroCarousel from '@/components/home/HeroCarousel.vue'
 import ArticleCard from '@/components/home/ArticleCard.vue'
 import CourseCard from '@/components/course/CourseCard.vue'
@@ -8,41 +9,88 @@ import CourseRail from '@/components/course/CourseRail.vue'
 import AdsSlot from '@/components/ui/AdsSlot.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import logoUrl from '@/assets/img/logo.png'
-import { data, store } from '@/vendor'
+import { api } from '@/lib/api'
+import type { PublicCategory, PublicCourse } from '@/lib/api'
+import { categoryLabel, courseView } from '@/lib/course'
+import { data } from '@/vendor'
 import { date } from '@/lib/format'
-import { vendorCourseView } from '@/lib/vendor-view'
 
 /**
- * The home page, in the order the design sets out: hero, the three course
- * rails, categories, how learning works here, the package band, articles, with
+ * The home page, in the order the design sets out: hero, the course rails,
+ * categories, how learning works here, the package band, articles, with
  * advertising slots between them.
  *
- * "คอร์สของฉัน" is absent rather than empty for signed-out visitors — a rail
- * promising progress nobody has yet is noise on a first visit.
+ * The two course rails are the catalog, sorted two ways — newest, and the
+ * school's own "recommended", which is its featured flag first and then how
+ * popular a course is. Both come from the same endpoint the catalog uses, so a
+ * card here and the same card there cannot disagree.
+ *
+ * There is no "คอร์สของฉัน" rail. The prototype had one, filled from its
+ * localStorage fixtures; a real one needs entitlements and lesson progress from
+ * a student API that does not exist yet, and a rail showing courses nobody
+ * bought is worse than no rail.
  */
 const route = useRoute()
+const { t } = useI18n()
 const locale = computed(() => String(route.params.locale ?? 'th'))
 const path = (p: string) => `/${locale.value}${p}`
-/** Until this page is served by our own API, its cards come from the
- *  prototype store. See `vendor-view.ts`. */
-const vendorView = (id: string) => vendorCourseView(id, locale.value)
 
-const s = store as unknown as Record<string, (...args: unknown[]) => any>
+const newCourses = ref<PublicCourse[]>([])
+const featured = ref<PublicCourse[]>([])
+const allCategories = ref<PublicCategory[]>([])
 
-const isLoggedIn = computed(() => Boolean(s.isLoggedIn()))
-const myCourses = computed(() => (isLoggedIn.value ? s.myCourses() : []))
-const newCourses = computed(() => s.newCourses().slice(0, 8))
-const recommended = computed(() => s.recommended().slice(0, 8))
+const RAIL = 8
 
-/** Filters as you type. Matches both the English and Thai name, because people
- *  search for whichever one they happen to know. */
+/** A rail stays out of the page until it has something in it, rather than
+ *  drawing a heading over an empty track while the request is in flight. */
+onMounted(async () => {
+  const [cats, fresh, best] = await Promise.all([
+    api.categories().catch(() => null),
+    api.courses({ sort: 'newest', perPage: RAIL }).catch(() => null),
+    // Asked for wide, shown narrow: the newest courses are often also the
+    // featured ones, and two rails showing the same four cards is one rail's
+    // worth of information taking up two rails of the page.
+    api.courses({ sort: 'recommended', perPage: RAIL * 3 }).catch(() => null),
+  ])
+  allCategories.value = cats?.data ?? []
+  newCourses.value = fresh?.data ?? []
+
+  const alreadyShown = new Set(newCourses.value.map((c) => c.id))
+  const rest = (best?.data ?? []).filter((c) => !alreadyShown.has(c.id))
+  // Unless taking the overlap out would leave the rail nearly empty, in which
+  // case a repeated card beats a missing section.
+  featured.value = (rest.length >= 4 ? rest : (best?.data ?? [])).slice(0, RAIL)
+})
+
+const asCards = (list: PublicCourse[]) =>
+  list.map((c) => courseView(c, { locale: locale.value, t, categories: allCategories.value }))
+
+const newCards = computed(() => asCards(newCourses.value))
+const featuredCards = computed(() => asCards(featured.value))
+
+/**
+ * Filters as you type, over the name and the parent's — somebody looking for
+ * "ญี่ปุ่น" should find "ภาษาญี่ปุ่น · คันจิ", whose own name does not contain
+ * it.
+ */
 const categoryQuery = ref('')
 const categories = computed(() => {
   const q = categoryQuery.value.toLowerCase().trim()
-  const published = s.catalog() as { category: string }[]
-  return data.categories
-    .filter((c) => !q || `${c.name} ${c.th}`.toLowerCase().includes(q))
-    .map((c) => ({ ...c, count: published.filter((x) => x.category === c.id).length }))
+  return allCategories.value
+    .map((c) => {
+      const parent = c.parentId ? allCategories.value.find((p) => p.id === c.parentId) : null
+      return {
+        id: c.id,
+        name: c.name,
+        /** The card's second line. Empty on a top-level category, where it
+         *  would only repeat the first. */
+        parentName: parent?.name ?? '',
+        label: categoryLabel(c, allCategories.value),
+        icon: c.icon ?? parent?.icon ?? 'book-open',
+        count: c.totalCourseCount,
+      }
+    })
+    .filter((c) => !q || c.label.toLowerCase().includes(q))
 })
 
 const journey = computed(
@@ -55,67 +103,36 @@ const articles = computed(() => (data.articles ?? []) as unknown as any[])
   <!-- 1. Hero -->
   <HeroCarousel />
 
-  <!-- 2. My courses — signed-in only -->
-  <section v-if="isLoggedIn && myCourses.length" class="home-rail" id="my-courses">
-    <div class="container">
-      <CourseRail
-        id="my"
-        eyebrow="Continue Learning"
-        title="คอร์สของฉัน"
-        :sub="`เรียนต่อจากจุดล่าสุด · ${myCourses.length} คอร์ส`"
-        :more-href="path('/account/learning')"
-        more-label="ดูทั้งหมด"
-        :count="myCourses.length"
-      >
-        <CourseCard
-          v-for="c in myCourses"
-          :key="c.id"
-          :view="vendorView(c.id)"
-          variant="continue"
-        />
-      </CourseRail>
-    </div>
-  </section>
-
-  <!-- 3. New courses -->
-  <section class="home-rail" id="new-courses">
+  <!-- 2. New courses -->
+  <section v-if="newCards.length" class="home-rail" id="new-courses">
     <div class="container">
       <CourseRail
         id="new"
         eyebrow="New Courses"
-        title="คอร์สมาใหม่"
-        sub="อัปเดตล่าสุดจากผู้สอนในแต่ละสาขา"
+        :title="t('home.newTitle')"
+        :sub="t('home.newSub')"
         :more-href="`${path('/courses')}?sort=new`"
-        more-label="ดูคอร์สใหม่ทั้งหมด"
-        :count="newCourses.length"
+        :more-label="t('home.newMore')"
+        :count="newCards.length"
       >
-        <CourseCard v-for="c in newCourses" :key="c.id" :view="vendorView(c.id)" />
+        <CourseCard v-for="c in newCards" :key="c.id" :view="c" />
       </CourseRail>
     </div>
   </section>
 
-  <!-- 4. Recommended -->
-  <section class="home-rail" id="rec-courses">
+  <!-- 3. Recommended -->
+  <section v-if="featuredCards.length" class="home-rail" id="rec-courses">
     <div class="container">
       <CourseRail
         id="rec"
-        :eyebrow="isLoggedIn ? 'Recommended for you' : 'Featured'"
-        title="คอร์สแนะนำ"
-        :sub="
-          isLoggedIn
-            ? 'คัดจากความสนใจ ประวัติการเรียน และแพ็กเกจของคุณ'
-            : 'คอร์สเด่นที่ผู้เรียนเลือกมากที่สุดและทีมงานแนะนำ'
-        "
+        eyebrow="Featured"
+        :title="t('home.featuredTitle')"
+        :sub="t('home.featuredSub')"
         :more-href="path('/courses')"
-        more-label="ดูคอร์สทั้งหมด"
-        :count="recommended.length"
+        :more-label="t('home.featuredMore')"
+        :count="featuredCards.length"
       >
-        <CourseCard
-          v-for="r in recommended"
-          :key="r.course.id"
-          :view="vendorView(r.course.id)"
-          :reason="isLoggedIn ? r.reason : undefined"
-        />
+        <CourseCard v-for="c in featuredCards" :key="c.id" :view="c" />
       </CourseRail>
     </div>
   </section>
@@ -128,19 +145,19 @@ const articles = computed(() => (data.articles ?? []) as unknown as any[])
     <div class="container">
       <div class="section-head">
         <p class="eyebrow">Course Categories</p>
-        <h2 id="cat-h">หมวดหมู่คอร์ส</h2>
-        <p>เลือกหมวดที่ตรงกับเป้าหมายของคุณ ครอบคลุม {{ data.categories.length }} หมวด</p>
+        <h2 id="cat-h">{{ t('home.catsTitle') }}</h2>
+        <p>{{ t('home.catsSub', { count: allCategories.length }) }}</p>
       </div>
 
       <div class="cat-search">
         <div class="search-field">
           <AppIcon name="search" :size="22" />
-          <label class="sr-only" for="cat-q">ค้นหาหมวดหมู่</label>
+          <label class="sr-only" for="cat-q">{{ t('home.catsSearchLabel') }}</label>
           <input
             id="cat-q"
             v-model="categoryQuery"
             type="search"
-            placeholder="ค้นหาหมวดหมู่ เช่น สนทนา, JLPT, ไวยากรณ์"
+            :placeholder="t('home.catsSearchPlaceholder')"
             autocomplete="off"
           />
         </div>
@@ -155,14 +172,14 @@ const articles = computed(() => (data.articles ?? []) as unknown as any[])
           :to="`${path('/courses')}?category=${c.id}`"
         >
           <span class="ci"><AppIcon :name="c.icon" /></span>
-          <span><b>{{ c.name }}</b><small>{{ c.th }}</small></span>
-          <span class="cc-n">{{ c.count ? `${c.count} คอร์ส` : 'เร็ว ๆ นี้' }}</span>
+          <span><b>{{ c.name }}</b><small v-if="c.parentName">{{ c.parentName }}</small></span>
+          <span class="cc-n">{{
+            c.count ? t('home.catsCount', { count: c.count }) : t('home.catsSoon')
+          }}</span>
         </RouterLink>
       </div>
 
-      <p v-if="!categories.length" class="cat-empty">
-        ไม่พบหมวดหมู่ที่ค้นหา ลองพิมพ์คำอื่น เช่น สนทนา หรือ เตรียมสอบ
-      </p>
+      <p v-if="!categories.length" class="cat-empty">{{ t('home.catsEmpty') }}</p>
     </div>
   </section>
 

@@ -57,7 +57,7 @@ const categoryOpts = computed<[string, string][]>(() =>
     .slice()
     .sort(
       (a, b) =>
-        b.courseCount - a.courseCount || categoryLabel(a, categories.value).localeCompare(categoryLabel(b, categories.value)),
+        b.totalCourseCount - a.totalCourseCount || categoryLabel(a, categories.value).localeCompare(categoryLabel(b, categories.value)),
     )
     .map((c) => [String(c.id), categoryLabel(c, categories.value)] as [string, string]),
 )
@@ -312,7 +312,9 @@ onMounted(async () => {
   // Categories first: the URL's `?category=` is read against them, and the
   // filter panel cannot be drawn without them.
   try {
-    categories.value = (await api.categories()).data.filter((c) => c.courseCount > 0 || !c.parentId)
+    categories.value = (await api.categories()).data.filter(
+      (c) => c.totalCourseCount > 0 || !c.parentId,
+    )
   } catch {
     // The rest of the catalog still works; only the category group is empty.
   }
@@ -498,7 +500,7 @@ const onlyEmptyCategories = computed(() => {
   if (query.value || !filters.value.category.length) return false
   if (filterCount.value !== filters.value.category.length) return false
   return filters.value.category.every(
-    (id) => (categories.value.find((c) => String(c.id) === id)?.courseCount ?? 0) === 0,
+    (id) => (categories.value.find((c) => String(c.id) === id)?.totalCourseCount ?? 0) === 0,
   )
 })
 

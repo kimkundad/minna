@@ -2310,5 +2310,20 @@
     "bestseller": "Bestseller",
     "recommended": "Recommended",
     "new": "New"
+  },
+  "home": {
+    "newTitle": "New courses",
+    "newSub": "The latest to open for enrolment",
+    "newMore": "See every new course",
+    "featuredTitle": "Recommended",
+    "featuredSub": "Picked by the school, and the courses learners choose most",
+    "featuredMore": "See every course",
+    "catsTitle": "Course categories",
+    "catsSub": "Pick the one that matches what you are after — {count} to choose from",
+    "catsSearchLabel": "Search categories",
+    "catsSearchPlaceholder": "Search categories — conversation, JLPT, grammar…",
+    "catsCount": "{count} courses",
+    "catsSoon": "Coming soon",
+    "catsEmpty": "No category matches that. Try another word, such as conversation or exam."
   }
 }

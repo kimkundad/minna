@@ -2310,5 +2310,20 @@
     "bestseller": "人気",
     "recommended": "おすすめ",
     "new": "新着"
+  },
+  "home": {
+    "newTitle": "新着コース",
+    "newSub": "開講したばかりのコース",
+    "newMore": "新着コースをすべて見る",
+    "featuredTitle": "おすすめコース",
+    "featuredSub": "スクールが選んだコースと、受講者に最も選ばれているコース",
+    "featuredMore": "すべてのコースを見る",
+    "catsTitle": "コースのカテゴリー",
+    "catsSub": "目的に合うカテゴリーをお選びください — 全 {count} カテゴリー",
+    "catsSearchLabel": "カテゴリーを検索",
+    "catsSearchPlaceholder": "カテゴリーを検索 — 会話、JLPT、文法…",
+    "catsCount": "{count} コース",
+    "catsSoon": "近日公開",
+    "catsEmpty": "該当するカテゴリーがありません。「会話」「試験対策」などでお試しください。"
   }
 }

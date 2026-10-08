@@ -213,7 +213,11 @@ export interface PublicCategory {
   /** A lucide glyph name. Null on most sub-categories, which borrow a parent's. */
   icon: string | null
   sortOrder: number
+  /** Filed on this category itself. What the admin needs before deleting one. */
   courseCount: number
+  /** This category and everything beneath it. Nothing is filed on a parent,
+   *  so this is what a visitor means by a parent's name. */
+  totalCourseCount: number
 }
 
 export type CourseLevel = 'beginner' | 'intermediate' | 'advanced'

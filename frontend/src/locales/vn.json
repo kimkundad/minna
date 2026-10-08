@@ -2310,5 +2310,20 @@
     "bestseller": "Bán chạy",
     "recommended": "Đề xuất",
     "new": "Mới"
+  },
+  "home": {
+    "newTitle": "Khoá học mới",
+    "newSub": "Những khoá vừa mở đăng ký",
+    "newMore": "Xem tất cả khoá mới",
+    "featuredTitle": "Khoá đề xuất",
+    "featuredSub": "Do nhà trường chọn, và những khoá học viên chọn nhiều nhất",
+    "featuredMore": "Xem tất cả khoá học",
+    "catsTitle": "Danh mục khoá học",
+    "catsSub": "Chọn danh mục phù hợp với mục tiêu của bạn — {count} danh mục",
+    "catsSearchLabel": "Tìm danh mục",
+    "catsSearchPlaceholder": "Tìm danh mục — giao tiếp, JLPT, ngữ pháp…",
+    "catsCount": "{count} khoá",
+    "catsSoon": "Sắp có",
+    "catsEmpty": "Không có danh mục nào khớp. Thử từ khác, ví dụ giao tiếp hoặc luyện thi."
   }
 }
