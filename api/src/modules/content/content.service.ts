@@ -8,6 +8,7 @@ import {
   users,
 } from '../../db/schema/index'
 import { conflict, notFound } from '../../lib/errors'
+import { removeOrphanedMedia } from '../../lib/media'
 
 /**
  * The site's own content: articles, testimonials, enquiries, subscribers.
@@ -128,12 +129,17 @@ export async function updatePost(id: number, input: PostInput) {
     })
     .where(eq(posts.id, id))
 
-  return { before, after: await getPost(id) }
+  const after = await getPost(id)
+  // After the write, never before: the question is what still points at a
+  // picture, and the answer has to come from what is now stored.
+  await removeOrphanedMedia(before.contentHtml, after.contentHtml)
+  return { before, after }
 }
 
 export async function deletePost(id: number) {
   const post = await getPost(id)
   await db.delete(posts).where(eq(posts.id, id))
+  await removeOrphanedMedia(post.contentHtml, null)
   return post
 }
 

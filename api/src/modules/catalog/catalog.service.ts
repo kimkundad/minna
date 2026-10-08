@@ -9,6 +9,7 @@ import {
   users,
 } from '../../db/schema/index'
 import { conflict, notFound } from '../../lib/errors'
+import { removeOrphanedMedia } from '../../lib/media'
 import { outer } from '../../lib/sql'
 
 /**
@@ -346,6 +347,9 @@ export async function updateCourse(id: number, input: Partial<CourseInput>) {
   if (instructorIds) await setInstructors(id, instructorIds)
 
   const [after] = await db.select().from(courses).where(eq(courses.id, id)).limit(1)
+  // After the write: whether a picture is still in use is answered by what is
+  // now stored, including by other courses and articles.
+  await removeOrphanedMedia(row.description, after!.description)
   return { before, after: after! }
 }
 
@@ -360,6 +364,7 @@ export async function deleteCourse(id: number) {
   }
 
   await db.delete(courses).where(eq(courses.id, id))
+  await removeOrphanedMedia(row.description, null)
   return row
 }
 
