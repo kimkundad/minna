@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import AppProgress from '@/components/ui/AppProgress.vue'
 import CourseImage from '@/components/course/CourseImage.vue'
 import CoStateBox from '@/components/commerce/CoStateBox.vue'
 import CoSteps from '@/components/commerce/CoSteps.vue'
 import CoTotalsRows from '@/components/commerce/CoTotalsRows.vue'
-import CommerceToasts from '@/components/commerce/CommerceToasts.vue'
-import { assetUrl, call, protoHref, toast, useStoreTick } from '@/components/commerce/useCommerce'
-import type { CommerceCategory, CommerceCourse, Order } from '@/components/commerce/types'
-import { courseView } from '@/vendor'
-import { date, dateTime, num } from '@/lib/format'
+import { openAuth } from '@/components/auth/authChannel'
+import { ApiError, api, mediaUrl } from '@/lib/api'
+import type { PublicCategory, PublicCourse, PublicOrder } from '@/lib/api'
+import { baht as toBaht } from '@/lib/checkout'
+import { dateTime, num } from '@/lib/format'
+import { useAuthStore } from '@/stores/auth'
 
 /**
  * The end of the order — which is not always a success.
@@ -21,719 +21,473 @@ import { date, dateTime, num } from '@/lib/format'
  * rather than a red version of the same one: no steps, no receipt, no "start
  * learning", and a help card that says plainly that nothing was charged. The
  * two most useful things after a failed payment are knowing you were not
- * billed and being able to try again, so those are what the page leads with.
+ * billed and being able to try again, so those are what it leads with.
  *
- * Without `?order=` it shows the most recent order and says so, because the
- * usual way to arrive without one is by reopening the page later.
+ * A pending order is asked about rather than waited on: the payment provider's
+ * webhook may not have arrived, so the API checks with it directly instead of
+ * making somebody refresh until it does.
  */
 const route = useRoute()
 const { t } = useI18n()
+const auth = useAuthStore()
 
-const tick = useStoreTick()
 const locale = computed(() => String(route.params.locale ?? 'th'))
 const path = (p: string) => `/${locale.value}${p}`
 const baht = (n: number) => t('commerce.baht', { n: num(n) })
 
-const METHOD_ICON: Record<string, string> = { qr: 'qr', card: 'credit-card', free: 'gift' }
-const STATUS: Record<string, { badge: string; icon: string }> = {
-  paid: { badge: 'done', icon: 'check-circle' },
-  free: { badge: 'free', icon: 'gift' },
-  failed: { badge: 'failed', icon: 'x-circle' },
-  cancelled: { badge: 'expired', icon: 'ban' },
+const METHOD_ICON: Record<string, string> = {
+  promptpay: 'qr',
+  card: 'credit-card',
+  free: 'gift',
 }
 
-const isLoggedIn = computed(() => {
-  void tick.value
-  return Boolean(call<boolean>('isLoggedIn'))
-})
-
-const requestedId = computed(() => {
+const orderNo = computed(() => {
   const value = route.query.order
   return value ? String(value) : null
 })
 
-const found = computed(() => {
-  void tick.value
-  if (!isLoggedIn.value) return { order: null, latest: false }
-  const mine = call<Order[]>('orders')
-  if (requestedId.value) {
-    return { order: mine.find((o) => o.id === requestedId.value) ?? null, latest: false }
+const order = ref<PublicOrder | null>(null)
+const courses = ref<PublicCourse[]>([])
+const categories = ref<PublicCategory[]>([])
+const loading = ref(true)
+const notFound = ref(false)
+const loadError = ref('')
+
+const isLoggedIn = computed(() => auth.isLoggedIn)
+
+let seq = 0
+
+async function load(): Promise<void> {
+  if (!orderNo.value) {
+    loading.value = false
+    notFound.value = true
+    return
   }
-  return { order: mine[0] ?? null, latest: true }
-})
+  if (!isLoggedIn.value) {
+    loading.value = false
+    return
+  }
 
-const order = computed(() => found.value.order)
-const isProblem = computed(
-  () => order.value?.status === 'failed' || order.value?.status === 'cancelled',
-)
-const isFree = computed(() => order.value?.status === 'free')
-const settled = computed(() => order.value?.status === 'paid' || isFree.value)
+  const mine = ++seq
+  loading.value = true
+  notFound.value = false
+  loadError.value = ''
+  try {
+    const { data } = await api.orderByNo(orderNo.value)
+    if (mine !== seq) return
+    order.value = data
 
-/* ---------------- the lines on the order ---------------- */
+    // The courses behind the lines, for their pictures and their links. The
+    // order itself only remembers the title it was sold under, which is right
+    // — a price list changing must not rewrite what somebody bought.
+    const ids = data.items.map((i) => i.courseId).filter((id): id is number => id !== null)
+    const [found, cats] = await Promise.all([
+      Promise.all(ids.map((id) => api.course(id).then((r) => r.data).catch(() => null))),
+      api.categories().catch(() => ({ data: [] as PublicCategory[] })),
+    ])
+    if (mine !== seq) return
+    courses.value = found.filter((c): c is PublicCourse => c !== null)
+    categories.value = cats.data
+  } catch (err) {
+    if (mine !== seq) return
+    if (err instanceof ApiError && (err.status === 404 || err.status === 409)) notFound.value = true
+    else loadError.value = err instanceof ApiError ? err.message : t('commerce.success.loadFailed')
+  } finally {
+    if (mine === seq) loading.value = false
+  }
+}
+
+onMounted(load)
+watch(() => [orderNo.value, isLoggedIn.value], load)
+
+/* ---------------- what state it is in ---------------- */
+
+const status = computed(() => order.value?.status ?? null)
+const isProblem = computed(() => status.value === 'failed' || status.value === 'cancelled')
+const isPending = computed(() => status.value === 'pending')
+const isFree = computed(() => order.value?.total === 0 && status.value === 'paid')
+const settled = computed(() => status.value === 'paid')
+
+/* ---------------- the lines ---------------- */
 
 interface SuccessLine {
-  cid: string
+  id: number
   title: string
-  href: string
+  href: string | null
   category: string
-  image: { src?: string; id?: string; alt?: string; fp?: string } | null
-  artIcon?: string
-  artPalette?: number
-  until: string
-  coupon: string | null
-  couponOff: string
+  image: { src: string; alt: string } | null
+  artIcon: string
+  artPalette: number
   price: number
   disc: number
   net: number
-  /** Set when this purchase renewed access that had lapsed. */
-  renewedPct: number | null
-  learn: { label: string; href: string } | null
+  access: string
 }
 
-/** Where to carry on, when this account can already open the course. */
-function learnInfo(cid: string): { label: string; href: string } | null {
-  if (!call<{ has: boolean }>('access', cid).has) return null
-  const progress = call<{ pct: number }>('progress', cid)
-  const view = courseView(cid) as unknown as { learnHref?: string }
-  return {
-    label:
-      progress.pct > 0 && progress.pct < 100
-        ? t('commerce.success.resume')
-        : t('commerce.success.start'),
-    href: protoHref(view?.learnHref ?? `learn.html?id=${cid}`, locale.value),
-  }
-}
+const lines = computed<SuccessLine[]>(() =>
+  (order.value?.items ?? []).map((item) => {
+    const course = courses.value.find((c) => c.id === item.courseId)
+    const cat = course?.categoryId
+      ? categories.value.find((c) => c.id === course.categoryId)
+      : undefined
+    const parent = cat?.parentId ? categories.value.find((c) => c.id === cat.parentId) : undefined
 
-const lines = computed<SuccessLine[]>(() => {
-  const o = order.value
-  if (!o) return []
-  // Only an order with more than one course offers a link per line; with one
-  // course the hero's own button already goes there.
-  const showLink = settled.value && (o.items ?? []).length > 1
-
-  return (o.items ?? [])
-    .map((item) => ({ item, course: call<CommerceCourse | null>('course', item.cid) }))
-    .filter((x) => x.course)
-    .map(({ item, course }) => {
-      const c = course as CommerceCourse
-      const category = call<CommerceCategory | null>('category', c.category)
-      const entitlement = settled.value
-        ? call<{ endAt?: string } | null>('entitlement', item.cid)
-        : null
-      const renewed = settled.value && (order.value?.renewed ?? []).includes(item.cid)
-      const img = c.image
-      return {
-        cid: item.cid,
-        title: c.title,
-        href: protoHref(`course.html?id=${item.cid}`, locale.value),
-        category: category?.name ?? '',
-        image: img ? { ...img, src: assetUrl(img.src) ?? undefined } : null,
-        artIcon: category?.icon,
-        artPalette: category?.palette,
-        until: entitlement?.endAt
-          ? t('commerce.success.accessUntil', { date: date(entitlement.endAt) })
-          : settled.value && c.isFree
-            ? t('commerce.success.freeForMembers')
-            : '',
-        coupon: item.coupon,
-        couponOff: item.disc ? `−${baht(item.disc)}` : baht(0),
-        price: item.price,
-        disc: item.disc,
-        net: item.net,
-        renewedPct: renewed ? call<{ pct: number }>('progress', item.cid).pct : null,
-        learn: showLink ? learnInfo(item.cid) : null,
-      }
-    })
-})
-
-/** The hero's primary action on a settled order. */
-const heroLearn = computed(() =>
-  settled.value && lines.value.length ? learnInfo(lines.value[0]!.cid) : null,
-)
-
-/** Courses on a failed order that could still be bought. */
-const buyable = computed(() => {
-  const o = order.value
-  if (!o) return []
-  return (o.items ?? [])
-    .map((i) => i.cid)
-    .filter((cid) => call<CommerceCourse | null>('course', cid) && !call('cartBlock', cid))
-})
-
-const renewedCourses = computed(() =>
-  (order.value?.renewed ?? [])
-    .map((cid) => call<CommerceCourse | null>('course', cid))
-    .filter((c): c is CommerceCourse => Boolean(c))
-    .map((c) => ({
-      title: c.title,
-      pct: call<{ pct: number }>('progress', c.id).pct,
-    })),
-)
-
-/* ---------------- receipt ---------------- */
-
-const receipt = computed(() => {
-  const o = order.value
-  if (!o) return null
-  const r = o.receipt ?? { want: false }
-  if (isFree.value) return { kind: 'none' as const, icon: 'gift' }
-  if (r.want) {
     return {
-      kind: 'full' as const,
-      icon: r.type === 'corporate' ? 'building' : 'id-card',
-      type:
-        r.type === 'corporate' ? t('commerce.tax.corporate') : t('commerce.tax.individual'),
-      name: r.name || '—',
-      corporate: r.type === 'corporate',
-      branch:
-        r.branch && r.branch !== '00000'
-          ? t('commerce.success.receiptBranch', { no: r.branch })
-          : t('commerce.success.receiptHeadOffice'),
-      email: o.buyer?.email ?? '',
+      id: item.id,
+      title: item.titleSnapshot,
+      href: course ? `/${locale.value}/courses/${course.slug}` : null,
+      category: cat ? (parent ? `${parent.name} · ${cat.name}` : cat.name) : '',
+      image: course?.thumbnailPath
+        ? { src: mediaUrl(course.thumbnailPath), alt: item.titleSnapshot }
+        : null,
+      artIcon: cat?.icon ?? parent?.icon ?? 'book-open',
+      artPalette: (course?.categoryId ?? 0) % 6,
+      price: toBaht(item.unitPrice),
+      disc: toBaht(item.discount),
+      net: toBaht(Math.max(0, item.unitPrice - item.discount)),
+      access:
+        item.accessType === 'limited' && item.accessDurationDays
+          ? t('course.infoAccessDays', { days: item.accessDurationDays })
+          : t('course.perkLifetime'),
     }
-  }
-  return { kind: 'electronic' as const, icon: 'receipt', email: o.buyer?.email ?? '' }
+  }),
+)
+
+/** Where to carry on. A paid order granted access, so the course page is open
+ *  to them — the lesson player is still the prototype's, so it is not offered
+ *  as though it were ready. */
+const firstCourseHref = computed(() => lines.value.find((l) => l.href)?.href ?? null)
+
+/** Buying again after a failure: the same courses, back through checkout. */
+const retryHref = computed(() => {
+  const slugs = (order.value?.items ?? [])
+    .map((i) => courses.value.find((c) => c.id === i.courseId)?.slug)
+    .filter(Boolean)
+  return slugs.length ? `${path('/checkout')}?items=${slugs.join(',')}` : path('/courses')
 })
 
-/* ---------------- copy the order number ---------------- */
+const totalDiscount = computed(() =>
+  order.value ? toBaht(order.value.courseDiscount + order.value.orderDiscount) : 0,
+)
 
-async function copyOrderId() {
-  const id = order.value?.id
+const failReason = computed(() =>
+  status.value === 'cancelled'
+    ? t('commerce.success.reasonCancelled')
+    : t('commerce.success.reasonFailed'),
+)
+
+/* ---------------- copying the number ---------------- */
+
+const copied = ref(false)
+
+async function copyOrderNo(): Promise<void> {
+  const id = order.value?.orderNo
   if (!id) return
   try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(id)
-    } else {
-      // A fallback for plain http, where the clipboard API is unavailable.
-      const field = document.createElement('textarea')
-      field.value = id
-      field.setAttribute('readonly', '')
-      field.style.cssText = 'position:fixed;top:0;opacity:0'
-      document.body.appendChild(field)
-      field.select()
-      const ok = document.execCommand('copy')
-      field.remove()
-      if (!ok) throw new Error('copy rejected')
-    }
-    toast(t('commerce.success.copied', { id }), { type: 'success' })
+    await navigator.clipboard.writeText(id)
+    copied.value = true
+    setTimeout(() => (copied.value = false), 2000)
   } catch {
-    toast(t('commerce.success.copyFailed', { id }), { type: 'info' })
+    // Denied, or no clipboard at all. The number is on the page either way.
   }
 }
-
-const h1 = ref<HTMLElement | null>(null)
 </script>
 
 <template>
   <div id="cs-root">
-    <div class="cs-page">
-      <!-- Signed out -->
-      <template v-if="!isLoggedIn">
-        <section class="page-hero co-hero" aria-labelledby="cs-h">
-          <div class="container">
-            <h1 id="cs-h" tabindex="-1">{{ t('commerce.success.pageTitle') }}</h1>
-            <p>{{ t('commerce.success.pageSub') }}</p>
-          </div>
-        </section>
-        <div class="container container--mid co-page">
-          <CoStateBox
-            icon="lock"
-            plain
-            :title="t('commerce.success.gateTitle')"
-            :text="t('commerce.success.gateText')"
-          >
-            <template #actions>
-              <button type="button" class="btn btn--primary" data-act="login">
-                <AppIcon name="log-in" />{{ t('common.login') }}
-              </button>
-              <button type="button" class="btn btn--secondary" data-act="register">
-                {{ t('common.register') }}
-              </button>
-            </template>
-          </CoStateBox>
-        </div>
-      </template>
+    <!-- Still finding out -->
+    <section v-if="loading" class="page-hero co-hero">
+      <div class="container">
+        <CoStateBox icon="hourglass" plain :title="t('commerce.success.loading')" />
+      </div>
+    </section>
 
-      <!-- No such order -->
-      <template v-else-if="!order">
-        <section class="page-hero co-hero" aria-labelledby="cs-h">
-          <div class="container">
-            <h1 id="cs-h" tabindex="-1">{{ t('commerce.success.pageTitle') }}</h1>
-          </div>
-        </section>
-        <div class="container container--mid co-page">
-          <CoStateBox
-            icon="receipt"
-            :title="
-              requestedId ? t('commerce.success.notFoundTitle') : t('commerce.success.noneTitle')
-            "
-            :text="
-              requestedId
-                ? t('commerce.success.notFoundText', { id: requestedId })
-                : t('commerce.success.noneText')
-            "
-          >
-            <template #actions>
-              <RouterLink class="btn btn--primary" :to="path('/courses')">
-                <AppIcon name="book-open" />{{ t('commerce.cart.browseCourses') }}
-              </RouterLink>
-              <RouterLink
-                v-if="requestedId"
-                class="btn btn--secondary"
-                :to="path('/account/orders')"
-              >
-                <AppIcon name="history" />{{ t('commerce.success.orderHistory') }}
-              </RouterLink>
-              <RouterLink v-else class="btn btn--secondary" :to="path('/cart')">
-                <AppIcon name="cart" />{{ t('commerce.success.backToCart') }}
-              </RouterLink>
-            </template>
-          </CoStateBox>
-        </div>
-      </template>
-
-      <template v-else>
-        <!-- Something went wrong: a page of its own, not a red success page -->
-        <section
-          v-if="isProblem"
-          class="cs-hero cs-hero--problem"
-          aria-labelledby="cs-h"
+    <!-- Signed out: an order belongs to an account -->
+    <section v-else-if="!isLoggedIn" class="page-hero co-hero" aria-labelledby="cs-h">
+      <div class="container">
+        <h1 class="sr-only" id="cs-h">{{ t('commerce.success.pageTitle') }}</h1>
+        <CoStateBox
+          icon="lock"
+          :title="t('commerce.success.gateTitle')"
+          :text="t('commerce.success.gateText')"
         >
-          <div class="container cs-anim">
-            <div
-              class="cs-icon"
-              :class="order.status === 'failed' ? 'cs-icon--failed' : 'cs-icon--cancelled'"
-              aria-hidden="true"
-            >
-              <AppIcon :name="order.status === 'failed' ? 'x-circle' : 'ban'" />
-            </div>
-            <p class="eyebrow cs-eyebrow">
+          <template #actions>
+            <button type="button" class="btn btn--primary" @click="openAuth({ step: 'login' })">
+              <AppIcon name="log-in" />{{ t('common.login') }}
+            </button>
+          </template>
+        </CoStateBox>
+      </div>
+    </section>
+
+    <!-- Could not load it -->
+    <section v-else-if="loadError" class="page-hero co-hero" aria-labelledby="cs-h">
+      <div class="container">
+        <h1 class="sr-only" id="cs-h">{{ t('commerce.success.pageTitle') }}</h1>
+        <CoStateBox icon="wifi-off" :title="t('commerce.success.loadFailed')" :text="loadError">
+          <template #actions>
+            <button type="button" class="btn btn--primary" data-retry="order" @click="load()">
+              <AppIcon name="refresh" />{{ t('catalog.retry') }}
+            </button>
+          </template>
+        </CoStateBox>
+      </div>
+    </section>
+
+    <!-- No such order, or not this account's -->
+    <section v-else-if="notFound || !order" class="page-hero co-hero" aria-labelledby="cs-h">
+      <div class="container">
+        <h1 class="sr-only" id="cs-h">{{ t('commerce.success.pageTitle') }}</h1>
+        <CoStateBox
+          icon="search"
+          :title="t('commerce.success.notFoundTitle')"
+          :text="
+            orderNo
+              ? t('commerce.success.notFoundText', { id: orderNo })
+              : t('commerce.success.noneText')
+          "
+        >
+          <template #actions>
+            <RouterLink class="btn btn--primary" :to="path('/account/orders')">
+              <AppIcon name="receipt" />{{ t('commerce.success.orderHistoryShort') }}
+            </RouterLink>
+            <RouterLink class="btn btn--secondary" :to="path('/courses')">
+              <AppIcon name="book-open" />{{ t('commerce.cart.browseCourses') }}
+            </RouterLink>
+          </template>
+        </CoStateBox>
+      </div>
+    </section>
+
+    <template v-else>
+      <!-- Something went wrong: a page of its own, not a red success page -->
+      <section v-if="isProblem" class="page-hero co-hero" aria-labelledby="cs-h">
+        <div class="container">
+          <div class="state-box state-box--error" role="alert">
+            <div class="state-ico"><AppIcon name="x-circle" /></div>
+            <h1 id="cs-h">
               {{
-                order.status === 'failed'
-                  ? t('commerce.success.failedEyebrow')
-                  : t('commerce.success.cancelledEyebrow')
-              }}
-            </p>
-            <h1 id="cs-h" ref="h1" tabindex="-1">
-              {{
-                order.status === 'failed'
-                  ? t('commerce.success.failedTitle')
-                  : t('commerce.success.cancelledTitle')
+                status === 'cancelled'
+                  ? t('commerce.success.cancelledTitle')
+                  : t('commerce.success.failedTitle')
               }}
             </h1>
-            <p class="lead">
+            <p>
               {{
-                order.status === 'failed'
-                  ? t('commerce.success.failedLead', { id: order.id })
-                  : t('commerce.success.cancelledLead', { id: order.id })
+                status === 'cancelled'
+                  ? t('commerce.success.cancelledLead', { id: order.orderNo })
+                  : t('commerce.success.failedLead', { id: order.orderNo })
               }}
             </p>
-
-            <div>
-              <span class="cs-ref"
-                >{{ t('commerce.success.orderLabel') }} <b>{{ order.id }}</b
-                ><button
-                  type="button"
-                  class="icon-btn icon-btn--ghost"
-                  :data-copy="order.id"
-                  :aria-label="t('commerce.success.copyAria', { id: order.id })"
-                  @click="copyOrderId"
-                >
-                  <AppIcon name="copy" /></button
-              ></span>
-            </div>
-
-            <div v-if="found.latest" class="cs-latest">
-              <div class="notice notice--info" role="status">
-                <AppIcon name="info" />
-                <div class="notice-body">
-                  <b>{{ t('commerce.success.latestTitle') }}</b>
-                  <span>
-                    <i18n-t keypath="commerce.success.latestText">
-                      <template #link>
-                        <RouterLink class="link" :to="path('/account/orders')">{{
-                          t('commerce.success.orderHistoryShort')
-                        }}</RouterLink>
-                      </template>
-                    </i18n-t>
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div class="cs-ctas">
-              <RouterLink
-                v-if="buyable.length"
-                class="btn btn--primary btn--lg"
-                :to="{ path: path('/checkout'), query: { items: buyable.join(',') } }"
-              >
-                <AppIcon name="refresh" />{{
-                  order.status === 'failed'
-                    ? t('commerce.success.retryFailed')
-                    : t('commerce.success.retryCancelled')
-                }}
+            <div class="state-actions">
+              <RouterLink class="btn btn--primary" :to="retryHref">
+                <AppIcon name="refresh" />{{ t('commerce.success.retryCancelled') }}
               </RouterLink>
-              <RouterLink
-                class="btn btn--lg"
-                :class="buyable.length ? 'btn--secondary' : 'btn--primary'"
-                :to="path('/cart')"
-              >
-                <AppIcon name="cart" />{{ t('commerce.success.backToCart') }}
+              <RouterLink class="btn btn--secondary" :to="path('/account/orders')">
+                <AppIcon name="receipt" />{{ t('commerce.success.orderHistoryShort') }}
               </RouterLink>
             </div>
-
-            <p v-if="!buyable.length" class="text-sm text-muted mt-16 mb-0">
-              {{ t('commerce.success.nothingToPay') }}
-            </p>
-
-            <RouterLink class="link cs-history" :to="path('/account/orders')">{{
-              t('commerce.success.orderHistory')
-            }}</RouterLink>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <!-- Paid, or claimed for free -->
-        <section v-else class="cs-hero" aria-labelledby="cs-h">
-          <div class="container cs-anim">
-            <CoSteps :current="4" all-done />
-            <div class="cs-icon" aria-hidden="true">
-              <AppIcon :name="isFree ? 'gift' : 'check-circle'" />
-            </div>
-            <p class="eyebrow eyebrow--cyan cs-eyebrow">
-              {{
-                isFree
+      <!-- Paid for, or waiting to be -->
+      <section v-else class="cs-hero" aria-labelledby="cs-h">
+        <div class="container cs-anim">
+          <CoSteps :current="4" :all-done="settled" />
+          <div class="cs-icon" aria-hidden="true">
+            <AppIcon :name="isPending ? 'hourglass' : isFree ? 'gift' : 'check-circle'" />
+          </div>
+          <p class="eyebrow eyebrow--cyan cs-eyebrow">
+            {{
+              isPending
+                ? t('commerce.success.pendingEyebrow')
+                : isFree
                   ? t('commerce.success.freeEyebrow')
                   : t('commerce.success.successEyebrow')
-              }}
-            </p>
-            <h1 id="cs-h" ref="h1" tabindex="-1">
-              {{ isFree ? t('commerce.success.freeTitle') : t('commerce.success.successTitle') }}
-            </h1>
-            <p class="lead">
-              {{ isFree ? t('commerce.success.freeLead') : t('commerce.success.successLead') }}
-            </p>
+            }}
+          </p>
+          <h1 id="cs-h" tabindex="-1">
+            {{
+              isPending
+                ? t('commerce.success.pendingTitle')
+                : isFree
+                  ? t('commerce.success.freeTitle')
+                  : t('commerce.success.successTitle')
+            }}
+          </h1>
+          <p class="lead">
+            {{
+              isPending
+                ? t('commerce.success.pendingLead')
+                : isFree
+                  ? t('commerce.success.freeLead')
+                  : t('commerce.success.successLead')
+            }}
+          </p>
 
-            <div>
-              <span class="cs-ref"
-                >{{ t('commerce.success.orderLabel') }} <b>{{ order.id }}</b
-                ><button
-                  type="button"
-                  class="icon-btn icon-btn--ghost"
-                  :data-copy="order.id"
-                  :aria-label="t('commerce.success.copyAria', { id: order.id })"
-                  @click="copyOrderId"
-                >
-                  <AppIcon name="copy" /></button
-              ></span>
-            </div>
-
-            <div v-if="renewedCourses.length" class="notice notice--info" role="status">
-              <AppIcon name="refresh" />
-              <div class="notice-body">
-                <b>{{ t('commerce.success.renewNoticeTitle') }}</b>
-                <span>
-                  <template v-for="(r, i) in renewedCourses" :key="r.title">
-                    <br v-if="i" />{{
-                      t('commerce.success.renewNoticeItem', { title: r.title, pct: `${r.pct}%` })
-                    }}
-                  </template>
-                </span>
-              </div>
-            </div>
-
-            <div v-if="found.latest" class="cs-latest">
-              <div class="notice notice--info" role="status">
-                <AppIcon name="info" />
-                <div class="notice-body">
-                  <b>{{ t('commerce.success.latestTitle') }}</b>
-                  <span>
-                    <i18n-t keypath="commerce.success.latestText">
-                      <template #link>
-                        <RouterLink class="link" :to="path('/account/orders')">{{
-                          t('commerce.success.orderHistoryShort')
-                        }}</RouterLink>
-                      </template>
-                    </i18n-t>
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div class="cs-ctas">
-              <a v-if="heroLearn" class="btn btn--primary btn--lg" :href="heroLearn.href">
-                <AppIcon name="play" />{{ heroLearn.label }}
-              </a>
-              <RouterLink
-                class="btn btn--lg"
-                :class="heroLearn ? 'btn--secondary' : 'btn--primary'"
-                :to="path('/account/learning')"
+          <div>
+            <span class="cs-ref"
+              >{{ t('commerce.success.orderLabel') }} <b>{{ order.orderNo }}</b
+              ><button
+                type="button"
+                class="icon-btn icon-btn--ghost"
+                :data-copy="order.orderNo"
+                :aria-label="t('commerce.success.copyAria', { id: order.orderNo })"
+                @click="copyOrderNo"
               >
-                <AppIcon name="book-open" />{{ t('commerce.success.myCourses') }}
-              </RouterLink>
-            </div>
-
-            <RouterLink class="link cs-history" :to="path('/account/orders')">{{
-              t('commerce.success.orderHistory')
-            }}</RouterLink>
+                <AppIcon :name="copied ? 'check' : 'copy'" /></button
+            ></span>
           </div>
-        </section>
 
-        <div class="container">
-          <div class="cs-grid cs-anim">
-            <!-- What was ordered -->
-            <section class="cs-card" aria-labelledby="cs-d-h">
-              <h2 id="cs-d-h">
-                <AppIcon name="receipt" />{{ t('commerce.success.detailsHeading') }}
-              </h2>
-              <dl class="kv cs-kv">
-                <dt>{{ t('commerce.success.orderNo') }}</dt>
-                <dd><b class="tabular">{{ order.id }}</b></dd>
-                <dt>{{ t('commerce.success.dateTime') }}</dt>
-                <dd>{{ dateTime(order.at) }}</dd>
-                <dt>{{ t('commerce.success.method') }}</dt>
-                <dd>
-                  <AppIcon :name="METHOD_ICON[order.method] ?? 'credit-card'" :size="16" />{{
-                    t(`commerce.success.method${order.method === 'qr' ? 'Qr' : order.method === 'card' ? 'Card' : 'Free'}`)
-                  }}
-                </dd>
-                <dt>{{ t('commerce.success.status') }}</dt>
-                <dd>
-                  <span class="badge" :class="`badge--${STATUS[order.status]?.badge}`">
-                    <AppIcon :name="STATUS[order.status]?.icon ?? 'info'" />{{
-                      t(`commerce.success.status${order.status.charAt(0).toUpperCase()}${order.status.slice(1)}`)
-                    }}
-                  </span>
-                </dd>
-                <template v-if="order.buyer?.name">
-                  <dt>{{ t('commerce.success.buyer') }}</dt>
-                  <dd>{{ order.buyer.name }}{{ order.buyer.email ? ` · ${order.buyer.email}` : '' }}</dd>
-                </template>
-              </dl>
+          <div class="cs-ctas">
+            <RouterLink
+              v-if="settled && firstCourseHref"
+              class="btn btn--primary btn--lg"
+              :to="firstCourseHref"
+            >
+              <AppIcon name="play" />{{ t('commerce.success.start') }}
+            </RouterLink>
+            <RouterLink
+              class="btn btn--lg"
+              :class="settled && firstCourseHref ? 'btn--secondary' : 'btn--primary'"
+              :to="path('/account/learning')"
+            >
+              <AppIcon name="book-open" />{{ t('commerce.success.myCourses') }}
+            </RouterLink>
+          </div>
 
-              <h3>{{ t('commerce.success.itemsHeading', { n: lines.length }) }}</h3>
-              <ul class="cs-items" role="list">
-                <li v-for="l in lines" :key="l.cid" class="cs-item">
-                  <a class="cs-item-media" :href="l.href" tabindex="-1" aria-hidden="true">
-                    <CourseImage
-                      :image="l.image"
-                      alt=""
-                      :width="224"
-                      :height="126"
-                      :art-icon="l.artIcon"
-                      :art-palette="l.artPalette"
-                    />
-                  </a>
+          <RouterLink class="link cs-history" :to="path('/account/orders')">{{
+            t('commerce.success.orderHistory')
+          }}</RouterLink>
+        </div>
+      </section>
+
+      <div class="container">
+        <div class="cs-grid cs-anim">
+          <!-- What was ordered -->
+          <section class="cs-card" aria-labelledby="cs-d-h">
+            <h2 id="cs-d-h">
+              <AppIcon name="receipt" />{{ t('commerce.success.detailsHeading') }}
+            </h2>
+            <dl class="kv cs-kv">
+              <dt>{{ t('commerce.success.orderNo') }}</dt>
+              <dd><b class="tabular">{{ order.orderNo }}</b></dd>
+              <dt>{{ t('commerce.success.dateTime') }}</dt>
+              <dd>{{ dateTime(order.paidAt ?? order.createdAt) }}</dd>
+              <dt>{{ t('commerce.success.method') }}</dt>
+              <dd>
+                <AppIcon :name="METHOD_ICON[order.paymentMethod ?? 'free'] ?? 'credit-card'" :size="16" />{{
+                  order.total === 0
+                    ? t('commerce.success.methodFree')
+                    : order.paymentMethod === 'promptpay'
+                      ? t('commerce.success.methodQr')
+                      : t('commerce.success.methodCard')
+                }}
+              </dd>
+              <dt>{{ t('commerce.success.status') }}</dt>
+              <dd>
+                <span
+                  class="badge"
+                  :class="settled ? 'badge--done' : isProblem ? 'badge--failed' : 'badge--info'"
+                  >{{ t(`commerce.success.state${status}`) }}</span
+                >
+              </dd>
+            </dl>
+
+            <h3 class="cs-items-h">
+              {{ t('commerce.success.itemsHeading', { n: lines.length }) }}
+            </h3>
+            <ul class="cs-items" role="list">
+              <li v-for="l in lines" :key="l.id" class="cs-item">
+                <span class="cs-item-media">
+                  <CourseImage
+                    :image="l.image"
+                    alt=""
+                    :width="224"
+                    :height="126"
+                    :art-icon="l.artIcon"
+                    :art-palette="l.artPalette"
+                  />
+                </span>
+                <div>
+                  <h4 class="cs-item-title">
+                    <RouterLink v-if="l.href" :to="l.href">{{ l.title }}</RouterLink>
+                    <template v-else>{{ l.title }}</template>
+                  </h4>
+                  <div class="cs-item-meta">
+                    <span v-if="l.category">{{ l.category }}</span>
+                    <span v-if="settled"><AppIcon name="calendar" />{{ l.access }}</span>
+                  </div>
+                </div>
+                <span class="cs-item-price">
+                  <s v-if="l.disc">{{ baht(l.price) }}</s>
+                  <strong>{{ l.net === 0 ? t('commerce.free') : baht(l.net) }}</strong>
+                </span>
+              </li>
+            </ul>
+
+            <CoTotalsRows
+              :count="lines.length"
+              :subtotal="toBaht(order.subtotal)"
+              :course-disc="toBaht(order.courseDiscount)"
+              :order-disc="toBaht(order.orderDiscount)"
+              :total-disc="totalDiscount"
+              :vat="toBaht(order.vatAmount)"
+              vat-inclusive
+            />
+            <div class="co-total">
+              <span class="co-total-lbl">{{ t('commerce.success.paidTotal') }}</span>
+              <strong class="co-total-amt">{{
+                order.total === 0 ? t('commerce.free') : baht(toBaht(order.total))
+              }}</strong>
+            </div>
+          </section>
+
+          <!-- What happens now -->
+          <section class="cs-card" aria-labelledby="cs-n-h">
+            <h2 id="cs-n-h"><AppIcon name="info" />{{ t('commerce.success.nextHeading') }}</h2>
+
+            <ol class="cs-next" role="list">
+              <li v-if="isPending">
+                <span class="cs-next-ico"><AppIcon name="hourglass" /></span>
+                <div>
+                  <b>{{ t('commerce.success.pendingStepTitle') }}</b>
+                  <p>{{ t('commerce.success.pendingStepText') }}</p>
+                </div>
+              </li>
+              <template v-else>
+                <li>
+                  <span class="cs-next-ico"><AppIcon name="play-circle" /></span>
                   <div>
-                    <h4 class="cs-item-title"><a :href="l.href">{{ l.title }}</a></h4>
-                    <div class="cs-item-meta">
-                      <span>{{ l.category }}</span>
-                      <span v-if="l.until"><AppIcon name="calendar" />{{ l.until }}</span>
-                      <span v-if="l.coupon" class="cs-coupon">
-                        <AppIcon name="tag" />{{ l.coupon }} {{ l.couponOff }}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="cs-item-price">
-                    <s v-if="l.disc"
-                      ><span class="sr-only">{{ t('commerce.success.priceBeforeDiscount') }}</span
-                      >{{ baht(l.price) }}</s
-                    >
-                    <strong>{{ l.net === 0 ? t('commerce.free') : baht(l.net) }}</strong>
-                  </div>
-                  <div v-if="l.renewedPct !== null || l.learn" class="cs-item-extra">
-                    <div v-if="l.renewedPct !== null" class="cs-renew">
-                      <b><AppIcon name="refresh" />{{ t('commerce.success.renewedTitle') }}</b>
-                      {{ t('commerce.success.renewedText', { pct: `${l.renewedPct}%` }) }}
-                      <AppProgress
-                        :value="l.renewedPct"
-                        :label="t('commerce.success.renewedProgressLabel', { title: l.title })"
-                      />
-                    </div>
-                    <a v-if="l.learn" class="link-arrow" :href="l.learn.href">
-                      {{ l.learn.label }}<AppIcon name="arrow-right" />
-                    </a>
+                    <b>{{ t('commerce.success.next1Title') }}</b>
+                    <p>{{ t('commerce.success.next1Text') }}</p>
                   </div>
                 </li>
-              </ul>
-
-              <div class="cs-totals">
-                <CoTotalsRows
-                  :count="lines.length"
-                  :subtotal="order.subtotal"
-                  :course-disc="order.courseDisc"
-                  :order-disc="order.orderDisc"
-                  :order-coupon-code="order.orderCoupon"
-                />
-                <div class="co-total">
-                  <span class="co-total-lbl"
-                    >{{
-                      settled
-                        ? t('commerce.success.netTotalPaid')
-                        : t('commerce.success.netTotalDue')
-                    }}<small>{{
-                      isFree
-                        ? t('commerce.success.freeNoCharge')
-                        : settled
-                          ? t('commerce.success.paidVia', {
-                              method: t(
-                                `commerce.success.method${order.method === 'qr' ? 'Qr' : 'Card'}`,
-                              ),
-                            })
-                          : t('commerce.success.notCharged')
-                    }}</small></span
-                  >
-                  <strong class="co-total-amt">{{ baht(order.net) }}</strong>
-                </div>
-              </div>
-            </section>
-
-            <div class="cs-side">
-              <!-- Problem: how to get help -->
-              <section v-if="isProblem" class="cs-card" aria-labelledby="cs-hp-h">
-                <h2 id="cs-hp-h">
-                  <AppIcon name="help-circle" />{{ t('commerce.success.helpHeading') }}
-                </h2>
-                <ul class="cs-next" role="list">
-                  <li>
-                    <AppIcon name="shield-check" />
-                    <span
-                      ><b>{{ t('commerce.success.help1Title') }}</b
-                      >{{
-                        t('commerce.success.help1Text', {
-                          id: order.id,
-                          reason:
-                            order.status === 'failed'
-                              ? t('commerce.success.statusFailed')
-                              : t('commerce.success.reasonCancelled'),
-                        })
-                      }}</span
-                    >
-                  </li>
-                  <li>
-                    <AppIcon name="refresh" />
-                    <span
-                      ><b>{{ t('commerce.success.help2Title') }}</b
-                      >{{ t('commerce.success.help2Text') }}</span
-                    >
-                  </li>
-                  <li>
-                    <AppIcon name="mail" />
-                    <span
-                      ><b>{{ t('commerce.success.help3Title') }}</b>
-                      <i18n-t keypath="commerce.success.help3Text">
-                        <template #link>
-                          <a class="link" href="#contact" data-proto-link>{{
-                            t('commerce.success.contactUs')
-                          }}</a>
-                        </template>
-                      </i18n-t>
-                    </span>
-                  </li>
-                </ul>
-              </section>
-
-              <!-- Settled: the receipt, then what to do next -->
-              <template v-else>
-                <section class="cs-card" aria-labelledby="cs-r-h">
-                  <h2 id="cs-r-h">
-                    <AppIcon name="file-text" />{{ t('commerce.success.receiptHeading') }}
-                  </h2>
-                  <div class="cs-receipt">
-                    <span class="cs-receipt-ico" aria-hidden="true">
-                      <AppIcon :name="receipt?.icon ?? 'receipt'" />
-                    </span>
-                    <div>
-                      <template v-if="receipt?.kind === 'none'">
-                        <b>{{ t('commerce.success.receiptFreeTitle') }}</b>
-                        <p>{{ t('commerce.success.receiptFreeText') }}</p>
-                      </template>
-                      <template v-else-if="receipt?.kind === 'full'">
-                        <b>{{
-                          t('commerce.success.receiptFullTitle', { type: receipt.type })
-                        }}</b>
-                        <p>
-                          <template v-if="receipt.email">
-                            <i18n-t keypath="commerce.success.receiptFullText">
-                              <template #email>
-                                <span class="cs-mail">{{ receipt.email }}</span>
-                              </template>
-                            </i18n-t>
-                          </template>
-                          <template v-else>{{
-                            t('commerce.success.receiptFullTextNoEmail')
-                          }}</template>
-                        </p>
-                        <span class="badge badge--pending">
-                          <AppIcon name="hourglass" />{{
-                            t('commerce.success.receiptProcessing')
-                          }}
-                        </span>
-                        <dl class="kv">
-                          <dt>{{ t('commerce.success.receiptIssuedTo') }}</dt>
-                          <dd>{{ receipt.name }}</dd>
-                          <template v-if="receipt.corporate">
-                            <dt>{{ t('commerce.success.receiptPremises') }}</dt>
-                            <dd>{{ receipt.branch }}</dd>
-                          </template>
-                        </dl>
-                      </template>
-                      <template v-else>
-                        <b>{{ t('commerce.success.receiptEtitle') }}</b>
-                        <p>
-                          <i18n-t keypath="commerce.success.receiptEtext">
-                            <template #link>
-                              <RouterLink class="link" :to="path('/account/orders')">{{
-                                t('commerce.success.orderHistoryShort')
-                              }}</RouterLink>
-                            </template>
-                          </i18n-t>
-                          <template v-if="receipt?.email">{{
-                            t('commerce.success.receiptEcopy', { email: receipt.email })
-                          }}</template>
-                        </p>
-                        <span class="badge badge--done">
-                          <AppIcon name="check" />{{ t('commerce.success.receiptReady') }}
-                        </span>
-                      </template>
-                    </div>
+                <li v-if="order.total > 0">
+                  <span class="cs-next-ico"><AppIcon name="mail" /></span>
+                  <div>
+                    <b>{{ t('commerce.success.next2Title') }}</b>
+                    <p>{{ t('commerce.success.next2Text') }}</p>
                   </div>
-                </section>
-
-                <section class="cs-card" aria-labelledby="cs-n-h">
-                  <h2 id="cs-n-h">
-                    <AppIcon name="route" />{{ t('commerce.success.nextHeading') }}
-                  </h2>
-                  <ul class="cs-next" role="list">
-                    <li>
-                      <AppIcon name="play-circle" />
-                      <span
-                        ><b>{{ t('commerce.success.next1Title') }}</b
-                        >{{ t('commerce.success.next1Text') }}</span
-                      >
-                    </li>
-                    <li>
-                      <AppIcon name="history" />
-                      <span
-                        ><b>{{ t('commerce.success.next2Title') }}</b
-                        >{{ t('commerce.success.next2Text') }}</span
-                      >
-                    </li>
-                    <li>
-                      <AppIcon name="award" />
-                      <span
-                        ><b>{{ t('commerce.success.next3Title') }}</b
-                        >{{ t('commerce.success.next3Text') }}</span
-                      >
-                    </li>
-                  </ul>
-                </section>
+                </li>
+                <li>
+                  <span class="cs-next-ico"><AppIcon name="receipt" /></span>
+                  <div>
+                    <b>{{ t('commerce.success.next3Title') }}</b>
+                    <p>{{ t('commerce.success.next3Text') }}</p>
+                  </div>
+                </li>
               </template>
-            </div>
-          </div>
-        </div>
-      </template>
-    </div>
-  </div>
+            </ol>
 
-  <CommerceToasts />
+            <p class="cs-help">
+              <AppIcon name="help-circle" />
+              <span>{{ t('commerce.success.helpText', { id: order.orderNo }) }}</span>
+            </p>
+          </section>
+        </div>
+      </div>
+    </template>
+  </div>
 </template>

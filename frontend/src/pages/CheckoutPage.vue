@@ -1,190 +1,228 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import CourseImage from '@/components/course/CourseImage.vue'
 import CheckoutItem from '@/components/commerce/CheckoutItem.vue'
 import CoCouponApplied from '@/components/commerce/CoCouponApplied.vue'
-import CoCouponChip from '@/components/commerce/CoCouponChip.vue'
 import CoField from '@/components/commerce/CoField.vue'
 import CoStateBox from '@/components/commerce/CoStateBox.vue'
 import CoSteps from '@/components/commerce/CoSteps.vue'
 import CoTaxPanel from '@/components/commerce/CoTaxPanel.vue'
 import CoTotalsRows from '@/components/commerce/CoTotalsRows.vue'
-import CommerceConfirm from '@/components/commerce/CommerceConfirm.vue'
-import CommerceToasts from '@/components/commerce/CommerceToasts.vue'
+import type { CheckoutErrors, CheckoutForm, Coupon } from '@/components/commerce/types'
+import { ApiError, api } from '@/lib/api'
+import type { InvoiceRequest, PublicCategory } from '@/lib/api'
 import {
-  assetUrl,
-  call,
-  confirm,
-  protoHref,
-  toast,
-  useBottomBar,
-  useStoreTick,
-} from '@/components/commerce/useCommerce'
-import type {
-  CheckoutErrors,
-  CheckoutForm,
-  CommerceCategory,
-  CommerceCourse,
-  Coupon,
-  Order,
-  Totals,
-} from '@/components/commerce/types'
-import { data } from '@/vendor'
+  asContentLocale,
+  mapQuote,
+  quoteLines,
+  resolveItems,
+  type CheckoutTotals,
+  type ResolvedItem,
+  type Unavailable,
+} from '@/lib/checkout'
 import { num } from '@/lib/format'
+import { openAuth } from '@/components/auth/authChannel'
+import { useAuthStore } from '@/stores/auth'
 
 /**
- * The order page — step two of four, and five numbered sections: what you are
- * buying, who you are, whether you need a tax invoice, how you will pay, and
- * the total.
+ * The order page: what is being bought, who is buying it, whether they want a
+ * tax invoice, how they will pay, and the total.
  *
- * Nothing here works out its own prices. `store.computeTotals` takes the lines,
- * the per-course coupons and the order coupon and returns every figure on the
- * page, and `store.validateCourseCoupon` / `validateOrderCoupon` decide whether
- * a code is allowed — including the reason it is not, which is shown verbatim
- * rather than reworded into something vaguer.
+ * Nothing here works out a price. Every amount on this page came from
+ * `/checkout/quote`, which prices the basket from the database — the only
+ * thing stopping somebody paying ฿1 for a ฿1,900 course is that the browser
+ * never does the sum. A coupon is "applied" by asking for a new quote with the
+ * code in it; whether it is real, live, and allowed on these courses is the
+ * server's answer, not a guess made here.
  *
- * An order that comes to nothing — all free courses, or coupons that cover the
- * whole amount — drops the tax section entirely and renumbers the rest, since
- * there is no payment to document.
- *
- * Which courses are on the order is settled once, by `resolveItems`: the
- * `items` query if there is one, then a saved draft, then whatever is selected
- * in the cart. Anything in that list that cannot be bought is lifted out into
- * a notice at the top rather than silently dropped, so a total that is smaller
- * than expected always has a reason attached.
+ * The basket comes from the address. `?items=` carries slugs, because that is
+ * what a course card links by and what somebody would paste to a friend.
  */
 const route = useRoute()
 const router = useRouter()
-const { t } = useI18n()
+const { t, locale: uiLocale } = useI18n()
+const auth = useAuthStore()
 
-const tick = useStoreTick()
-/**
- * The checkout draft is saved without an event — `store.setCheckoutDraft`
- * writes the bucket and stops there — so the store's own tick never moves when
- * a coupon is applied. This ref is what the coupon computeds watch instead.
- */
-const draftTick = ref(0)
-function writeDraft(patch: Record<string, unknown>) {
-  call('setCheckoutDraft', patch)
-  draftTick.value += 1
-}
 const locale = computed(() => String(route.params.locale ?? 'th'))
 const path = (p: string) => `/${locale.value}${p}`
-const baht = (n: number) => t('commerce.baht', { n: num(n) })
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const isLoggedIn = computed(() => auth.isLoggedIn)
 
-const isLoggedIn = computed(() => {
-  void tick.value
-  return Boolean(call<boolean>('isLoggedIn'))
-})
+/* ---------------- the basket ---------------- */
 
-/* ---------------- which courses are on this order ---------------- */
+const items = ref<ResolvedItem[]>([])
+const unavailable = ref<Unavailable[]>([])
+const categories = ref<PublicCategory[]>([])
+const totals = ref<CheckoutTotals | null>(null)
+const loading = ref(true)
+const loadError = ref('')
 
-type Block = 'package' | 'owned' | 'ended' | 'missing'
+/** A code typed against one course, and against the whole order. */
+const courseCoupons = ref<Record<string, string>>({})
+const orderCouponCode = ref<string | null>(null)
 
-const resolved = computed(() => {
-  void tick.value
-  void draftTick.value
-  const param = String(route.query.items ?? '')
-  const draft = isLoggedIn.value
-    ? call<{ items?: string[] } | null>('checkoutDraft')
-    : null
+const couponDrafts = ref<Record<string, string>>({})
+const couponErrors = ref<Record<string, string>>({})
+const couponBusy = ref<string | null>(null)
+const orderCouponDraft = ref('')
+const orderCouponError = ref('')
+const orderCouponBusy = ref(false)
 
-  let raw: string[]
-  let source: 'param' | 'draft' | 'cart'
-  if (param) {
-    raw = param.split(',').map((s) => s.trim()).filter(Boolean)
-    source = 'param'
-  } else if (draft?.items?.length) {
-    raw = draft.items.slice()
-    source = 'draft'
-  } else {
-    raw = call<string[]>('selectedCart')
-    source = 'cart'
+function refsFromUrl(): string[] {
+  const raw = route.query.items
+  const value = Array.isArray(raw) ? raw.join(',') : String(raw ?? '')
+  return value.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 20)
+}
+
+let seq = 0
+
+/** Re-prices the basket. Every amount on the page comes from this. */
+async function reprice(): Promise<void> {
+  if (!items.value.length) {
+    totals.value = null
+    return
   }
+  const mine = seq
+  const lines = quoteLines(
+    items.value.map((i) => ({
+      ...i,
+      couponCode: courseCoupons.value[i.course.slug],
+    })),
+  )
+  const { data } = await api.quote(lines, orderCouponCode.value ?? undefined)
+  if (mine !== seq) return
+  totals.value = mapQuote(
+    data,
+    items.value.map((i) => ({ ...i, couponCode: courseCoupons.value[i.course.slug] })),
+    { locale: locale.value, t, categories: categories.value },
+  )
+}
 
-  const items: string[] = []
-  const removed: { cid: string; block: Block }[] = []
-  raw.forEach((cid) => {
-    if (items.includes(cid) || removed.some((r) => r.cid === cid)) return
-    const block = call<CommerceCourse | null>('course', cid)
-      ? (call<Block | null>('cartBlock', cid) ?? null)
-      : 'missing'
-    if (block) removed.push({ cid, block })
-    else items.push(cid)
-  })
-  return { items, removed, source }
+async function load(): Promise<void> {
+  const mine = ++seq
+  loading.value = true
+  loadError.value = ''
+  try {
+    const [resolved, cats] = await Promise.all([
+      resolveItems(refsFromUrl()),
+      api.categories().catch(() => ({ data: [] as PublicCategory[] })),
+    ])
+    if (mine !== seq) return
+    items.value = resolved.items
+    unavailable.value = resolved.unavailable
+    categories.value = cats.data
+
+    // The quote needs a session; a signed-out visitor sees the gate and a
+    // preview of what is waiting behind it instead.
+    if (isLoggedIn.value) await reprice()
+  } catch (err) {
+    if (mine !== seq) return
+    loadError.value = err instanceof ApiError ? err.message : t('commerce.checkout.loadFailed')
+  } finally {
+    if (mine === seq) loading.value = false
+  }
+}
+
+onMounted(load)
+watch(() => route.fullPath, () => {
+  if (route.name === 'checkout') void load()
+})
+// Signing in from the gate turns the preview into a real order.
+watch(isLoggedIn, (now) => {
+  if (now) void load()
 })
 
-/** Lines taken out of the order by hand, which the draft also forgets. */
-const dropped = ref<string[]>([])
-const items = computed(() => resolved.value.items.filter((cid) => !dropped.value.includes(cid)))
+/* ---------------- coupons ---------------- */
 
-const courseCoupons = computed<Record<string, string>>(() => {
-  void tick.value
-  void draftTick.value
-  const draft = call<{ courseCoupons?: Record<string, string> } | null>('checkoutDraft')
-  const out: Record<string, string> = {}
-  Object.entries(draft?.courseCoupons ?? {}).forEach(([cid, code]) => {
-    if (items.value.includes(cid) && code) out[cid] = code
-  })
-  return out
-})
+/**
+ * Applying a coupon is asking for a new quote with it.
+ *
+ * If the server prices the line no lower, the code did not apply — to these
+ * courses, at this moment, or at all — and saying so is more honest than
+ * repeating the server's reason, which it does not give one of.
+ */
+async function applyCourseCoupon(slug: string, code: string): Promise<void> {
+  const clean = code.trim().toUpperCase()
+  if (!clean) return
+  couponBusy.value = slug
+  couponErrors.value = { ...couponErrors.value, [slug]: '' }
 
-const orderCouponCode = computed(() => {
-  void tick.value
-  void draftTick.value
-  return call<{ orderCoupon?: string | null } | null>('checkoutDraft')?.orderCoupon ?? null
-})
-
-const totals = computed(() =>
-  call<Totals>('computeTotals', items.value, courseCoupons.value, orderCouponCode.value),
-)
-
-/** An order with nothing left to pay skips the invoice and the card details. */
-const isFree = computed(
-  () => totals.value.lines.length > 0 && (totals.value.allFree || totals.value.net === 0),
-)
-
-/** Keeps the saved draft in step, so coupons survive a reload. */
-watch(
-  [items, isLoggedIn],
-  () => {
-    if (!isLoggedIn.value || !items.value.length) return
-    const draft = call<{ items?: string[] } | null>('checkoutDraft')
-    const source = resolved.value.source === 'param' ? 'buy-now' : 'cart'
-    if (!draft) {
-      writeDraft({
-        items: items.value.slice(),
-        source,
-        courseCoupons: {},
-        orderCoupon: null,
-      })
-      return
+  const before = totals.value?.lines.find((l) => l.slug === slug)?.net ?? 0
+  const previous = courseCoupons.value[slug]
+  courseCoupons.value = { ...courseCoupons.value, [slug]: clean }
+  try {
+    await reprice()
+    const after = totals.value?.lines.find((l) => l.slug === slug)?.net ?? 0
+    if (after >= before) {
+      courseCoupons.value = { ...courseCoupons.value, [slug]: previous ?? '' }
+      if (!previous) delete courseCoupons.value[slug]
+      await reprice()
+      couponErrors.value = { ...couponErrors.value, [slug]: t('commerce.coupon.notValid') }
+    } else {
+      couponDrafts.value = { ...couponDrafts.value, [slug]: '' }
     }
-    const existing = draft.items ?? []
-    const subset = items.value.every((cid) => existing.includes(cid))
-    if (!subset) {
-      writeDraft({
-        items: items.value.slice(),
-        source,
-        courseCoupons: {},
-        orderCoupon: null,
-      })
-    } else if (existing.length !== items.value.length) {
-      writeDraft({ items: items.value.slice(), courseCoupons: courseCoupons.value })
+  } catch (err) {
+    courseCoupons.value = { ...courseCoupons.value, [slug]: previous ?? '' }
+    couponErrors.value = {
+      ...couponErrors.value,
+      [slug]: err instanceof ApiError ? err.message : t('commerce.coupon.notValid'),
     }
-  },
-  { immediate: true },
-)
+  } finally {
+    couponBusy.value = null
+  }
+}
+
+async function removeCourseCoupon(slug: string): Promise<void> {
+  const next = { ...courseCoupons.value }
+  delete next[slug]
+  courseCoupons.value = next
+  await reprice()
+}
+
+async function applyOrderCoupon(code: string): Promise<void> {
+  const clean = code.trim().toUpperCase()
+  if (!clean) return
+  orderCouponBusy.value = true
+  orderCouponError.value = ''
+  const before = totals.value?.orderDiscount ?? 0
+  const previous = orderCouponCode.value
+  orderCouponCode.value = clean
+  try {
+    await reprice()
+    if ((totals.value?.orderDiscount ?? 0) <= before) {
+      orderCouponCode.value = previous
+      await reprice()
+      orderCouponError.value = t('commerce.coupon.notValid')
+    } else {
+      orderCouponDraft.value = ''
+    }
+  } catch (err) {
+    orderCouponCode.value = previous
+    orderCouponError.value = err instanceof ApiError ? err.message : t('commerce.coupon.notValid')
+  } finally {
+    orderCouponBusy.value = false
+  }
+}
+
+async function removeOrderCoupon(): Promise<void> {
+  orderCouponCode.value = null
+  await reprice()
+}
+
+/* ---------------- removing a line ---------------- */
+
+/** Rewrites the address, because the address is what the basket is. */
+async function removeItem(slug: string): Promise<void> {
+  const left = items.value.filter((i) => i.course.slug !== slug).map((i) => i.course.slug)
+  await router.replace({ query: { ...route.query, items: left.join(',') } })
+}
 
 /* ---------------- the form ---------------- */
 
-const form = reactive<CheckoutForm>({
+const form = ref<CheckoutForm>({
   buyerName: '',
   buyerEmail: '',
   buyerPhone: '',
@@ -201,294 +239,228 @@ const form = reactive<CheckoutForm>({
   method: 'qr',
   terms: false,
 })
-
 const errors = ref<CheckoutErrors>({})
-const ctaMessage = ref('')
 
-/** Prefilled from the profile; edits here apply to this order only. */
+/**
+ * A field stops being wrong the moment it is changed.
+ *
+ * Validation runs on submit, so without this the message sits under a box
+ * somebody has already fixed — which reads as "still wrong" and sends them
+ * looking for a second mistake that is not there.
+ */
+let checkedValues: Partial<CheckoutForm> = {}
+
 watch(
-  isLoggedIn,
-  (loggedIn) => {
-    if (!loggedIn) return
-    const p = call<Record<string, string>>('profile') ?? {}
-    form.buyerName = `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim()
-    form.buyerEmail = p.email ?? ''
-    form.buyerPhone = p.phone ?? ''
-    form.taxFirstName = p.firstName ?? ''
-    form.taxLastName = p.lastName ?? ''
+  form,
+  (now) => {
+    if (!Object.keys(errors.value).length) return
+    const cleared = { ...errors.value }
+    // Compared against a snapshot taken when the form was checked. A deep
+    // watcher hands back the same object twice, so the old value has to be
+    // kept separately or nothing ever looks changed.
+    for (const key of Object.keys(cleared) as (keyof CheckoutForm)[]) {
+      if (now[key] !== checkedValues[key]) delete cleared[key]
+    }
+    errors.value = cleared
+  },
+  { deep: true },
+)
+
+/** The buyer's own details, so nobody retypes what the account already knows. */
+watch(
+  () => auth.user,
+  (user) => {
+    if (!user) return
+    form.value.buyerName ||= `${user.firstName} ${user.lastName}`.trim()
+    form.value.buyerEmail ||= user.email
   },
   { immediate: true },
 )
 
-function validate(): CheckoutErrors {
+const isFree = computed(() => totals.value?.allFree ?? false)
+
+function validate(): boolean {
   const e: CheckoutErrors = {}
-  if (!form.buyerName.trim()) e.buyerName = t('commerce.error.name')
+  const f = form.value
 
-  const email = form.buyerEmail.trim()
-  if (!email) e.buyerEmail = t('commerce.error.emailRequired')
-  else if (!EMAIL.test(email)) e.buyerEmail = t('commerce.error.emailFormat')
+  if (!f.buyerName.trim()) e.buyerName = t('commerce.checkout.errName')
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.buyerEmail.trim())) {
+    e.buyerEmail = t('commerce.checkout.errEmail')
+  }
+  if (f.buyerPhone.replace(/\D/g, '').length < 9) e.buyerPhone = t('commerce.checkout.errPhone')
 
-  const phone = form.buyerPhone.trim()
-  const digits = phone.replace(/[\s\-().]/g, '')
-  const digitCount = (digits.match(/\d/g) ?? []).length
-  if (!phone) e.buyerPhone = t('commerce.error.phoneRequired')
-  else if (!/^\+?[0-9Xx]{9,12}$/.test(digits) || digitCount < 4)
-    e.buyerPhone = t('commerce.error.phoneFormat')
-
-  if (!isFree.value && form.taxWant === 'yes') {
-    if (form.taxType === 'corporate') {
-      if (!form.company.trim()) e.company = t('commerce.error.company')
-      if (!form.taxId) e.taxId = t('commerce.error.taxIdRequired')
-      else if (!/^\d{13}$/.test(form.taxId)) e.taxId = t('commerce.error.taxIdFormat')
-      if (form.branchType === 'branch' && !/^\d{5}$/.test(form.branchNo))
-        e.branchNo = t('commerce.error.branchNo')
+  if (!isFree.value && f.taxWant === 'yes') {
+    if (f.taxType === 'corporate') {
+      if (!f.company.trim()) e.company = t('commerce.tax.errCompany')
+      if (f.branchType === 'branch' && !f.branchNo.trim()) {
+        e.branchNo = t('commerce.tax.errBranch')
+      }
     } else {
-      if (!form.taxFirstName.trim()) e.taxFirstName = t('commerce.error.firstName')
-      if (!form.taxLastName.trim()) e.taxLastName = t('commerce.error.lastName')
-      if (!form.idCard) e.idCard = t('commerce.error.idCardRequired')
-      else if (!/^\d{13}$/.test(form.idCard)) e.idCard = t('commerce.error.idCardFormat')
+      if (!f.taxFirstName.trim()) e.taxFirstName = t('commerce.tax.errFirstName')
+      if (!f.taxLastName.trim()) e.taxLastName = t('commerce.tax.errLastName')
     }
-    const address = form.address.trim()
-    if (!address) e.address = t('commerce.error.addressRequired')
-    else if (address.length < 10) e.address = t('commerce.error.addressShort')
-  }
-  return e
-}
-
-/* ---------------- coupons ---------------- */
-
-const couponDrafts = ref<Record<string, string>>({})
-const couponErrors = ref<Record<string, string>>({})
-const couponBusy = ref<string | null>(null)
-const orderCouponDraft = ref('')
-const orderCouponError = ref('')
-const orderCouponBusy = ref(false)
-
-const orderCouponHints = computed(() =>
-  (data.coupons as unknown as Coupon[]).filter((c) => c.scope === 'order'),
-)
-const baseAfterCourse = computed(() => totals.value.subtotal - totals.value.courseDisc)
-
-/** A short pause before the verdict: the prototype's, and it reads as the
- *  code being checked rather than the page flickering. */
-const pause = () => new Promise((r) => setTimeout(r, 420))
-
-async function applyCourseCoupon(cid: string, raw: string) {
-  const code = String(raw ?? '').trim().toUpperCase()
-  couponDrafts.value = { ...couponDrafts.value, [cid]: code }
-  if (code) {
-    couponBusy.value = cid
-    await pause()
-    couponBusy.value = null
+    // Shape only. Whether the check digit adds up is the server's answer, and
+    // it gives a better one than a copy of the rule kept in two places.
+    if (f.taxId.replace(/\D/g, '').length !== 13) e.taxId = t('commerce.tax.errTaxId')
+    if (!f.address.trim()) e.address = t('commerce.tax.errAddress')
   }
 
-  const result = call<{ ok: boolean; error?: string; coupon?: Coupon }>(
-    'validateCourseCoupon',
-    code,
-    cid,
-  )
-  if (!result.ok) {
-    couponErrors.value = { ...couponErrors.value, [cid]: result.error ?? '' }
-    return
+  if (!f.terms) e.terms = t('commerce.checkout.errTerms')
+
+  errors.value = e
+  checkedValues = { ...form.value }
+  return Object.keys(e).length === 0
+}
+
+/** The invoice block, in the shape the API takes. */
+function invoicePayload(): InvoiceRequest | null {
+  const f = form.value
+  if (isFree.value || f.taxWant !== 'yes') return null
+  return {
+    type: f.taxType,
+    name:
+      f.taxType === 'corporate'
+        ? f.company.trim()
+        : `${f.taxFirstName.trim()} ${f.taxLastName.trim()}`.trim(),
+    taxId: (f.taxType === 'corporate' ? f.taxId : f.idCard || f.taxId).replace(/\D/g, ''),
+    branchType: f.taxType === 'corporate' ? f.branchType : null,
+    // The head office is 00000 by law, not a number somebody chooses.
+    branchCode:
+      f.taxType === 'corporate' ? (f.branchType === 'head' ? '00000' : f.branchNo.trim()) : null,
+    address: f.address.trim(),
   }
-  writeDraft({
-    courseCoupons: { ...courseCoupons.value, [cid]: result.coupon!.code },
-  })
-  const { [cid]: _dropped, ...rest } = couponErrors.value
-  couponErrors.value = rest
-  couponDrafts.value = { ...couponDrafts.value, [cid]: '' }
-  const line = totals.value.lines.find((l) => l.cid === cid)
-  toast(
-    t('commerce.coupon.applied', {
-      code: result.coupon!.code,
-      amount: baht(line?.disc ?? 0),
-    }),
-    { type: 'success' },
-  )
 }
 
-function removeCourseCoupon(cid: string) {
-  const next = { ...courseCoupons.value }
-  const code = next[cid]
-  delete next[cid]
-  writeDraft({ courseCoupons: next })
-  toast(t('commerce.coupon.removed', { code: code ?? '' }), { type: 'info' })
-}
-
-async function applyOrderCoupon(raw: string) {
-  const code = String(raw ?? '').trim().toUpperCase()
-  orderCouponDraft.value = code
-  if (code) {
-    orderCouponBusy.value = true
-    await pause()
-    orderCouponBusy.value = false
-  }
-
-  const result = call<{ ok: boolean; error?: string; coupon?: Coupon }>(
-    'validateOrderCoupon',
-    code,
-    baseAfterCourse.value,
-  )
-  if (!result.ok) {
-    orderCouponError.value = result.error ?? ''
-    return
-  }
-  writeDraft({ orderCoupon: result.coupon!.code })
-  orderCouponError.value = ''
-  orderCouponDraft.value = ''
-  toast(
-    t('commerce.coupon.applied', {
-      code: result.coupon!.code,
-      amount: baht(totals.value.orderDisc),
-    }),
-    { type: 'success' },
-  )
-}
-
-function removeOrderCoupon() {
-  const code = orderCouponCode.value
-  writeDraft({ orderCoupon: null })
-  toast(t('commerce.coupon.removed', { code: code ?? '' }), { type: 'info' })
-}
-
-/* ---------------- removing a line ---------------- */
-
-async function removeItem(cid: string) {
-  if (items.value.length < 2) return
-  const course = call<CommerceCourse>('course', cid)
-  const ok = await confirm({
-    title: t('commerce.checkout.removeTitle'),
-    message: call<boolean>('inCart', cid)
-      ? t('commerce.checkout.removeMessageInCart', { title: course.title })
-      : t('commerce.checkout.removeMessage', { title: course.title }),
-    confirmLabel: t('commerce.checkout.removeConfirm'),
-    cancelLabel: t('commerce.cancel'),
-    danger: true,
-  })
-  if (!ok) return
-
-  dropped.value = [...dropped.value, cid]
-  const next = { ...courseCoupons.value }
-  delete next[cid]
-  writeDraft({ items: items.value.slice(), courseCoupons: next })
-  if (resolved.value.source === 'param') {
-    void router.replace({ path: path('/checkout'), query: { items: items.value.join(',') } })
-  }
-  toast(t('commerce.checkout.removed', { title: course.title }), { type: 'info' })
-}
-
-/* ---------------- confirming ---------------- */
+/* ---------------- placing it ---------------- */
 
 const placing = ref(false)
+const ctaMessage = ref('')
 
-async function confirmOrder() {
-  if (placing.value || !isLoggedIn.value || !items.value.length) return
+async function confirmOrder(): Promise<void> {
+  if (placing.value || !items.value.length) return
+  ctaMessage.value = ''
 
-  const found = validate()
-  if (!form.terms) found.terms = t('commerce.error.terms')
-  errors.value = found
-
-  const count = Object.keys(found).length
-  if (count) {
-    ctaMessage.value = t('commerce.error.summary', { n: count })
+  if (!validate()) {
+    ctaMessage.value = t('commerce.checkout.errSomething')
+    // Take them to what is wrong rather than leaving them to find it.
+    document
+      .querySelector('.field.has-error, .co-block [aria-invalid="true"]')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     return
   }
-  ctaMessage.value = ''
+
   placing.value = true
-  await new Promise((r) => setTimeout(r, isFree.value ? 700 : 550))
+  try {
+    const { data } = await api.checkout({
+      lines: quoteLines(
+        items.value.map((i) => ({ ...i, couponCode: courseCoupons.value[i.course.slug] })),
+      ),
+      ...(orderCouponCode.value ? { couponCode: orderCouponCode.value } : {}),
+      method: form.value.method === 'qr' ? 'promptpay' : 'card',
+      invoice: invoicePayload(),
+    })
 
-  const tax = !isFree.value && form.taxWant === 'yes'
-    ? form.taxType === 'corporate'
-      ? {
-          want: true,
-          type: 'corporate',
-          company: form.company.trim(),
-          taxId: form.taxId,
-          branchType: form.branchType,
-          branchNo: form.branchType === 'branch' ? form.branchNo : '00000',
-          address: form.address.trim(),
-        }
-      : {
-          want: true,
-          type: 'individual',
-          firstName: form.taxFirstName.trim(),
-          lastName: form.taxLastName.trim(),
-          idCard: form.idCard,
-          address: form.address.trim(),
-        }
-    : { want: false }
+    if (data.url) {
+      // Stripe's own page takes the card details, so none of them ever touch
+      // this site. A full navigation, not a router push.
+      window.location.href = data.url
+      return
+    }
 
-  const order = call<Order | null>('placeOrder', {
-    items: items.value.slice(),
-    courseCoupons: courseCoupons.value,
-    orderCoupon: totals.value.orderCoupon ? totals.value.orderCoupon.code : null,
-    buyer: {
-      name: form.buyerName.trim(),
-      email: form.buyerEmail.trim(),
-      phone: form.buyerPhone.trim(),
-    },
-    tax,
-    method: isFree.value ? 'free' : form.method,
-    status: isFree.value ? 'free' : 'paid',
-  })
-
-  placing.value = false
-  if (!order) return
-  void router.push({ path: path('/checkout/success'), query: { order: order.id } })
+    await router.push({ path: path('/checkout/success'), query: { order: data.order.orderNo } })
+  } catch (err) {
+    ctaMessage.value = err instanceof ApiError ? err.message : t('commerce.checkout.errPlacing')
+    placing.value = false
+  }
 }
 
-/* ---------------- copy that depends on the order ---------------- */
+/* ---------------- what the page says ---------------- */
+
+const baht = (n: number) => t('commerce.baht', { n: num(n) })
 
 const subtitle = computed(() => {
-  if (!isLoggedIn.value) return t('commerce.checkout.subtitleGuest')
+  if (loading.value) return t('commerce.checkout.loading')
   if (!items.value.length) return t('commerce.checkout.subtitleEmpty')
-  return isFree.value
-    ? t('commerce.checkout.subtitleFree', { n: items.value.length })
-    : t('commerce.checkout.subtitle', { n: items.value.length })
+  if (!isLoggedIn.value) return t('commerce.checkout.subtitleGuest')
+  if (isFree.value) return t('commerce.checkout.subtitleFree', { n: items.value.length })
+  return t('commerce.checkout.subtitle', { n: items.value.length })
 })
 
 const itemsSub = computed(() =>
-  `${t('commerce.courseCount', { n: items.value.length })} · ${
-    totals.value.allFree
-      ? t('commerce.checkout.itemsSubFree')
-      : t('commerce.checkout.itemsSubCoupon')
-  }`,
+  isFree.value
+    ? t('commerce.checkout.itemsSubFree')
+    : t('commerce.checkout.itemsSub', { n: items.value.length }),
 )
 
+/** Why each unavailable thing is not on the order, in its own words. */
 const removedList = computed(() =>
-  resolved.value.removed.map((r) => ({
-    cid: r.cid,
-    title: call<CommerceCourse | null>('course', r.cid)?.title ?? r.cid,
-    reason: t(`commerce.block.${r.block}`),
+  unavailable.value.map((u) => ({
+    cid: u.ref,
+    title: u.title ?? u.ref,
+    reason:
+      u.reason === 'missing'
+        ? t('commerce.checkout.reasonMissing')
+        : t('commerce.checkout.reasonNotForSale'),
   })),
 )
 
-/** The guest preview: what the order would be, without the form. */
-const previewLines = computed(() => {
-  if (isLoggedIn.value) return []
-  return call<Totals>('computeTotals', items.value, {}, null).lines.map((l) => {
-    const category = call<CommerceCategory | null>('category', l.course.category)
-    const img = l.course.image
-    return {
-      cid: l.cid,
-      title: l.course.title,
-      meta: category?.name ?? '',
-      price: l.course.isFree ? t('commerce.free') : baht(l.price),
-      image: img ? { ...img, src: assetUrl(img.src) ?? undefined } : null,
-      artIcon: category?.icon,
-      artPalette: category?.palette,
-    }
-  })
-})
-const previewTotal = computed(
-  () => call<Totals>('computeTotals', items.value, {}, null).subtotal,
+/** Courses the buyer already has. The server refuses the order, so it is said
+ *  here rather than discovered at the end. */
+const ownedLines = computed(() => totals.value?.lines.filter((l) => l.owned) ?? [])
+
+/** The guest preview: what is waiting behind the gate, with no prices — a
+ *  quote needs a session, and inventing one here would be the browser doing
+ *  the sum. */
+const previewLines = computed(() =>
+  items.value.map((i) => ({
+    cid: i.course.slug,
+    title: i.course.title,
+    meta: i.course.categoryName ?? '',
+    image: i.course.thumbnailPath
+      ? { src: `/api/v1/media/${i.course.thumbnailPath}`, alt: '' }
+      : null,
+    artIcon: 'book-open',
+    artPalette: (i.course.categoryId ?? 0) % 6,
+    price: i.course.price === 0 ? t('commerce.free') : baht(i.course.price / 100),
+  })),
 )
 
-/* ---------------- mobile summary bar ---------------- */
+const baseAfterCourse = computed(() =>
+  totals.value ? totals.value.subtotal - totals.value.courseDiscount : 0,
+)
 
-const bar = ref<HTMLElement | null>(null)
+const totalDiscount = computed(() =>
+  totals.value ? totals.value.courseDiscount + totals.value.orderDiscount : 0,
+)
+
+/** The order coupon as `CoCouponApplied` draws it. The amount is the server's. */
+const orderCoupon = computed<Coupon | null>(() =>
+  orderCouponCode.value && (totals.value?.orderDiscount ?? 0) > 0
+    ? {
+        code: orderCouponCode.value,
+        name: orderCouponCode.value,
+        scope: 'order',
+        type: 'amount',
+        value: totals.value?.orderDiscount ?? 0,
+        condition: '',
+        expires: '',
+      }
+    : null,
+)
+
 const barOpen = ref(false)
-useBottomBar('page-checkout', bar, () => isLoggedIn.value && items.value.length > 0)
+
+function goSignIn(): void {
+  openAuth({ step: 'login', reason: t('auth.reasonCheckout') })
+}
+
+function goRegister(): void {
+  openAuth({ step: 'register', reason: t('auth.reasonCheckout') })
+}
+
+/** Unused for now, but the locale the reader is in decides which language the
+ *  receipt is written in once that is wired up. */
+void asContentLocale(uiLocale.value)
 </script>
 
 <template>
@@ -513,8 +485,30 @@ useBottomBar('page-checkout', bar, () => isLoggedIn.value && items.value.length 
 
   <section class="co-page" :aria-label="t('commerce.checkout.regionLabel')">
     <div class="container" id="co-root">
+      <!-- Still finding out what is in the basket -->
+      <CoStateBox
+        v-if="loading"
+        icon="hourglass"
+        plain
+        :title="t('commerce.checkout.loading')"
+      />
+
+      <!-- Could not find out -->
+      <CoStateBox
+        v-else-if="loadError"
+        icon="wifi-off"
+        :title="t('commerce.checkout.loadFailed')"
+        :text="loadError"
+      >
+        <template #actions>
+          <button type="button" class="btn btn--primary" data-retry="checkout" @click="load()">
+            <AppIcon name="refresh" />{{ t('catalog.retry') }}
+          </button>
+        </template>
+      </CoStateBox>
+
       <!-- Signed out: the gate, with what is waiting behind it -->
-      <div v-if="!isLoggedIn" class="co-guest">
+      <div v-else-if="!isLoggedIn" class="co-guest">
         <h2 class="sr-only">{{ t('commerce.checkout.gateHeading') }}</h2>
         <CoStateBox
           icon="lock"
@@ -523,10 +517,10 @@ useBottomBar('page-checkout', bar, () => isLoggedIn.value && items.value.length 
           :text="t('commerce.checkout.gateText')"
         >
           <template #actions>
-            <button type="button" class="btn btn--primary" data-act="login">
+            <button type="button" class="btn btn--primary" data-act="login" @click="goSignIn">
               <AppIcon name="log-in" />{{ t('common.login') }}
             </button>
-            <button type="button" class="btn btn--secondary" data-act="register">
+            <button type="button" class="btn btn--secondary" data-act="register" @click="goRegister">
               {{ t('common.register') }}
             </button>
           </template>
@@ -552,20 +546,7 @@ useBottomBar('page-checkout', bar, () => isLoggedIn.value && items.value.length 
               <span class="co-mini-price">{{ l.price }}</span>
             </li>
           </ul>
-          <div class="co-preview-foot">
-            <span
-              >{{ t('commerce.cart.total') }}
-              <span class="text-sm text-muted">{{
-                t('commerce.checkout.previewTotalNote')
-              }}</span></span
-            >
-            <strong>{{ baht(previewTotal) }}</strong>
-          </div>
-          <p class="text-sm mt-16 mb-0">
-            <RouterLink class="link" :to="path('/cart')">{{
-              t('commerce.checkout.editCart')
-            }}</RouterLink>
-          </p>
+          <p class="text-sm mt-16 mb-0">{{ t('commerce.checkout.previewTotalNote') }}</p>
         </section>
       </div>
 
@@ -607,9 +588,9 @@ useBottomBar('page-checkout', bar, () => isLoggedIn.value && items.value.length 
       </template>
 
       <!-- The order itself -->
-      <template v-else>
-        <div v-if="removedList.length" class="co-flash">
-          <div class="notice notice--warning" role="status">
+      <template v-else-if="totals">
+        <div v-if="removedList.length || ownedLines.length" class="co-flash">
+          <div v-if="removedList.length" class="notice notice--warning" role="status">
             <AppIcon name="alert-triangle" />
             <div class="notice-body">
               <b>{{ t('commerce.checkout.removedTitle', { n: removedList.length }) }}</b>
@@ -618,6 +599,16 @@ useBottomBar('page-checkout', bar, () => isLoggedIn.value && items.value.length 
                 <li v-for="r in removedList" :key="r.cid">
                   <b>{{ r.title }}</b> — {{ r.reason }}
                 </li>
+              </ul>
+            </div>
+          </div>
+          <div v-if="ownedLines.length" class="notice notice--info" role="status">
+            <AppIcon name="info" />
+            <div class="notice-body">
+              <b>{{ t('commerce.checkout.ownedTitle', { n: ownedLines.length }) }}</b>
+              <span>{{ t('commerce.checkout.ownedText') }}</span>
+              <ul>
+                <li v-for="l in ownedLines" :key="l.slug"><b>{{ l.view.title }}</b></li>
               </ul>
             </div>
           </div>
@@ -637,13 +628,15 @@ useBottomBar('page-checkout', bar, () => isLoggedIn.value && items.value.length 
               <div class="co-items" id="co-items">
                 <CheckoutItem
                   v-for="line in totals.lines"
-                  :key="line.cid"
+                  :key="line.slug"
                   :line="line"
-                  :count="items.length"
-                  :draft-code="couponDrafts[line.cid] ?? ''"
-                  :error="couponErrors[line.cid]"
-                  :busy="couponBusy === line.cid"
-                  @update:draft-code="(code) => (couponDrafts = { ...couponDrafts, [line.cid]: code })"
+                  :count="totals.lines.length"
+                  :draft-code="couponDrafts[line.slug] ?? ''"
+                  :error="couponErrors[line.slug]"
+                  :busy="couponBusy === line.slug"
+                  @update:draft-code="
+                    (code) => (couponDrafts = { ...couponDrafts, [line.slug]: code })
+                  "
                   @apply="applyCourseCoupon"
                   @remove-coupon="removeCourseCoupon"
                   @remove="removeItem"
@@ -809,19 +802,14 @@ useBottomBar('page-checkout', bar, () => isLoggedIn.value && items.value.length 
 
               <div id="co-ocp-slot">
                 <template v-if="!isFree">
-                  <div v-if="totals.orderCoupon || totals.orderCouponInvalid" class="co-ocp">
+                  <div v-if="orderCoupon" class="co-ocp">
                     <CoCouponApplied
-                      :coupon="
-                        (totals.orderCoupon ?? call('coupon', orderCouponCode ?? '')) as Coupon
-                      "
+                      :coupon="orderCoupon"
                       scope="order"
-                      :applies-to="
-                        t('commerce.coupon.wholeOrder', { n: items.length })
-                      "
+                      :applies-to="t('commerce.coupon.wholeOrder', { n: totals.lines.length })"
                       :base="baseAfterCourse"
-                      :disc="totals.orderDisc"
-                      :net="baseAfterCourse - totals.orderDisc"
-                      :invalid="totals.orderCouponInvalid"
+                      :disc="totals.orderDiscount"
+                      :net="baseAfterCourse - totals.orderDiscount"
                       @remove="removeOrderCoupon"
                     />
                   </div>
@@ -854,7 +842,6 @@ useBottomBar('page-checkout', bar, () => isLoggedIn.value && items.value.length 
                           type="submit"
                           class="btn btn--secondary"
                           :class="{ 'is-loading': orderCouponBusy }"
-                          data-fk="ocp-go"
                           :disabled="orderCouponBusy"
                         >
                           <template v-if="orderCouponBusy">
@@ -869,42 +856,38 @@ useBottomBar('page-checkout', bar, () => isLoggedIn.value && items.value.length 
                         <AppIcon name="alert-circle" /><span>{{ orderCouponError }}</span>
                       </p>
                     </div>
-                    <div class="co-cp-hints">
-                      <span>{{ t('commerce.checkout.orderCouponHints') }}</span>
-                      <CoCouponChip
-                        v-for="h in orderCouponHints"
-                        :key="h.code"
-                        :coupon="h"
-                        :dim="!!h.minSubtotal && baseAfterCourse < h.minSubtotal"
-                        @apply="(code) => applyOrderCoupon(code)"
-                      />
-                    </div>
                   </form>
                 </template>
               </div>
 
               <div id="co-rows-slot">
                 <CoTotalsRows
-                  :count="items.length"
+                  :count="totals.lines.length"
                   :subtotal="totals.subtotal"
-                  :course-disc="totals.courseDisc"
-                  :order-disc="totals.orderDisc"
-                  :order-coupon-code="totals.orderCoupon?.code ?? null"
-                  :total-disc="totals.totalDisc"
+                  :course-disc="totals.courseDiscount"
+                  :order-disc="totals.orderDiscount"
+                  :order-coupon-code="orderCoupon?.code ?? null"
+                  :total-disc="totalDiscount"
+                  :vat="totals.vatAmount"
+                  :vat-inclusive="totals.vatInclusive"
                 />
                 <div class="co-total">
                   <span class="co-total-lbl"
                     >{{ t('commerce.checkout.netTotal')
                     }}<small v-if="isFree">{{ t('commerce.checkout.netFree') }}</small
-                    ><small v-else-if="totals.totalDisc">{{
-                      t('commerce.checkout.netSaved', { amount: baht(totals.totalDisc) })
+                    ><small v-else-if="totalDiscount">{{
+                      t('commerce.checkout.netSaved', { amount: baht(totalDiscount) })
                     }}</small></span
                   >
-                  <strong class="co-total-amt">{{ baht(totals.net) }}</strong>
+                  <strong class="co-total-amt">{{ baht(totals.total) }}</strong>
                 </div>
               </div>
 
-              <div class="field co-terms" id="co-terms-wrap" :class="{ 'has-error': !!errors.terms }">
+              <div
+                class="field co-terms"
+                id="co-terms-wrap"
+                :class="{ 'has-error': !!errors.terms }"
+              >
                 <label class="check">
                   <input
                     type="checkbox"
@@ -918,13 +901,9 @@ useBottomBar('page-checkout', bar, () => isLoggedIn.value && items.value.length 
                     <span class="req" aria-hidden="true">*</span></span
                   >
                 </label>
-                <a
-                  class="link"
-                  :href="path('/purchase-terms')"
-                  target="_blank"
-                  rel="noopener"
-                  >{{ t('commerce.checkout.termsLink') }}</a
-                >
+                <RouterLink class="link" :to="path('/purchase-terms')" target="_blank">{{
+                  t('commerce.checkout.termsLink')
+                }}</RouterLink>
                 <p v-if="errors.terms" class="field-error">
                   <AppIcon name="alert-circle" /><span>{{ errors.terms }}</span>
                 </p>
@@ -960,18 +939,24 @@ useBottomBar('page-checkout', bar, () => isLoggedIn.value && items.value.length 
 
               <ul class="co-trust" role="list" id="co-trust">
                 <template v-if="isFree">
-                  <li><AppIcon name="gift" /><span>{{ t('commerce.trust.freeForMembers') }}</span></li>
                   <li>
-                    <AppIcon name="play-circle" /><span>{{ t('commerce.trust.startAfterClaim') }}</span>
+                    <AppIcon name="gift" /><span>{{ t('commerce.trust.freeForMembers') }}</span>
+                  </li>
+                  <li>
+                    <AppIcon name="play-circle" /><span>{{
+                      t('commerce.trust.startAfterClaim')
+                    }}</span>
                   </li>
                 </template>
                 <template v-else>
                   <li>
-                    <AppIcon name="shield-check" /><span>{{ t('commerce.trust.simulated') }}</span>
+                    <AppIcon name="shield-check" /><span>{{ t('commerce.trust.secure') }}</span>
                   </li>
                   <li><AppIcon name="receipt" /><span>{{ t('commerce.trust.emailed') }}</span></li>
                   <li>
-                    <AppIcon name="play-circle" /><span>{{ t('commerce.trust.startAfterPay') }}</span>
+                    <AppIcon name="play-circle" /><span>{{
+                      t('commerce.trust.startAfterPay')
+                    }}</span>
                   </li>
                 </template>
               </ul>
@@ -982,11 +967,8 @@ useBottomBar('page-checkout', bar, () => isLoggedIn.value && items.value.length 
     </div>
   </section>
 
-  <p class="sr-only" id="co-live" aria-live="polite" />
-
   <div
-    v-if="isLoggedIn && items.length"
-    ref="bar"
+    v-if="isLoggedIn && totals && totals.lines.length"
     class="sticky-bar co-bar"
     id="co-bar"
     role="region"
@@ -995,12 +977,14 @@ useBottomBar('page-checkout', bar, () => isLoggedIn.value && items.value.length 
     <div class="co-bar-in">
       <div class="co-bar-detail" id="co-bar-detail" :hidden="!barOpen">
         <CoTotalsRows
-          :count="items.length"
+          :count="totals.lines.length"
           :subtotal="totals.subtotal"
-          :course-disc="totals.courseDisc"
-          :order-disc="totals.orderDisc"
-          :order-coupon-code="totals.orderCoupon?.code ?? null"
-          :total-disc="totals.totalDisc"
+          :course-disc="totals.courseDiscount"
+          :order-disc="totals.orderDiscount"
+          :order-coupon-code="orderCoupon?.code ?? null"
+          :total-disc="totalDiscount"
+          :vat="totals.vatAmount"
+          :vat-inclusive="totals.vatInclusive"
         />
       </div>
       <div class="co-bar-row">
@@ -1008,7 +992,6 @@ useBottomBar('page-checkout', bar, () => isLoggedIn.value && items.value.length 
           type="button"
           class="co-bar-sum"
           data-bar-toggle
-          data-fk="bar-toggle"
           :aria-expanded="barOpen"
           aria-controls="co-bar-detail"
           @click="barOpen = !barOpen"
@@ -1019,13 +1002,12 @@ useBottomBar('page-checkout', bar, () => isLoggedIn.value && items.value.length 
               >{{ barOpen ? t('commerce.hideDetail') : t('commerce.showDetail')
               }}<AppIcon name="chevron-up" /></b
           ></small>
-          <strong>{{ baht(totals.net) }}</strong>
+          <strong>{{ baht(totals.total) }}</strong>
         </button>
         <button
           type="button"
           class="btn btn--primary"
           data-confirm
-          data-fk="bar-cta"
           :disabled="placing"
           @click="confirmOrder"
         >
@@ -1037,7 +1019,4 @@ useBottomBar('page-checkout', bar, () => isLoggedIn.value && items.value.length 
       </div>
     </div>
   </div>
-
-  <CommerceConfirm />
-  <CommerceToasts />
 </template>

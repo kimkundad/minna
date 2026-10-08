@@ -227,6 +227,122 @@ export const api = {
     send<{ data: Record<string, PublicAd | null> }>(
       `/ads/public${queryString({ placements, locale })}`,
     ),
+
+  /* ---------------- buying ---------------- */
+
+  /**
+   * What a basket costs, without buying it.
+   *
+   * Every price, discount and total in the answer is worked out on the server.
+   * Nothing here sends an amount, and nothing here should ever add one up —
+   * the only thing stopping somebody paying ฿1 for a ฿1,900 course is that the
+   * sum is not done in the browser.
+   */
+  quote: (lines: QuoteLine[], couponCode?: string) =>
+    send<{ data: Quote }>('/checkout/quote', {
+      method: 'POST',
+      body: { lines, ...(couponCode ? { couponCode } : {}) },
+    }),
+
+  /**
+   * Starts a payment, and returns where to send the buyer.
+   *
+   * `url` is null when the basket came to nothing: a free order is granted
+   * outright rather than sent to a payment page for zero.
+   */
+  checkout: (input: CheckoutInput) =>
+    send<{ data: { order: PublicOrder; url: string | null } }>('/checkout', {
+      method: 'POST',
+      body: input,
+    }),
+
+  /** One of the buyer's own orders, by the number support would ask for. */
+  orderByNo: (orderNo: string) =>
+    send<{ data: PublicOrder }>(`/orders/by-no/${encodeURIComponent(orderNo)}`),
+}
+
+/* ---------------- buying ---------------- */
+
+export interface QuoteLine {
+  kind: 'course' | 'package'
+  id: number
+  /** A coupon that applies to this line only. */
+  couponCode?: string
+}
+
+/** Money is satang throughout, as it is in the database. */
+export interface QuotedLine {
+  kind: 'course' | 'package'
+  id: number
+  title: string
+  unitPrice: number
+  discount: number
+  couponId: number | null
+  accessType: 'lifetime' | 'limited'
+  accessDurationDays: number | null
+}
+
+export interface Quote {
+  lines: QuotedLine[]
+  subtotal: number
+  courseDiscount: number
+  orderDiscount: number
+  orderCouponId: number | null
+  vatAmount: number
+  /**
+   * Whether that VAT is already inside `total` or was added to it. The school
+   * sets which, and a summary that does not say reads as a charge added on
+   * where the price was tax-inclusive all along.
+   */
+  vatInclusive: boolean
+  total: number
+  currency: string
+  /** Course ids the buyer already has access to. Worth saying before they pay
+   *  twice for the same thing. */
+  alreadyOwned: number[]
+}
+
+export interface InvoiceRequest {
+  type: 'corporate' | 'individual'
+  name: string
+  taxId: string
+  branchType?: 'head' | 'branch' | null
+  branchCode?: string | null
+  address: string
+}
+
+export interface CheckoutInput {
+  lines: QuoteLine[]
+  couponCode?: string
+  method: 'card' | 'promptpay'
+  invoice?: InvoiceRequest | null
+}
+
+export interface PublicOrder {
+  id: number
+  orderNo: string
+  status: 'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded'
+  paymentMethod: 'card' | 'promptpay' | 'free' | null
+  subtotal: number
+  courseDiscount: number
+  orderDiscount: number
+  vatAmount: number
+  total: number
+  currency: string
+  paidAt: string | null
+  createdAt: string
+  items: {
+    id: number
+    courseId: number | null
+    packageId: number | null
+    /** Frozen at purchase time, so a later edit to the course never changes
+     *  what somebody bought or what their receipt says. */
+    titleSnapshot: string
+    unitPrice: number
+    discount: number
+    accessType: string
+    accessDurationDays: number | null
+  }[]
 }
 
 /* ---------------- advertising ---------------- */

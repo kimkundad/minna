@@ -19,6 +19,10 @@ const props = defineProps<{
   orderDisc: number
   orderCouponCode?: string | null
   totalDisc?: number
+  /** What the server worked out. Omitted where the order is free. */
+  vat?: number
+  /** Whether that VAT is already inside the total or was added to it. */
+  vatInclusive?: boolean
 }>()
 
 const { t } = useI18n()
@@ -45,6 +49,13 @@ const minus = (n: number) => (n ? `−${baht(n)}` : baht(0))
         }}<small v-if="props.orderCouponCode">{{ props.orderCouponCode }}</small></dt
       >
       <dd>{{ minus(props.orderDisc) }}</dd>
+    </div>
+    <div v-if="props.vat" class="is-sep" :class="{ 'is-zero': props.vatInclusive }">
+      <dt
+        >{{ t('commerce.totals.vat')
+        }}<small v-if="props.vatInclusive">{{ t('commerce.totals.vatIncluded') }}</small></dt
+      >
+      <dd>{{ props.vatInclusive ? baht(props.vat) : '+' + baht(props.vat) }}</dd>
     </div>
     <div v-if="props.totalDisc !== undefined" class="is-sep" :class="props.totalDisc ? 'is-disc' : 'is-zero'">
       <dt>{{ t('commerce.totals.allDiscounts') }}</dt>

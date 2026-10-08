@@ -1458,7 +1458,8 @@
       "emailed": "Receipts and tax invoices go to the buyer’s email",
       "startAfterPay": "Start studying as soon as payment succeeds",
       "freeForMembers": "Free for members, nothing to pay",
-      "startAfterClaim": "Start studying as soon as you confirm"
+      "startAfterClaim": "Start studying as soon as you confirm",
+      "secure": "Thanh toán trên trang của nhà cung cấp — thông tin thẻ không qua trang này"
     },
     "toast": {
       "close": "Dismiss notification"
@@ -1541,13 +1542,16 @@
       "use": "Apply",
       "checking": "Checking…",
       "applied": "Coupon {code} applied — {amount} off",
-      "removed": "Coupon {code} removed"
+      "removed": "Coupon {code} removed",
+      "notValid": "Mã này không áp dụng được. Kiểm tra lại mã và điều kiện."
     },
     "totals": {
       "courses": "Course prices",
       "courseCoupons": "Per-course coupons",
       "orderCoupon": "Order coupon",
-      "allDiscounts": "Total discount"
+      "allDiscounts": "Total discount",
+      "vat": "Thuế GTGT",
+      "vatIncluded": "đã gồm trong giá"
     },
     "checkout": {
       "title": "Your order",
@@ -1605,7 +1609,20 @@
       "emptyTitle": "Nothing to order",
       "emptyText": "Pick courses in your cart, or press “Buy this course” on a course page to start an order.",
       "emptyTextBlocked": "The courses you picked do not need buying, or are no longer on sale.",
-      "backToCart": "Back to your cart"
+      "backToCart": "Back to your cart",
+      "loading": "Đang kiểm tra đơn hàng…",
+      "loadFailed": "Không tải được đơn hàng",
+      "itemsSub": "Kiểm tra {n} khoá trước khi xác nhận",
+      "errName": "Vui lòng nhập họ tên",
+      "errEmail": "Vui lòng nhập email hợp lệ",
+      "errPhone": "Vui lòng nhập số điện thoại hợp lệ",
+      "errTerms": "Vui lòng đồng ý điều khoản mua hàng và chính sách hoàn tiền",
+      "errSomething": "Vẫn còn mục cần sửa — xem các ô được đánh dấu ở trên",
+      "errPlacing": "Không đặt được đơn hàng. Vui lòng thử lại.",
+      "reasonMissing": "không có khoá này",
+      "reasonNotForSale": "đã ngừng bán",
+      "ownedTitle": "Bạn đã có quyền học {n} khoá trong số này",
+      "ownedText": "Hãy bỏ khỏi đơn hàng, nếu không bạn sẽ trả tiền hai lần."
     },
     "tax": {
       "heading": "Receipt / full tax invoice",
@@ -1635,7 +1652,13 @@
       "branchCode": "Branch code",
       "headOfficeCode": "A head office is always branch code 00000",
       "address": "Billing address",
-      "addressPlaceholder": "House number, building, road, sub-district, district, province, postcode"
+      "addressPlaceholder": "House number, building, road, sub-district, district, province, postcode",
+      "errCompany": "Vui lòng nhập tên công ty",
+      "errBranch": "Vui lòng nhập mã chi nhánh",
+      "errFirstName": "Vui lòng nhập tên",
+      "errLastName": "Vui lòng nhập họ",
+      "errTaxId": "Mã số thuế gồm 13 chữ số",
+      "errAddress": "Vui lòng nhập địa chỉ xuất hoá đơn"
     },
     "pay": {
       "heading": "How you will pay",
@@ -1749,11 +1772,11 @@
       "receiptReady": "Ready to download",
       "nextHeading": "What happens next",
       "next1Title": "Start straight away",
-      "next1Text": "The course is in My courses now, on computer, tablet or phone.",
+      "next1Text": "Khoá bạn vừa mua đã mở — bắt đầu từ bài đầu tiên.",
       "next2Title": "Progress saves itself",
       "next2Text": "Come back to the lesson you left off at whenever you like.",
-      "next3Title": "Certificate and CE",
-      "next3Text": "Issued once you finish the lessons, pass the quiz and have your essay marked (CE where the course carries points).",
+      "next3Title": "Biên lai của bạn",
+      "next3Text": "Gửi tới email người mua, và lưu trong lịch sử đơn hàng.",
       "helpHeading": "Need a hand?",
       "help1Title": "Nothing was charged",
       "help1Text": "Order {id} {reason}, and we did not take any money from you.",
@@ -1761,7 +1784,22 @@
       "help2Text": "The courses you have not bought are still in your cart, or order again right away.",
       "help3Title": "Talk to us",
       "help3Text": "If payment keeps failing, {link} and quote your order number.",
-      "contactUs": "get in touch"
+      "contactUs": "get in touch",
+      "loading": "Đang tải đơn hàng…",
+      "loadFailed": "Không tải được đơn hàng",
+      "reasonFailed": "thanh toán chưa thành công",
+      "paidTotal": "Đã thanh toán",
+      "pendingEyebrow": "Chờ thanh toán",
+      "pendingTitle": "Đang chờ thanh toán của bạn",
+      "pendingLead": "Chúng tôi đã nhận đơn nhưng chưa nhận được tiền. Nếu bạn đã trả bằng QR, hệ thống sẽ cập nhật trong vài phút.",
+      "pendingStepTitle": "Đang kiểm tra thanh toán",
+      "pendingStepText": "Quyền học sẽ tự mở khi nhận được tiền, và chúng tôi sẽ gửi email cho bạn.",
+      "helpText": "Liên hệ với chúng tôi kèm mã đơn {id} nếu có vấn đề.",
+      "statepaid": "Đã thanh toán",
+      "statepending": "Chờ thanh toán",
+      "statefailed": "Thất bại",
+      "statecancelled": "Đã huỷ",
+      "staterefunded": "Đã hoàn tiền"
     }
   },
   "learning": {

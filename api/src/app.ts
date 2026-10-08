@@ -8,6 +8,7 @@ import authPlugin from './plugins/auth'
 import errorHandler from './plugins/error-handler'
 import auditRoutes from './modules/audit/audit.routes'
 import contentRoutes from './modules/content/content.routes'
+import cartRoutes from './modules/commerce/cart.routes'
 import heroRoutes from './modules/content/hero.routes'
 import adRoutes from './modules/content/ads.routes'
 import dashboardRoutes from './modules/dashboard/dashboard.routes'
@@ -79,6 +80,7 @@ export async function buildApp() {
   await app.register(invoiceRoutes, { prefix: '/api/v1' })
   await app.register(settingsRoutes, { prefix: '/api/v1' })
   await app.register(commerceRoutes, { prefix: '/api/v1' })
+  await app.register(cartRoutes, { prefix: '/api/v1' })
   // Its own registration, so its raw-body parser stays inside its own scope.
   await app.register(webhookRoutes, { prefix: '/api/v1' })
 

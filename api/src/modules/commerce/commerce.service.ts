@@ -55,6 +55,13 @@ export interface Quote {
   /** Which coupon gave `orderDiscount`, so the order can remember it. */
   orderCouponId: number | null
   vatAmount: number
+  /**
+   * Whether that VAT is already inside `total` or was added to it.
+   *
+   * The school sets which, and a summary that does not say reads as a charge
+   * added on where the price was tax-inclusive all along.
+   */
+  vatInclusive: boolean
   total: number
   currency: string
 }
@@ -181,9 +188,10 @@ export async function quote(
   }
 
   const payable = Math.max(0, subtotal - courseDiscount - orderDiscount)
-  const vatAmount = vatOf(payable, await getVatRules())
-
+  // One read, not two: the rate must not change between working out the tax
+  // and working out the total.
   const rules = await getVatRules()
+  const vatAmount = vatOf(payable, rules)
   // Inclusive VAT is already inside `payable`; exclusive is added to it.
   const total = rules.inclusive ? payable : payable + vatAmount
 
@@ -194,6 +202,7 @@ export async function quote(
     orderDiscount,
     orderCouponId,
     vatAmount,
+    vatInclusive: rules.inclusive,
     total,
     currency: 'THB',
   }

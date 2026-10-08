@@ -11,6 +11,7 @@ import {
   verifyWebhook,
 } from '../../lib/stripe'
 import * as authService from '../auth/auth.service'
+import * as cart from './cart.service'
 import * as service from './commerce.service'
 import * as invoices from './invoices.service'
 
@@ -126,6 +127,11 @@ export default async function commerceRoutes(app: FastifyInstance) {
       // document number and it needs something to allocate one for.
       if (body.invoice) await invoices.request(order.id, body.invoice)
       await service.markPaid(order.id, { providerRef: null })
+    await cart.clearPurchased(
+      req.user.sub,
+      body.lines.filter((l) => l.kind === 'course').map((l) => l.id),
+    )
+
       audit(req, {
         action: 'order.paid',
         subjectType: 'order',
@@ -164,6 +170,11 @@ export default async function commerceRoutes(app: FastifyInstance) {
       })
 
       await service.setProviderRef(order.id, session.id, session)
+    await cart.clearPurchased(
+      req.user.sub,
+      body.lines.filter((l) => l.kind === 'course').map((l) => l.id),
+    )
+
 
       audit(req, {
         action: 'order.created',
