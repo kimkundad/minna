@@ -91,6 +91,10 @@ export interface SessionUser {
   locale: 'th' | 'en' | 'jp' | 'vn'
   roles: ('admin' | 'teacher' | 'student')[]
   avatarPath: string | null
+  /** Carried on the session so a form can fill it in — see `PublicUser` on the
+   *  API side for why. */
+  phoneCountryCode: string | null
+  phoneNational: string | null
   privacyAcceptedAt: string | null
   emailVerifiedAt: string | null
 }
@@ -190,6 +194,20 @@ export const api = {
   categories: () => send<{ data: PublicCategory[] }>('/categories'),
 
   acceptPrivacy: () => send<{ user: SessionUser }>('/auth/accept-privacy', { method: 'POST', body: {} }),
+
+  /**
+   * Your own account's details. The API takes the whole block, so a caller
+   * changing one field sends the rest unchanged — `avatarPath` left out keeps
+   * the photo, and sending null removes it.
+   */
+  updateProfile: (body: {
+    firstName: string
+    lastName: string
+    phoneCountryCode?: string | null
+    phoneNational?: string | null
+    locale: 'th' | 'en' | 'jp' | 'vn'
+    avatarPath?: string | null
+  }) => send<{ data: unknown }>('/me/profile', { method: 'PATCH', body }),
 
   /** The catalog. `facets: true` adds the counts beside each filter option. */
   courses: (params: CourseQuery = {}) =>

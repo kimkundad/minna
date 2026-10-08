@@ -1622,7 +1622,8 @@
       "reasonMissing": "このコースは見つかりません",
       "reasonNotForSale": "販売を終了しました",
       "ownedTitle": "うち {n} 件はすでに受講権をお持ちです",
-      "ownedText": "二重購入になりますので、ご注文から外してください。"
+      "ownedText": "二重購入になりますので、ご注文から外してください。",
+      "phoneSaved": "プロフィールに保存しました。次回からの入力は不要です。"
     },
     "tax": {
       "heading": "Receipt / full tax invoice",

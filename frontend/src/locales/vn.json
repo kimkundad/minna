@@ -1622,7 +1622,8 @@
       "reasonMissing": "không có khoá này",
       "reasonNotForSale": "đã ngừng bán",
       "ownedTitle": "Bạn đã có quyền học {n} khoá trong số này",
-      "ownedText": "Hãy bỏ khỏi đơn hàng, nếu không bạn sẽ trả tiền hai lần."
+      "ownedText": "Hãy bỏ khỏi đơn hàng, nếu không bạn sẽ trả tiền hai lần.",
+      "phoneSaved": "Đã lưu vào hồ sơ của bạn — lần sau không cần nhập lại."
     },
     "tax": {
       "heading": "Receipt / full tax invoice",

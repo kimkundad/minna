@@ -273,9 +273,45 @@ watch(
     if (!user) return
     form.value.buyerName ||= `${user.firstName} ${user.lastName}`.trim()
     form.value.buyerEmail ||= user.email
+    form.value.buyerPhone ||= user.phoneNational ?? ''
   },
   { immediate: true },
 )
+
+/**
+ * A phone number given at checkout is kept.
+ *
+ * Asking for it on every order and then forgetting it is asking somebody to do
+ * the same work repeatedly for no reason. Saved after the order is placed
+ * rather than before — a number typed by someone who then changed their mind
+ * is not a correction to their account.
+ *
+ * Only when it differs from what is stored, and the page says it happened,
+ * because quietly rewriting a saved detail is a surprise even when it is what
+ * was wanted.
+ */
+const phoneSaved = ref(false)
+
+async function rememberPhone(): Promise<void> {
+  const user = auth.user
+  const typed = form.value.buyerPhone.trim()
+  if (!user || !typed || typed === (user.phoneNational ?? '')) return
+
+  try {
+    await api.updateProfile({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phoneCountryCode: user.phoneCountryCode ?? '+66',
+      phoneNational: typed,
+      locale: user.locale,
+    })
+    await auth.refreshUser()
+    phoneSaved.value = true
+  } catch {
+    // The order is placed and that is what matters. A number that did not
+    // save can be given again next time, which is where it is already asked.
+  }
+}
 
 const isFree = computed(() => totals.value?.allFree ?? false)
 
@@ -359,6 +395,8 @@ async function confirmOrder(): Promise<void> {
       method: form.value.method === 'qr' ? 'promptpay' : 'card',
       invoice: invoicePayload(),
     })
+
+    await rememberPhone()
 
     if (data.url) {
       // Stripe's own page takes the card details, so none of them ever touch
@@ -691,7 +729,10 @@ void asContentLocale(uiLocale.value)
                   />
                 </div>
                 <p class="co-prefill">
-                  <AppIcon name="user" /><span>{{ t('commerce.checkout.prefill') }}</span>
+                  <AppIcon :name="phoneSaved ? 'check-circle' : 'user'" />
+                  <span>{{
+                    phoneSaved ? t('commerce.checkout.phoneSaved') : t('commerce.checkout.prefill')
+                  }}</span>
                 </p>
               </section>
 

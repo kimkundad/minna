@@ -24,6 +24,13 @@ export interface PublicUser {
   locale: Locale
   roles: RoleName[]
   avatarPath: string | null
+  /**
+   * Carried on the session so a form can fill it in. Checkout asks for a phone
+   * number on every order, and somebody who has given one already should not
+   * be made to type it again — nor should the one they type be forgotten.
+   */
+  phoneCountryCode: string | null
+  phoneNational: string | null
   privacyAcceptedAt: Date | null
   emailVerifiedAt: Date | null
 }
@@ -52,6 +59,8 @@ function toPublicUser(row: typeof users.$inferSelect, roles: RoleName[]): Public
     locale: row.locale,
     roles,
     avatarPath: row.avatarPath,
+    phoneCountryCode: row.phoneCountryCode,
+    phoneNational: row.phoneNational,
     privacyAcceptedAt: row.privacyAcceptedAt,
     emailVerifiedAt: row.emailVerifiedAt,
   }

@@ -74,6 +74,23 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * Re-reads the account after something changed it elsewhere.
+   *
+   * Checkout saves a phone number to the profile; without this the session
+   * would keep the old one and the next order would prefill what was just
+   * replaced.
+   */
+  async function refreshUser(): Promise<void> {
+    if (!user.value) return
+    try {
+      const { user: me } = await api.me()
+      user.value = me
+    } catch {
+      // The session is what it was. Nothing here is worth interrupting for.
+    }
+  }
+
   async function login(email: string, password: string, remember = true): Promise<void> {
     busy.value = true
     try {
@@ -116,6 +133,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAdmin,
     isTeacher,
     bootstrap,
+    refreshUser,
     login,
     register,
     logout,

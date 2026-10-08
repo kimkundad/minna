@@ -81,6 +81,14 @@ page.on('console', (m) => {
  * refuses any address which is not a test one. The database's cascades take
  * the orders and entitlements with it.
  */
+/** Replaces whatever is in a field, rather than typing after it. */
+async function fill(selector, value) {
+  const el = await page.$(selector)
+  await el.click({ clickCount: 3 })
+  await el.press('Backspace')
+  await page.type(selector, value, { delay: 8 })
+}
+
 async function cleanUp() {
   await browser.close().catch(() => {})
   try {
@@ -179,7 +187,7 @@ try {
 
   /* ---------------- 5. a paid order reaches the payment page ---------------- */
 
-  await page.type('#co-phone', '0812345678', { delay: 8 })
+  await fill('#co-phone', '0812345678')
   await page.click('#co-terms')
   await page.screenshot({ path: `${SHOTS}/checkout.png` })
 
@@ -201,7 +209,7 @@ try {
     check('a free course asks for no payment method', (await page.$('.co-free')) !== null)
     check('and no tax invoice', (await page.$('#co-sec-tax')) === null)
 
-    await page.type('#co-phone', '0812345678', { delay: 8 })
+    await fill('#co-phone', '0812345678')
     await page.click('#co-terms')
     await page.click('#co-submit')
     await page
@@ -247,12 +255,28 @@ try {
       stored.data.items.map((i) => i.title).join(', '),
     )
 
+    // The phone typed on the order belongs to the account now, so the next
+    // order does not ask for it again.
+    const after = await (
+      await fetch(`${API}/auth/me`, { headers: { Authorization: `Bearer ${accessToken}` } })
+    ).json()
+    check(
+      'the phone given at checkout is kept on the profile',
+      after.user.phoneNational === '0812345678',
+      JSON.stringify(after.user.phoneNational),
+    )
+
     // And the point of the whole thing: access.
     await page.goto(`${BASE}/th/checkout?items=${free.slug}`, { waitUntil: 'networkidle2' })
     await page.waitForSelector('.co-layout, .state-box', { timeout: 12000 })
     check(
       'buying it again warns that they already have it',
       (await page.evaluate(() => document.body.innerText)).includes('มีสิทธิ์เรียน'),
+    )
+    check(
+      'and the phone box is already filled in',
+      (await page.$eval('#co-phone', (el) => el.value)) === '0812345678',
+      await page.$eval('#co-phone', (el) => el.value),
     )
   }
 

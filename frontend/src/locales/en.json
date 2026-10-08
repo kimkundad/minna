@@ -1622,7 +1622,8 @@
       "reasonMissing": "no such course",
       "reasonNotForSale": "no longer on sale",
       "ownedTitle": "You already have access to {n} of these",
-      "ownedText": "Take them off the order, or you will be paying twice."
+      "ownedText": "Take them off the order, or you will be paying twice.",
+      "phoneSaved": "Saved to your profile — you will not be asked for it again."
     },
     "tax": {
       "heading": "Receipt / full tax invoice",
