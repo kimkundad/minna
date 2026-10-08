@@ -366,7 +366,7 @@ onBeforeUnmount(() => clearTimeout(copyTimer))
           </div>
 
           <aside v-if="headings.length > 1" class="bl-toc" :aria-label="t('blog.contents')">
-            <p class="bl-toc-title">{{ t('blog.contents') }}</p>
+            <p class="bl-toc-title"><AppIcon name="list" />{{ t('blog.contents') }}</p>
             <ol>
               <li v-for="h in headings" :key="h.id">
                 <a :href="`#${h.id}`" :class="{ 'is-current': currentHeading === h.id }">{{

@@ -80,14 +80,41 @@
 
 /* ---------- contents ---------- */
 
-.bl-toc { position: sticky; top: 100px; align-self: start; }
-.bl-toc-title { font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-secondary); margin-bottom: 10px; }
+/* A card, like the course page's purchase panel — the same white, the same
+   border, the same lift. It is the one thing pinned beside a column of reading
+   and it should read as an object sitting there, not as text that happened to
+   stop scrolling.
+
+   It gets its own scrollbar for the same reason that panel does: an article
+   with twenty headings would otherwise run past the bottom of the window and
+   the last entries could never be reached. */
+.bl-toc {
+  position: sticky; top: calc(var(--header-h) + 16px); align-self: start;
+  max-height: calc(100vh - var(--header-h) - 32px); max-height: calc(100dvh - var(--header-h) - 32px);
+  overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;
+  padding: 18px 16px 16px;
+  background: #fff; border: 1px solid var(--border-default); border-radius: var(--r-card);
+  box-shadow: 0 28px 56px -32px rgba(24, 39, 42, .38), var(--shadow-card);
+}
+.bl-toc-title { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 0 8px 12px; border-bottom: 1px solid var(--border-default); font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-secondary); }
+.bl-toc-title svg { width: 16px; height: 16px; color: var(--brand-primary-dark); }
+
 .bl-toc ol { display: grid; gap: 2px; list-style: none; margin: 0; padding: 0; counter-reset: bltoc; }
 .bl-toc li { counter-increment: bltoc; }
-.bl-toc a { display: block; padding: 8px 12px; border-radius: 10px; font-size: 14px; line-height: 1.53; color: var(--ink-primary); }
-.bl-toc a::before { content: counter(bltoc) ". "; color: var(--ink-muted); }
+
+/* Grid rather than block, so a heading that wraps keeps its lines aligned
+   under each other instead of running back under its own number. */
+.bl-toc a { display: grid; grid-template-columns: 1.4em minmax(0, 1fr); gap: 2px; padding: 9px 10px; border-radius: 12px; font-size: 14px; line-height: 1.53; color: var(--ink-secondary); transition: background .18s, color .18s; }
+.bl-toc a::before { content: counter(bltoc) "."; color: var(--ink-muted); font-weight: 700; font-variant-numeric: tabular-nums; }
 .bl-toc a:hover { background: var(--surface-soft); color: var(--brand-primary-dark); }
-.bl-toc a.is-current { background: var(--brand-primary-soft); color: var(--brand-primary-deep); font-weight: 700; }
+.bl-toc a:hover::before { color: var(--brand-primary-dark); }
+
+/* The heading being read. A bar down its leading edge rather than a heavier
+   fill: at a glance it marks a position in a list, which is what it is. */
+.bl-toc a.is-current { position: relative; background: var(--brand-primary-soft); color: var(--brand-primary-deep); font-weight: 700; }
+.bl-toc a.is-current::after { content: ""; position: absolute; inset-block: 7px; inset-inline-start: 0; width: 3px; border-radius: 0 3px 3px 0; background: var(--brand-primary); }
+.bl-toc a.is-current::before { color: var(--brand-primary-dark); }
 
 /* ---------- the body ---------- */
 
@@ -160,11 +187,15 @@
 @media (max-width: 1099px) {
   .bl-layout { grid-template-columns: minmax(0, 1fr); gap: 24px; }
   .bl-content { max-width: none; }
-  /* The contents list moves above the article and lies flat; sticky in a
-     one-column layout would cover the text it points at. */
-  .bl-toc { position: static; order: -1; padding: 16px 18px; border: 1px solid var(--border-default); border-radius: var(--r-card); background: var(--surface-soft); }
+  /* The contents move above the article and lie flat. Sticky in a one-column
+     layout would cover the text it points at, and a tall card between the
+     cover and the first paragraph would push the writing off the screen —
+     so the entries become a wrapped row of chips instead of a list. */
+  .bl-toc { position: static; order: -1; max-height: none; overflow: visible; background: var(--surface-soft); box-shadow: none; padding: 16px 18px; }
+  .bl-toc-title { padding-bottom: 10px; }
   .bl-toc ol { display: flex; flex-wrap: wrap; gap: 6px; }
-  .bl-toc a { background: #fff; }
+  .bl-toc a { display: inline-flex; align-items: baseline; gap: 6px; background: #fff; border: 1px solid var(--border-default); }
+  .bl-toc a.is-current::after { display: none; }
   .bl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
