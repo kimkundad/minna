@@ -100,10 +100,49 @@ export const courseBody = courseFields
 
 export const coursePatch = courseFields.partial()
 
+/**
+ * A filter the catalog's panel offers as checkboxes.
+ *
+ * Sent as one comma-separated parameter rather than repeated ones, so the
+ * address a visitor copies out of the bar stays short enough to paste.
+ */
+function csv<T extends readonly [string, ...string[]]>(values: T) {
+  return z
+    .string()
+    .optional()
+    .transform((v) =>
+      v
+        ? v
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s): s is T[number] => (values as readonly string[]).includes(s))
+        : undefined,
+    )
+}
+
 export const courseListQuery = listQuery.extend({
   status: z.enum(['draft', 'pending', 'approved', 'rejected', 'ended']).optional(),
   categoryId: z.coerce.number().int().positive().optional(),
-  sort: z.enum(['newest', 'title', 'price', 'popularity']).default('newest'),
+  /** Several at once: the panel is checkboxes, not a radio group. */
+  categoryIds: z
+    .string()
+    .optional()
+    .transform((v) =>
+      v
+        ? v
+            .split(',')
+            .map((s) => Number(s.trim()))
+            .filter((n) => Number.isInteger(n) && n > 0)
+        : undefined,
+    ),
+  levels: csv(['beginner', 'intermediate', 'advanced'] as const),
+  locales: csv(['th', 'en', 'jp', 'vn'] as const),
+  durations: csv(['le1', '1-3', '3-6', 'gt6'] as const),
+  prices: csv(['free', 'lt1000', '1000-2000', 'gt2000'] as const),
+  access: csv(['free', 'course', 'package'] as const),
+  sort: z
+    .enum(['recommended', 'newest', 'title', 'price', 'price-desc', 'popularity'])
+    .default('newest'),
 })
 
 /* ---------------- curriculum ---------------- */

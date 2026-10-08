@@ -6,10 +6,11 @@ import {
   courseModules,
   courses,
   lessons,
+  teacherProfiles,
   users,
 } from '../../db/schema/index'
 import { conflict, notFound } from '../../lib/errors'
-import { removeOrphanedMedia } from '../../lib/media'
+import { removeOrphanedMedia, removeOrphanedPath } from '../../lib/media'
 import { outer } from '../../lib/sql'
 
 /**
@@ -187,11 +188,51 @@ export interface CourseListOptions {
   q?: string | undefined
   status?: 'draft' | 'pending' | 'approved' | 'rejected' | 'ended' | undefined
   categoryId?: number | undefined
-  sort: 'newest' | 'title' | 'price' | 'popularity'
+  /**
+   * Several categories at once. The catalog's filter panel is a list of
+   * checkboxes, so one id would make it a radio group.
+   */
+  categoryIds?: number[] | undefined
+  levels?: ('beginner' | 'intermediate' | 'advanced')[] | undefined
+  locales?: ('th' | 'en' | 'jp' | 'vn')[] | undefined
+  /** Bands rather than numbers, because that is what the panel offers. */
+  durations?: ('le1' | '1-3' | '3-6' | 'gt6')[] | undefined
+  prices?: ('free' | 'lt1000' | '1000-2000' | 'gt2000')[] | undefined
+  /** How it is reached: free, bought on its own, or inside a package. */
+  access?: ('free' | 'course' | 'package')[] | undefined
+  sort: 'recommended' | 'newest' | 'title' | 'price' | 'price-desc' | 'popularity'
   /** The public site passes false and only ever sees approved courses. */
   includeUnpublished: boolean
   /** A teacher sees the courses they are on, not the whole catalog. */
   instructorId?: number | undefined
+}
+
+/** The duration bands the filter panel offers, in seconds. */
+const DURATION_BANDS: Record<string, [number, number]> = {
+  le1: [0, 3600],
+  '1-3': [3601, 10800],
+  '3-6': [10801, 21600],
+  gt6: [21601, Number.MAX_SAFE_INTEGER],
+}
+
+/** The price bands, in satang. */
+const PRICE_BANDS: Record<string, [number, number]> = {
+  free: [0, 0],
+  lt1000: [1, 99999],
+  '1000-2000': [100000, 200000],
+  gt2000: [200001, Number.MAX_SAFE_INTEGER],
+}
+
+function bandClause(
+  column: typeof courses.price | typeof courses.durationSeconds,
+  bands: Record<string, [number, number]>,
+  chosen: string[],
+) {
+  const parts = chosen.flatMap((key) => {
+    const band = bands[key]
+    return band ? [sql`${column} BETWEEN ${band[0]} AND ${band[1]}`] : []
+  })
+  return parts.length ? or(...parts) : undefined
 }
 
 export async function listCourses(opts: CourseListOptions): Promise<Paged<unknown>> {
@@ -199,7 +240,39 @@ export async function listCourses(opts: CourseListOptions): Promise<Paged<unknow
     opts.includeUnpublished ? undefined : eq(courses.status, 'approved'),
     opts.status ? eq(courses.status, opts.status) : undefined,
     opts.categoryId ? eq(courses.categoryId, opts.categoryId) : undefined,
-    opts.q ? or(like(courses.title, `%${opts.q}%`), like(courses.slug, `%${opts.q}%`)) : undefined,
+    opts.categoryIds?.length ? inArray(courses.categoryId, opts.categoryIds) : undefined,
+    opts.levels?.length ? inArray(courses.level, opts.levels) : undefined,
+    opts.locales?.length ? inArray(courses.contentLocale, opts.locales) : undefined,
+    opts.durations?.length
+      ? bandClause(courses.durationSeconds, DURATION_BANDS, opts.durations)
+      : undefined,
+    opts.prices?.length ? bandClause(courses.price, PRICE_BANDS, opts.prices) : undefined,
+    opts.access?.length ? accessClause(opts.access) : undefined,
+    /**
+     * Searches the teacher's name too, because that is how somebody looks for
+     * "the course Aiko teaches". The display name is matched as well as the
+     * account name: the first is what the site shows, the second is what a
+     * colleague would type.
+     */
+    opts.q
+      ? or(
+          like(courses.title, `%${opts.q}%`),
+          like(courses.slug, `%${opts.q}%`),
+          like(courses.shortDesc, `%${opts.q}%`),
+          sql`EXISTS (
+            SELECT 1 FROM categories cat
+            WHERE cat.id = ${outer(courses.categoryId)} AND cat.name LIKE ${`%${opts.q}%`}
+          )`,
+          sql`EXISTS (
+            SELECT 1 FROM course_instructors ci
+            JOIN users u ON u.id = ci.user_id
+            LEFT JOIN teacher_profiles tp ON tp.user_id = u.id
+            WHERE ci.course_id = ${outer(courses.id)}
+              AND (CONCAT(u.first_name, ' ', u.last_name) LIKE ${`%${opts.q}%`}
+                   OR tp.display_name LIKE ${`%${opts.q}%`})
+          )`,
+        )
+      : undefined,
     opts.instructorId
       ? sql`EXISTS (SELECT 1 FROM course_instructors ci WHERE ci.course_id = ${outer(courses.id)} AND ci.user_id = ${opts.instructorId})`
       : undefined,
@@ -209,12 +282,18 @@ export async function listCourses(opts: CourseListOptions): Promise<Paged<unknow
 
   const order =
     opts.sort === 'title'
-      ? asc(courses.title)
+      ? [asc(courses.title)]
       : opts.sort === 'price'
-        ? asc(courses.price)
-        : opts.sort === 'popularity'
-          ? desc(courses.popularity)
-          : desc(courses.createdAt)
+        ? [asc(courses.price)]
+        : opts.sort === 'price-desc'
+          ? [desc(courses.price)]
+          : opts.sort === 'popularity'
+            ? [desc(courses.popularity)]
+            : opts.sort === 'recommended'
+              ? // Featured first, then by how popular. Two keys, because
+                // "recommended" with one is just that one.
+                [desc(courses.featured), desc(courses.popularity)]
+              : [desc(courses.publishedAt), desc(courses.createdAt)]
 
   const [{ value: total } = { value: 0 }] = await db
     .select({ value: count() })
@@ -238,15 +317,119 @@ export async function listCourses(opts: CourseListOptions): Promise<Paged<unknow
       durationSeconds: courses.durationSeconds,
       publishedAt: courses.publishedAt,
       createdAt: courses.createdAt,
+      // Everything below is what a card on the catalog shows and the list used
+      // to make the browser fetch each course separately for.
+      shortDesc: courses.shortDesc,
+      contentLocale: courses.contentLocale,
+      badge: courses.badge,
+      accessType: courses.accessType,
+      accessDurationDays: courses.accessDurationDays,
+      repurchase: courses.repurchase,
+      popularity: courses.popularity,
+      updatedAt: courses.updatedAt,
+      lessonCount: sql<number>`(
+        SELECT COUNT(*) FROM lessons l WHERE l.course_id = ${outer(courses.id)}
+      )`,
+      inPackage: sql<boolean>`EXISTS (
+        SELECT 1 FROM package_courses pc WHERE pc.course_id = ${outer(courses.id)}
+      )`,
     })
     .from(courses)
     .leftJoin(categories, eq(categories.id, courses.categoryId))
     .where(filter)
-    .orderBy(order)
+    .orderBy(...order)
     .limit(opts.perPage)
     .offset((opts.page - 1) * opts.perPage)
 
-  return paged(rows, total, opts.page, opts.perPage)
+  // One query for every teacher on the page, rather than one per course.
+  const byCourse = await instructorsFor(rows.map((r) => r.id))
+
+  return paged(
+    rows.map((r) => ({
+      ...r,
+      lessonCount: Number(r.lessonCount),
+      inPackage: Boolean(r.inPackage),
+      instructors: byCourse.get(r.id) ?? [],
+    })),
+    total,
+    opts.page,
+    opts.perPage,
+  )
+}
+
+/** Free, bought on its own, or reachable through a package. */
+function accessClause(chosen: string[]) {
+  const parts = chosen
+    .map((key) =>
+      key === 'free'
+        ? sql`${courses.price} = 0`
+        : key === 'course'
+          ? sql`${courses.price} > 0 AND ${courses.sellable} = 1`
+          : key === 'package'
+            ? sql`EXISTS (SELECT 1 FROM package_courses pc WHERE pc.course_id = ${outer(courses.id)})`
+            : undefined,
+    )
+    .filter(Boolean)
+  return parts.length ? or(...(parts as never[])) : undefined
+}
+
+/**
+ * The teachers on each of these courses.
+ *
+ * The public name is the one on their profile, falling back to the account's.
+ * A course page that says "Aiko Tanaka" where the site everywhere else says
+ * "田中 愛子 (Aiko Tanaka)" reads as two different people.
+ */
+async function instructorsFor(courseIds: number[]) {
+  const map = new Map<number, CourseInstructor[]>()
+  if (!courseIds.length) return map
+
+  const rows = await db
+    .select({
+      courseId: courseInstructors.courseId,
+      id: users.id,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      avatarPath: users.avatarPath,
+      displayName: teacherProfiles.displayName,
+      shortName: teacherProfiles.shortName,
+      headline: teacherProfiles.headline,
+      slug: teacherProfiles.slug,
+      sortOrder: courseInstructors.sortOrder,
+    })
+    .from(courseInstructors)
+    .innerJoin(users, eq(users.id, courseInstructors.userId))
+    .leftJoin(teacherProfiles, eq(teacherProfiles.userId, users.id))
+    .where(inArray(courseInstructors.courseId, courseIds))
+    .orderBy(asc(courseInstructors.sortOrder))
+
+  for (const r of rows) {
+    const account = `${r.firstName} ${r.lastName}`.trim()
+    const list = map.get(r.courseId) ?? []
+    list.push({
+      id: r.id,
+      name: r.displayName ?? account,
+      short: r.shortName ?? account,
+      headline: r.headline,
+      slug: r.slug,
+      avatarPath: r.avatarPath,
+      sortOrder: r.sortOrder,
+    })
+    map.set(r.courseId, list)
+  }
+  return map
+}
+
+export interface CourseInstructor {
+  id: number
+  /** What the site shows: the profile's name, or the account's if there is none. */
+  name: string
+  short: string
+  headline: string | null
+  /** Their public page, when they have one. */
+  slug: string | null
+  avatarPath: string | null
+  sortOrder: number
 }
 
 export async function getCourse(id: number, includeUnpublished: boolean) {
@@ -255,20 +438,30 @@ export async function getCourse(id: number, includeUnpublished: boolean) {
     throw notFound('That course does not exist.')
   }
 
-  const instructors = await db
-    .select({
-      id: users.id,
-      firstName: users.firstName,
-      lastName: users.lastName,
-      avatarPath: users.avatarPath,
-      sortOrder: courseInstructors.sortOrder,
-    })
-    .from(courseInstructors)
-    .innerJoin(users, eq(users.id, courseInstructors.userId))
-    .where(eq(courseInstructors.courseId, id))
-    .orderBy(asc(courseInstructors.sortOrder))
+  // The same shape the list returns, so a card and a course page never
+  // disagree about what a teacher is called.
+  const instructors = (await instructorsFor([id])).get(id) ?? []
 
-  return { ...row, instructors }
+  const [extra] = await db
+    .select({
+      categoryName: categories.name,
+      lessonCount: sql<number>`(SELECT COUNT(*) FROM lessons l WHERE l.course_id = ${id})`,
+      inPackage: sql<boolean>`EXISTS (
+        SELECT 1 FROM package_courses pc WHERE pc.course_id = ${id}
+      )`,
+    })
+    .from(courses)
+    .leftJoin(categories, eq(categories.id, courses.categoryId))
+    .where(eq(courses.id, id))
+    .limit(1)
+
+  return {
+    ...row,
+    categoryName: extra?.categoryName ?? null,
+    lessonCount: Number(extra?.lessonCount ?? 0),
+    inPackage: Boolean(extra?.inPackage),
+    instructors,
+  }
 }
 
 async function assertCourseSlugFree(slug: string, exceptId?: number) {
@@ -350,6 +543,10 @@ export async function updateCourse(id: number, input: Partial<CourseInput>) {
   // After the write: whether a picture is still in use is answered by what is
   // now stored, including by other courses and articles.
   await removeOrphanedMedia(row.description, after!.description)
+  // The cover and the sample are files of their own, not links inside prose,
+  // so replacing one leaves the old file behind unless it is swept separately.
+  await removeOrphanedPath(row.thumbnailPath, after!.thumbnailPath)
+  await removeOrphanedPath(row.sampleVideoPath, after!.sampleVideoPath)
   return { before, after: after! }
 }
 
@@ -365,6 +562,8 @@ export async function deleteCourse(id: number) {
 
   await db.delete(courses).where(eq(courses.id, id))
   await removeOrphanedMedia(row.description, null)
+  await removeOrphanedPath(row.thumbnailPath, null)
+  await removeOrphanedPath(row.sampleVideoPath, null)
   return row
 }
 

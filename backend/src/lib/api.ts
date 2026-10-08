@@ -363,6 +363,8 @@ export interface CourseDetail extends CourseInput {
 
 export type UploadPurpose =
   | 'course-thumbnail'
+  /** The free sample. Public, like the cover — it plays before anyone buys. */
+  | 'course-sample'
   | 'course-video'
   | 'course-document'
   | 'avatar'

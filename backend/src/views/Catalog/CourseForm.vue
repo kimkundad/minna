@@ -433,7 +433,7 @@ onMounted(load)
             <FileField
               v-model="form.sampleVideoPath"
               :course-id="id ?? undefined"
-              purpose="course-video"
+              purpose="course-sample"
               label="Sample video"
               accept="video/*"
               hint="A free taste of the course, playable before buying."

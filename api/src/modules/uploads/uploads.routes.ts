@@ -24,7 +24,26 @@ import { isCourseInstructor } from '../catalog/catalog.service'
 
 /** What each kind of upload may do. Sizes are bytes. */
 const PURPOSES = {
-  'course-thumbnail': { folder: (id: number) => `courses/${id}`, maxSize: 8 * 1024 * 1024, ttl: 600 },
+  /**
+   * A course's cover picture and its free sample are marketing: they have to
+   * load for somebody who has not signed in and may never buy. So they go into
+   * `content/`, the one folder served without a signature, rather than beside
+   * the lessons.
+   *
+   * The lesson videos below stay where they are. The split is by what the file
+   * is for, not by which course it belongs to — a sample is published, a lesson
+   * is the thing being sold.
+   */
+  'course-thumbnail': {
+    folder: (id: number) => `content/courses/${id}`,
+    maxSize: 8 * 1024 * 1024,
+    ttl: 600,
+  },
+  'course-sample': {
+    folder: (id: number) => `content/courses/${id}`,
+    maxSize: 2 * 1024 * 1024 * 1024,
+    ttl: 3600,
+  },
   'course-video': { folder: (id: number) => `courses/${id}/video`, maxSize: 8 * 1024 * 1024 * 1024, ttl: 3600 },
   'course-document': { folder: (id: number) => `courses/${id}/docs`, maxSize: 200 * 1024 * 1024, ttl: 1800 },
   // A teacher's photo is their account avatar: one person, one picture.
@@ -50,7 +69,14 @@ const PURPOSES = {
 } as const
 
 const ticketBody = z.object({
-  purpose: z.enum(['course-thumbnail', 'course-video', 'course-document', 'avatar', 'content-image']),
+  purpose: z.enum([
+    'course-thumbnail',
+    'course-sample',
+    'course-video',
+    'course-document',
+    'avatar',
+    'content-image',
+  ]),
   /** The course the file belongs to. Ignored for an avatar. */
   courseId: z.coerce.number().int().positive().optional(),
   /** Whose avatar, when an admin is setting it for somebody else. */

@@ -18,7 +18,8 @@
     "db:seed": "tsx src/db/seed.ts",
     "check:storage": "tsx scripts/check-storage.ts",
     "seed:teachers": "tsx scripts/seed-teachers.ts",
-    "seed:hero": "tsx scripts/seed-hero.mts"
+    "seed:hero": "tsx scripts/seed-hero.mts",
+    "seed:catalog": "tsx scripts/seed-catalog.mts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

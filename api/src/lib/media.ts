@@ -33,6 +33,11 @@ import { deleteFile, isStorageConfigured, scopedPath } from './storage'
 const REFERENCING_COLUMNS = [
   { table: 'posts', column: 'content_html' },
   { table: 'courses', column: 'description' },
+  // A cover picture and a free sample live in `content/` too, because they
+  // have to load for somebody who has not signed in. Leave them out and the
+  // next article saved takes them with it.
+  { table: 'courses', column: 'thumbnail_path' },
+  { table: 'courses', column: 'sample_video_path' },
   { table: 'hero_slides', column: 'image_path' },
 ] as const
 
