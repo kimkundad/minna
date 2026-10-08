@@ -59,6 +59,26 @@ function onVideoError(): void {
   playing.value = false
 }
 
+/**
+ * What the attributes on the player are for, and what they are not.
+ *
+ * `controlslist="nodownload"` takes the download button out of the browser's
+ * own menu, and blocking the context menu takes away "Save video as". Together
+ * they stop somebody saving the file without meaning to, or because it was the
+ * obvious thing to click.
+ *
+ * They do not stop anybody who wants the file. The address is in the page, the
+ * network tab lists it, and a stream can be pulled with one command. Treating
+ * these as protection and putting a paid lesson behind them would be the
+ * mistake; what actually protects the paid lessons is that their addresses are
+ * never handed out at all.
+ *
+ * For this one, it matters less than it looks: a free sample is meant to be
+ * watched by anybody. The real limits are elsewhere — the link is signed, it
+ * expires within the hour, and it is for that one lesson.
+ */
+
+
 let seq = 0
 
 async function load(): Promise<void> {
@@ -121,6 +141,10 @@ const length = computed(() =>
         controls
         autoplay
         playsinline
+        controlslist="nodownload noplaybackrate"
+        disablepictureinpicture
+        disableremoteplayback
+        @contextmenu.prevent
         @error="onVideoError"
       />
       <template v-else>

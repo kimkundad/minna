@@ -718,6 +718,10 @@ function toInstructors(): void {
                 controls
                 autoplay
                 playsinline
+                controlslist="nodownload noplaybackrate"
+                disablepictureinpicture
+                disableremoteplayback
+                @contextmenu.prevent
               />
               <template v-else>
                 <CourseImage
