@@ -296,7 +296,7 @@ onMounted(load)
           <div>
             <label :class="labelClass">Module</label>
             <select v-model="lessonForm.moduleId" :class="inputClass">
-              <option :value="null">— directly on the course —</option>
+              <option :value="null">— not in a module (hidden on the site) —</option>
               <option v-for="m in data.modules" :key="m.id" :value="m.id">{{ m.title }}</option>
             </select>
           </div>
@@ -380,6 +380,15 @@ onMounted(load)
       </form>
 
       <div class="space-y-4">
+        <!-- Lessons are added from inside a module, so an empty course has to
+             say which end to start at. -->
+        <p
+          v-if="!data.modules.length && !data.loose.length"
+          class="rounded-2xl border border-dashed border-gray-300 px-5 py-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400"
+        >
+          Nothing here yet. Add a module below, then add lessons to it.
+        </p>
+
         <!-- Modules -->
         <div
           v-for="(mod, mi) in data.modules"
@@ -520,12 +529,16 @@ onMounted(load)
           class="rounded-2xl border border-dashed border-gray-300 bg-white dark:border-gray-700 dark:bg-white/[0.03]"
         >
           <div class="px-5 py-4 sm:px-6">
-            <h3 class="text-base font-medium text-gray-800 dark:text-white/90">
+            <h3 class="text-base font-medium text-warning-600 dark:text-warning-400">
               Not in a module
               <span class="ml-2 text-sm font-normal text-gray-400">
                 {{ data.loose.length }} lesson(s)
               </span>
             </h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              The course page lists lessons by module, so these are not shown to anyone. Edit each
+              one and pick a module. They end up here when the module holding them is deleted.
+            </p>
           </div>
           <ul class="divide-y divide-gray-100 border-t border-gray-100 dark:divide-gray-800 dark:border-gray-800">
             <li
@@ -571,13 +584,6 @@ onMounted(load)
           @click="addModule"
         >
           Add module
-        </button>
-        <button
-          type="button"
-          class="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-300"
-          @click="openNewLesson(null)"
-        >
-          Add lesson without a module
         </button>
       </div>
     </template>
