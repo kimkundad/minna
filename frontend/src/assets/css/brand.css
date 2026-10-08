@@ -256,3 +256,42 @@
 .modal-body .textarea {
   min-height: 0;
 }
+
+/* --------------------------------------------------------------------------
+   Where the emailed links land
+
+   Two pages the reference never had: setting a password from a reset link, and
+   confirming an address. Both are one short panel on an otherwise empty page,
+   so they borrow the form parts rather than introducing a layout.
+   -------------------------------------------------------------------------- */
+
+.auth-page { max-width: 520px; margin-inline: auto; padding-block: 40px 72px; }
+
+.auth-form { display: flex; flex-direction: column; gap: 20px; }
+
+/* The outcome panels: a glyph beside a short explanation and one way out. */
+.auth-note {
+  display: flex;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-card, 18px);
+  background: var(--surface-subtle);
+}
+
+.auth-note > svg { flex-shrink: 0; width: 28px; height: 28px; color: var(--ink-secondary); }
+.auth-note h2 { font-size: 19px; line-height: 1.35; margin: 0 0 6px; }
+.auth-note p { margin: 0 0 16px; color: var(--ink-secondary); line-height: 1.6; }
+.auth-note .btn { display: inline-flex; }
+
+/* Good news reads differently from a dead link, so the glyph carries the only
+   colour on the panel. */
+.auth-note--good { border-color: var(--brand-primary); background: var(--brand-primary-soft); }
+.auth-note--good > svg { color: var(--brand-primary-deep); }
+
+.auth-note-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+@media (max-width: 767px) {
+  .auth-page { padding-block: 24px 48px; }
+  .auth-note { flex-direction: column; gap: 12px; padding: 20px; }
+}

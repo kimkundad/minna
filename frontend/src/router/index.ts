@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { i18n, storeLocale } from '@/locales'
+import { i18n, storeLocale, storedLocale } from '@/locales'
 
 /**
  * Locale lives in the path (/th, /en, /jp, /vn). Anything without one is sent
@@ -127,6 +127,22 @@ const router = createRouter({
           },
         },
 
+        // Where the emailed links land. Also reachable without a locale —
+        // see the redirects below — because the mail does not know which one
+        // the reader uses.
+        {
+          path: 'reset-password',
+          name: 'reset-password',
+          component: () => import('@/pages/auth/ResetPasswordPage.vue'),
+          meta: { bodyClass: 'page-auth' },
+        },
+        {
+          path: 'verify-email',
+          name: 'verify-email',
+          component: () => import('@/pages/auth/VerifyEmailPage.vue'),
+          meta: { bodyClass: 'page-auth' },
+        },
+
         // The three legal documents. They share a shell, not a parent route:
         // each is a separate top-level page with its own URL in the footer.
         {
@@ -149,6 +165,19 @@ const router = createRouter({
         },
       ],
     },
+    // The emailed links carry no locale: the API builds them from APP_URL and
+    // has no idea which language the reader uses. Without these two the
+    // catch-all below sends them to /th and drops the token on the way, which
+    // is exactly what it was doing.
+    {
+      path: '/reset-password',
+      redirect: (to) => ({ path: `/${storedLocale() ?? 'th'}/reset-password`, query: to.query }),
+    },
+    {
+      path: '/verify-email',
+      redirect: (to) => ({ path: `/${storedLocale() ?? 'th'}/verify-email`, query: to.query }),
+    },
+
     { path: '/:pathMatch(.*)*', redirect: '/th' },
   ],
   scrollBehavior(to, from, saved) {

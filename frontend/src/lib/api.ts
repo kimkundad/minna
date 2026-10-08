@@ -171,6 +171,19 @@ export const api = {
   forgotPassword: (email: string) =>
     send<{ message: string }>('/auth/forgot-password', { method: 'POST', body: { email } }),
 
+  /** Finishes what the emailed link started. The API clears the refresh
+   *  cookie, so whoever did this has to sign in again — which is the point:
+   *  anyone already signed in on another device is signed out with it. */
+  resetPassword: (token: string, password: string) =>
+    send<{ message: string }>('/auth/reset-password', { method: 'POST', body: { token, password } }),
+
+  verifyEmail: (token: string) =>
+    send<{ user: SessionUser }>('/auth/verify-email', { method: 'POST', body: { token } }),
+
+  /** Sends another verification link to the signed-in account. */
+  sendVerifyEmail: () =>
+    send<{ message: string }>('/auth/verify-email/send', { method: 'POST', body: {} }),
+
   sessions: () => send<{ data: unknown[] }>('/auth/sessions'),
 
   categories: () =>
