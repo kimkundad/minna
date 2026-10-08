@@ -176,6 +176,12 @@ const router = createRouter({
       meta: { title: 'Articles', roles: ['superadmin', 'admin'] },
     },
     {
+      path: '/ads',
+      name: 'Advertising',
+      component: () => import('@/views/Content/Ads.vue'),
+      meta: { title: 'Advertising', roles: ['superadmin', 'admin'] },
+    },
+    {
       path: '/testimonials',
       name: 'Testimonials',
       component: () => import('@/views/Content/Testimonials.vue'),

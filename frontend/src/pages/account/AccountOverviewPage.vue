@@ -197,7 +197,7 @@ function category(id: string) {
         </div>
       </section>
 
-      <div class="acct-ads" id="ov-ads"><AdsSlot /></div>
+      <div class="acct-ads" id="ov-ads"><AdsSlot placement="account" /></div>
 
       <!-- Package and course counts -->
       <section class="acct-sec" aria-labelledby="ov-sum-h">

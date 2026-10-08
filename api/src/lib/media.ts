@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { db } from '../db/client'
-import { courses, heroSlides, posts } from '../db/schema/index'
+import { ads, courses, heroSlides, posts } from '../db/schema/index'
 import { deleteFile, isStorageConfigured, scopedPath } from './storage'
 
 /**
@@ -39,6 +39,8 @@ const REFERENCING_COLUMNS = [
   { table: 'courses', column: 'thumbnail_path' },
   { table: 'courses', column: 'sample_video_path' },
   { table: 'hero_slides', column: 'image_path' },
+  { table: 'ads', column: 'image_desktop_path' },
+  { table: 'ads', column: 'image_mobile_path' },
 ] as const
 
 /** `/api/v1/media/minna/content/2026/10/x.png`, absolute or relative. */
@@ -88,8 +90,13 @@ function escapeLike(value: string): string {
 async function stillReferenced(path: string): Promise<boolean> {
   const needle = `%${escapeLike(path)}%`
 
+  // A map rather than a ternary chain: a chain ends in a default, so a table
+  // added to the list above but forgotten here would quietly query the last
+  // one instead — which is a sweep that never finds anything.
+  const TABLES = { posts, courses, hero_slides: heroSlides, ads } as const
+
   for (const { table, column } of REFERENCING_COLUMNS) {
-    const source = table === 'posts' ? posts : table === 'courses' ? courses : heroSlides
+    const source = TABLES[table]
     const [row] = await db
       .select({ n: sql<number>`COUNT(*)` })
       .from(source)

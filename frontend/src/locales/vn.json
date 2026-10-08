@@ -2355,5 +2355,11 @@
     "homeTitle": "Bài viết mới nhất",
     "homeSub": "Mẹo học, tin tức, và chia sẻ từ giảng viên",
     "homeMore": "Xem tất cả bài viết"
+  },
+  "ads": {
+    "region": "Quảng cáo",
+    "label": "ADS",
+    "emptyTitle": "ADS / Sponsored",
+    "emptySize": "Vị trí quảng cáo · Desktop 4:1 · Mobile 4:5"
   }
 }

@@ -208,6 +208,40 @@ export const api = {
   /** One published article, by the slug in its URL. */
   post: (slug: string) =>
     send<{ data: PublicPostDetail }>(`/posts/public/${encodeURIComponent(slug)}`),
+
+  /**
+   * What each reserved advertising box is showing, or null where nothing is
+   * sold. Several at once, because a page has more than one box.
+   */
+  ads: (placements: AdPlacement[], locale?: ContentLocale) =>
+    send<{ data: Record<string, PublicAd | null> }>(
+      `/ads/public${queryString({ placements, locale })}`,
+    ),
+}
+
+/* ---------------- advertising ---------------- */
+
+/** One key per reserved box on the site. The school sells a position. */
+export type AdPlacement =
+  | 'home-top'
+  | 'home-bottom'
+  | 'catalog-inline'
+  | 'catalog-bottom'
+  | 'course'
+  | 'blog'
+  | 'article'
+  | 'account'
+  | 'learn'
+
+export interface PublicAd {
+  id: number
+  placement: AdPlacement
+  href: string
+  /** 4:1. A store path — pass it through `mediaUrl`. */
+  imageDesktopPath: string | null
+  /** 4:5, for a phone. */
+  imageMobilePath: string | null
+  imageAlt: string | null
 }
 
 /* ---------------- the blog ---------------- */
@@ -381,7 +415,7 @@ export interface Curriculum {
  * The filter arrays go as one comma-separated parameter each, which is what
  * the API expects and what keeps a shared link short enough to paste.
  */
-function queryString(params: CourseQuery | PostQuery): string {
+function queryString(params: CourseQuery | PostQuery | Record<string, unknown>): string {
   const q = new URLSearchParams()
   for (const [key, value] of Object.entries(params)) {
     if (value === undefined || value === null || value === '') continue

@@ -2355,5 +2355,11 @@
     "homeTitle": "Latest articles",
     "homeSub": "Study tips, news, and what the teachers want you to know",
     "homeMore": "Read every article"
+  },
+  "ads": {
+    "region": "Advertisement",
+    "label": "ADS",
+    "emptyTitle": "ADS / Sponsored",
+    "emptySize": "Advertising space · Desktop 4:1 · Mobile 4:5"
   }
 }

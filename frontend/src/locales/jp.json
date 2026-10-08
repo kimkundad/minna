@@ -2355,5 +2355,11 @@
     "homeTitle": "最新の記事",
     "homeSub": "学習のコツ、お知らせ、講師からのお話",
     "homeMore": "すべての記事を見る"
+  },
+  "ads": {
+    "region": "広告",
+    "label": "ADS",
+    "emptyTitle": "ADS / Sponsored",
+    "emptySize": "広告枠 · デスクトップ 4:1 · モバイル 4:5"
   }
 }

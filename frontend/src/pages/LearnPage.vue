@@ -6,7 +6,6 @@ import AppIcon from '@/components/ui/AppIcon.vue'
 import AppNotice from '@/components/ui/AppNotice.vue'
 import CtaButton from '@/components/ui/CtaButton.vue'
 import InstructorLine from '@/components/course/InstructorLine.vue'
-import AdsLink from '@/components/discovery/AdsLink.vue'
 import CommerceToasts from '@/components/commerce/CommerceToasts.vue'
 import CompactHeader from '@/components/learning/CompactHeader.vue'
 import CurriculumPanel from '@/components/learning/CurriculumPanel.vue'
@@ -36,6 +35,7 @@ import type {
 } from '@/components/learning/types'
 import { courseView, type CourseView } from '@/vendor'
 import { vendorPeople } from '@/lib/vendor-view'
+import AdsSlot from '@/components/ui/AdsSlot.vue'
 
 /**
  * The learning room.
@@ -827,7 +827,7 @@ const playerPosition = computed(() =>
 
     <!-- Ads (very bottom of the learning page) -->
     <div v-if="course" class="lp-ads" id="lp-ads">
-      <AdsLink href="#sponsor-learning" />
+      <AdsSlot placement="learn" />
     </div>
   </div>
 

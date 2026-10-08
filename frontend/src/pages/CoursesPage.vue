@@ -6,11 +6,11 @@ import AppIcon from '@/components/ui/AppIcon.vue'
 import CourseCard from '@/components/course/CourseCard.vue'
 import FilterGroups, { type FilterGroup } from '@/components/discovery/FilterGroups.vue'
 import SkeletonCards from '@/components/discovery/SkeletonCards.vue'
-import AdsLink from '@/components/discovery/AdsLink.vue'
 import { api } from '@/lib/api'
 import type { CourseFacets, CourseQuery, CourseSort, PublicCategory, PublicCourse } from '@/lib/api'
 import { categoryLabel, courseView } from '@/lib/course'
 import { num } from '@/lib/format'
+import AdsSlot from '@/components/ui/AdsSlot.vue'
 
 /**
  * The course catalog: search, five facet groups with live counts, five sort
@@ -805,7 +805,7 @@ const cardVariant = computed(() => (view.value === 'list' ? 'list' : 'grid'))
               </li>
             </ul>
             <template v-if="splitAds">
-              <div class="cat-ads-inline"><AdsLink href="#sponsor-catalog" /></div>
+              <div class="cat-ads-inline"><AdsSlot placement="catalog-inline" /></div>
               <ul class="cat-grid" :class="{ 'is-list': view === 'list' }" role="list">
                 <li v-for="c in secondPage" :key="c.id">
                   <CourseCard :view="c" :variant="cardVariant" @run="runAction" />
@@ -836,6 +836,6 @@ const cardVariant = computed(() => (view.value === 'list' ? 'list' : 'grid'))
 
   <!-- Ads (moves here when the catalog has 6 results or fewer) -->
   <div class="container cat-ads-slot" id="cat-ads-slot">
-    <AdsLink v-if="adsBelow" href="#sponsor-catalog" />
+    <AdsSlot v-if="adsBelow" placement="catalog-bottom" />
   </div>
 </template>

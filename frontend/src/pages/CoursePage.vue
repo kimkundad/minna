@@ -1044,7 +1044,7 @@ function toInstructors(): void {
               />
             </CourseRail>
           </section>
-          <div class="cd-ads"><AdsSlot /></div>
+          <div class="cd-ads"><AdsSlot placement="course" /></div>
         </div>
       </div>
 

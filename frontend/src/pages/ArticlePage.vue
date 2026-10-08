@@ -389,7 +389,7 @@ onBeforeUnmount(() => clearTimeout(copyTimer))
         </ul>
       </section>
 
-      <div class="container cat-ads-slot"><AdsSlot /></div>
+      <div class="container cat-ads-slot"><AdsSlot placement="article" /></div>
     </template>
   </div>
 </template>

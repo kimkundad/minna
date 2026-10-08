@@ -1562,3 +1562,53 @@ export const hero = {
   reorder: (locale: string, ids: number[]) =>
     send<{ data: HeroSlide[] }>('/hero-slides/order', { method: 'PUT', body: { locale, ids } }),
 }
+
+/* ---------------- advertising ---------------- */
+
+/** One key per reserved box on the public site. */
+export const AD_PLACEMENTS = [
+  'home-top',
+  'home-bottom',
+  'catalog-inline',
+  'catalog-bottom',
+  'course',
+  'blog',
+  'article',
+  'account',
+  'learn',
+] as const
+export type AdPlacement = (typeof AD_PLACEMENTS)[number]
+
+export interface Ad {
+  id: number
+  name: string
+  placement: AdPlacement
+  advertiser: string | null
+  href: string
+  imageDesktopPath: string | null
+  imageMobilePath: string | null
+  imageAlt: string | null
+  locale: 'th' | 'en' | 'jp' | 'vn' | 'all'
+  status: 'draft' | 'published'
+  startsAt: string | null
+  endsAt: string | null
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type AdInput = Omit<Ad, 'id' | 'createdAt' | 'updatedAt'>
+
+export const advertising = {
+  list: (query: Record<string, string | number | boolean | undefined> = {}) =>
+    send<Paged<Ad> & { live: Record<string, number> }>('/ads', { query }),
+
+  get: (id: number) => send<{ data: Ad }>(`/ads/${id}`),
+
+  create: (body: AdInput) => send<{ data: Ad }>('/ads', { method: 'POST', body }),
+
+  update: (id: number, body: AdInput) =>
+    send<{ data: Ad }>(`/ads/${id}`, { method: 'PUT', body }),
+
+  remove: (id: number) => send<void>(`/ads/${id}`, { method: 'DELETE' }),
+}

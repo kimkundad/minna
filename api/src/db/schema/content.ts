@@ -75,6 +75,67 @@ export const posts = mysqlTable(
   ],
 )
 
+/**
+ * Where an advertisement can go. One key per reserved box on the site, so the
+ * school sells a position rather than "somewhere on the site" — the box above
+ * the catalog's results and the one under them are worth different money.
+ */
+export const AD_PLACEMENTS = [
+  'home-top',
+  'home-bottom',
+  'catalog-inline',
+  'catalog-bottom',
+  'course',
+  'blog',
+  'article',
+  'account',
+  'learn',
+] as const
+
+export const AD_LOCALES = [...LOCALES, 'all'] as const
+
+export const ads = mysqlTable(
+  'ads',
+  {
+    id: bigint('id', { mode: 'number', unsigned: true }).autoincrement().primaryKey(),
+    /** What the school calls this campaign in the admin. Never shown. */
+    name: varchar('name', { length: 150 }).notNull(),
+    placement: mysqlEnum('placement', AD_PLACEMENTS).notNull(),
+    /** Who bought it. For the admin's own list, not for the page. */
+    advertiser: varchar('advertiser', { length: 150 }),
+    href: varchar('href', { length: 512 }).notNull(),
+
+    /**
+     * Two pictures, because the box is a different shape on each: 4:1 across a
+     * desktop, 4:5 on a phone. A banner that is 4:1 either fits a phone at
+     * thumbnail size or is cropped to its middle, and neither keeps the words
+     * on it readable.
+     */
+    imageDesktopPath: varchar('image_desktop_path', { length: 512 }),
+    imageMobilePath: varchar('image_mobile_path', { length: 512 }),
+    /** Read out in place of the picture, so the advertisement is not silent. */
+    imageAlt: varchar('image_alt', { length: 255 }),
+
+    /** 'all' by default: an advertiser usually buys the whole site. */
+    locale: mysqlEnum('locale', AD_LOCALES).default('all').notNull(),
+    status: mysqlEnum('status', ['draft', 'published']).default('draft').notNull(),
+    /** A campaign runs between dates. Either end may be open. */
+    startsAt: datetime('starts_at'),
+    endsAt: datetime('ends_at'),
+    /** Lower first, where several are live in one placement at once. */
+    sortOrder: int('sort_order').default(0).notNull(),
+
+    createdAt: datetime('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
+    updatedAt: datetime('updated_at')
+      .default(sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (t) => [
+    index('ads_live_idx').on(t.placement, t.status, t.startsAt, t.endsAt),
+    index('ads_locale_idx').on(t.locale),
+  ],
+)
+
 export const testimonials = mysqlTable(
   'testimonials',
   {

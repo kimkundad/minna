@@ -309,6 +309,7 @@ const allGroups = [
         subItems: [
           { name: 'Home slideshow', path: '/hero-slides' },
           { name: 'Articles', path: '/posts' },
+          { name: 'Advertising', path: '/ads' },
           { name: 'Testimonials', path: '/testimonials' },
           { name: 'Enquiries', path: '/contact-messages' },
           { name: 'Subscribers', path: '/subscribers' },

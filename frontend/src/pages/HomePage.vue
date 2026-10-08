@@ -148,7 +148,7 @@ const articleCards = computed(() =>
   </section>
 
   <!-- 5. Ads -->
-  <div class="container home-ads"><AdsSlot /></div>
+  <div class="container home-ads"><AdsSlot placement="home-top" /></div>
 
   <!-- 6. Categories -->
   <section class="panel panel--subtle section home-cats" id="categories" aria-labelledby="cat-h">
@@ -268,5 +268,5 @@ const articleCards = computed(() =>
   </section>
 
   <!-- 10. Ads -->
-  <div class="container home-ads home-ads--last"><AdsSlot /></div>
+  <div class="container home-ads home-ads--last"><AdsSlot placement="home-bottom" /></div>
 </template>

@@ -5,12 +5,12 @@ import { useI18n } from 'vue-i18n'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import ArticleCard from '@/components/blog/ArticleCard.vue'
 import SkeletonCards from '@/components/discovery/SkeletonCards.vue'
-import AdsLink from '@/components/discovery/AdsLink.vue'
 import { api } from '@/lib/api'
 import type { ContentLocale, PublicCategory, PublicPost } from '@/lib/api'
 import { articleView } from '@/lib/article'
 import { categoryLabel } from '@/lib/course'
 import { date, num } from '@/lib/format'
+import AdsSlot from '@/components/ui/AdsSlot.vue'
 
 /**
  * Every published article, newest first.
@@ -358,5 +358,5 @@ const cards = computed(() =>
     </div>
   </section>
 
-  <div class="container cat-ads-slot"><AdsLink href="#sponsor-blog" /></div>
+  <div class="container cat-ads-slot"><AdsSlot placement="blog" /></div>
 </template>
