@@ -12,6 +12,7 @@ import dashboardRoutes from './modules/dashboard/dashboard.routes'
 import authRoutes from './modules/auth/auth.routes'
 import catalogRoutes from './modules/catalog/catalog.routes'
 import uploadRoutes from './modules/uploads/uploads.routes'
+import mediaRoutes from './modules/uploads/media.routes'
 import peopleRoutes from './modules/people/people.routes'
 import memberDetailRoutes from './modules/people/member-detail.routes'
 import meRoutes from './modules/people/me.routes'
@@ -63,6 +64,8 @@ export async function buildApp() {
   await app.register(contentRoutes, { prefix: '/api/v1' })
   await app.register(catalogRoutes, { prefix: '/api/v1' })
   await app.register(uploadRoutes, { prefix: '/api/v1' })
+  // Public on purpose: it serves the pictures inside published writing.
+  await app.register(mediaRoutes, { prefix: '/api/v1' })
   await app.register(peopleRoutes, { prefix: '/api/v1' })
   await app.register(memberDetailRoutes, { prefix: '/api/v1' })
   await app.register(meRoutes, { prefix: '/api/v1' })

@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import FileField from '@/components/forms/FileField.vue'
+import RichTextField from '@/components/forms/RichTextField.vue'
 import {
   ApiError,
   api,
@@ -407,11 +408,12 @@ onMounted(load)
           </div>
 
           <div class="sm:col-span-2">
-            <label :class="labelClass">Description</label>
-            <textarea
+            <RichTextField
               v-model="form.description"
-              rows="6"
-              class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              label="Description"
+              :rows="10"
+              help="The long description on the course page. Pictures can be dropped straight in."
+              :error="fieldErrors.description ?? ''"
             />
           </div>
 

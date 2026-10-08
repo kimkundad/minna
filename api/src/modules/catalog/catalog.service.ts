@@ -312,16 +312,31 @@ export async function createCourse(input: CourseInput, createdBy: number) {
 }
 
 export async function updateCourse(id: number, input: Partial<CourseInput>) {
-  const [before] = await db.select().from(courses).where(eq(courses.id, id)).limit(1)
-  if (!before) throw notFound('That course does not exist.')
+  const [row] = await db.select().from(courses).where(eq(courses.id, id)).limit(1)
+  if (!row) throw notFound('That course does not exist.')
 
-  if (input.slug && input.slug !== before.slug) await assertCourseSlugFree(input.slug, id)
+  // The teachers are a separate table, so a bare course row has no
+  // `instructorIds` — and an audit diff against the request body would record
+  // every teacher change as "was nothing", which is worse than not recording it
+  // at all.
+  const before = {
+    ...row,
+    instructorIds: (
+      await db
+        .select({ userId: courseInstructors.userId })
+        .from(courseInstructors)
+        .where(eq(courseInstructors.courseId, id))
+        .orderBy(courseInstructors.sortOrder)
+    ).map((r) => r.userId),
+  }
+
+  if (input.slug && input.slug !== row.slug) await assertCourseSlugFree(input.slug, id)
 
   const { instructorIds, ...fields } = input
   if (Object.keys(fields).length) {
     // Approving is what publishes, so the date follows the status rather than
     // being a second thing to remember to set.
-    const publishing = fields.status === 'approved' && before.status !== 'approved'
+    const publishing = fields.status === 'approved' && row.status !== 'approved'
     const patch = {
       ...fields,
       ...(publishing ? { publishedAt: new Date() } : {}),

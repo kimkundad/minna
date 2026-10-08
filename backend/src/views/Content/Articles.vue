@@ -4,6 +4,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import TablePager from '@/components/common/TablePager.vue'
 import FileField from '@/components/forms/FileField.vue'
+import RichTextField from '@/components/forms/RichTextField.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { ApiError, content, type Post, type PostInput } from '@/lib/api'
 
@@ -298,16 +299,13 @@ onMounted(load)
           </div>
 
           <div class="sm:col-span-2">
-            <label :class="labelClass">The article</label>
-            <textarea
+            <RichTextField
               v-model="form.contentHtml"
-              rows="14"
-              class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-3 font-mono text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-              placeholder="<p>…</p>"
-            ></textarea>
-            <p class="mt-1 text-xs text-gray-400">
-              HTML. Paragraphs go in &lt;p&gt;, headings in &lt;h2&gt;.
-            </p>
+              label="The article"
+              :rows="16"
+              help="Pictures can be dropped straight in. The source button shows the HTML underneath."
+              :error="fieldErrors.contentHtml ?? ''"
+            />
           </div>
         </div>
 

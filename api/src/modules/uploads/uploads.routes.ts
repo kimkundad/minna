@@ -29,10 +29,28 @@ const PURPOSES = {
   'course-document': { folder: (id: number) => `courses/${id}/docs`, maxSize: 200 * 1024 * 1024, ttl: 1800 },
   // A teacher's photo is their account avatar: one person, one picture.
   'avatar': { folder: (id: number) => `avatars/${id}`, maxSize: 4 * 1024 * 1024, ttl: 600 },
+  /**
+   * A picture dropped into an article or a course description.
+   *
+   * Filed by month rather than by whatever it belongs to, because the writing
+   * it sits in may not exist yet — a new article has no id until it is saved,
+   * and the picture goes in while it is being written.
+   *
+   * `content/` is the one folder served without a signature, through
+   * `media.routes.ts`. Nothing else may be uploaded into it.
+   */
+  'content-image': {
+    folder: () => {
+      const now = new Date()
+      return `content/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`
+    },
+    maxSize: 8 * 1024 * 1024,
+    ttl: 600,
+  },
 } as const
 
 const ticketBody = z.object({
-  purpose: z.enum(['course-thumbnail', 'course-video', 'course-document', 'avatar']),
+  purpose: z.enum(['course-thumbnail', 'course-video', 'course-document', 'avatar', 'content-image']),
   /** The course the file belongs to. Ignored for an avatar. */
   courseId: z.coerce.number().int().positive().optional(),
   /** Whose avatar, when an admin is setting it for somebody else. */
@@ -61,7 +79,9 @@ export default async function uploadRoutes(app: FastifyInstance) {
     if (body.purpose === 'avatar' && body.userId && body.userId !== req.user.sub && !isAdmin) {
       throw forbidden('Only an administrator can set the photo of another account.')
     }
-    if (body.purpose !== 'avatar') {
+    // Neither an avatar nor a content picture belongs to a course, so neither
+    // needs one named. A content picture is filed by month.
+    if (body.purpose !== 'avatar' && body.purpose !== 'content-image') {
       if (!body.courseId) {
         throw new AppError(422, 'validation_failed', 'A course is required for this upload.', {
           courseId: 'Required.',

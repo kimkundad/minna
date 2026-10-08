@@ -361,7 +361,14 @@ export interface CourseDetail extends CourseInput {
   instructors?: { id: number; firstName: string; lastName: string; avatarPath: string | null }[]
 }
 
-export type UploadPurpose = 'course-thumbnail' | 'course-video' | 'course-document' | 'avatar'
+export type UploadPurpose =
+  | 'course-thumbnail'
+  | 'course-video'
+  | 'course-document'
+  | 'avatar'
+  /** A picture dropped into an article or a course description. Filed by month,
+   *  and the one folder served without a signature. */
+  | 'content-image'
 
 export interface UploadTicket {
   ticket: string
@@ -1474,4 +1481,18 @@ export const lessonQuestions = {
     ),
 
   remove: (id: number) => send<void>(`/lesson-questions/${id}`, { method: 'DELETE' }),
+}
+
+/**
+ * A permanent address for a picture inside a piece of writing.
+ *
+ * Everything in the store is reached through a signed URL that expires, which
+ * is right for a lesson video and wrong for a picture written into an article:
+ * the HTML is saved once and read for years. This address never changes, and
+ * the API signs the real one when the browser follows it.
+ *
+ * Takes the path as the store returns it, with or without the storage root.
+ */
+export function mediaUrl(path: string): string {
+  return `${BASE}/media/${path.replace(/^\/+/, '')}`
 }
