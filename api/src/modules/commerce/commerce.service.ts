@@ -9,6 +9,7 @@ import {
   orders,
   packageCourses,
   packages,
+  users,
 } from '../../db/schema/index'
 import { conflict, notFound } from '../../lib/errors'
 import { getVatRules, vatOf } from '../../lib/settings'
@@ -47,6 +48,8 @@ export interface Quote {
   subtotal: number
   courseDiscount: number
   orderDiscount: number
+  /** Which coupon gave `orderDiscount`, so the order can remember it. */
+  orderCouponId: number | null
   vatAmount: number
   total: number
   currency: string
@@ -159,12 +162,16 @@ export async function quote(
   // An order-wide coupon applies to what is left after the per-line ones, so
   // the two stack rather than one quietly replacing the other.
   let orderDiscount = 0
+  let orderCouponId: number | null = null
   if (orderCouponCode) {
     const coupon = await findCoupon(orderCouponCode)
     if (coupon && coupon.scope !== 'course') {
       const after = subtotal - courseDiscount
       if (!coupon.minSubtotal || after >= coupon.minSubtotal) {
         orderDiscount = discountFor(after, coupon)
+        // Only when it actually took something off: a coupon that was typed and
+        // came to nothing has not been used.
+        if (orderDiscount > 0) orderCouponId = coupon.id
       }
     }
   }
@@ -181,6 +188,7 @@ export async function quote(
     subtotal,
     courseDiscount,
     orderDiscount,
+    orderCouponId,
     vatAmount,
     total,
     currency: 'THB',
@@ -226,6 +234,7 @@ export async function createOrder(
     subtotal: q.subtotal,
     courseDiscount: q.courseDiscount,
     orderDiscount: q.orderDiscount,
+    orderCouponId: q.orderCouponId,
     vatAmount: q.vatAmount,
     total: q.total,
     currency: q.currency,
@@ -298,7 +307,10 @@ export async function markPaid(
     .where(eq(orders.id, orderId))
 
   await grantAccess(order.userId, order.items)
-  await countCouponUse(order.userId, order.id, order.items)
+  await countCouponUse(order.userId, order.id, order.items, {
+    couponId: order.orderCouponId,
+    discount: order.orderDiscount,
+  })
   return true
 }
 
@@ -359,24 +371,34 @@ async function grantAccess(userId: number, items: { id: number; courseId: number
   }
 }
 
-/** A coupon counts as used when it is paid for, not when it is typed. */
+/**
+ * A coupon counts as used when it is paid for, not when it is typed.
+ *
+ * Both kinds are counted: the per-line coupons carried on the items, and the
+ * basket coupon the order carries itself. Counting only the first meant a
+ * basket coupon's usage limit never came down, so a "first 100 customers" code
+ * would have gone on working for the hundred-and-first.
+ */
 async function countCouponUse(
   userId: number,
   orderId: number,
   items: { couponId: number | null; discount: number }[],
+  orderWide: { couponId: number | null; discount: number },
 ) {
-  for (const item of items) {
-    if (!item.couponId || !item.discount) continue
+  const spent = [...items, orderWide]
+
+  for (const use of spent) {
+    if (!use.couponId || !use.discount) continue
     await db.insert(couponRedemptions).values({
-      couponId: item.couponId,
+      couponId: use.couponId,
       userId,
       orderId,
-      discountAmount: item.discount,
+      discountAmount: use.discount,
     })
     await db
       .update(coupons)
       .set({ usedCount: sql`${coupons.usedCount} + 1` })
-      .where(eq(coupons.id, item.couponId))
+      .where(eq(coupons.id, use.couponId))
   }
 }
 
@@ -431,33 +453,129 @@ export async function setProviderRef(orderId: number, ref: string, payload: unkn
 
 /* ---------------- admin ---------------- */
 
+/**
+ * One order, with everything the admin needs to answer a question about it.
+ *
+ * Separate from `getOrder` because that one is on the payment path, where a
+ * join per webhook buys nothing — and because the coupon codes are stored by id
+ * on the item, which is no use to somebody reading a screen.
+ */
+export async function getOrderDetail(id: number) {
+  const order = await getOrder(id)
+
+  const [buyer] = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      phoneCountryCode: users.phoneCountryCode,
+      phoneNational: users.phoneNational,
+    })
+    .from(users)
+    .where(eq(users.id, order.userId))
+    .limit(1)
+
+  const couponIds = [...order.items.map((i) => i.couponId), order.orderCouponId].filter(
+    (v): v is number => v !== null,
+  )
+  const couponRows = couponIds.length
+    ? await db
+        .select({ id: coupons.id, code: coupons.code })
+        .from(coupons)
+        .where(inArray(coupons.id, couponIds))
+    : []
+  const codeOf = new Map(couponRows.map((c) => [c.id, c.code]))
+
+  return {
+    ...order,
+    // The raw Stripe payload is kept on the row for support, but it is pages of
+    // JSON and no help on a list — the detail screen asks for it by itself.
+    providerPayload: undefined,
+    orderCouponCode: order.orderCouponId ? (codeOf.get(order.orderCouponId) ?? null) : null,
+    buyer: buyer ?? null,
+    items: order.items.map((i) => ({
+      ...i,
+      couponCode: i.couponId ? (codeOf.get(i.couponId) ?? null) : null,
+    })),
+  }
+}
+
+/**
+ * The orders list the admin works from.
+ *
+ * Joined to the buyer rather than returning a bare user id: every question
+ * asked about an order starts with who placed it, and a screen that shows `#41`
+ * sends someone to another table to find out.
+ *
+ * `q` matches the order number, the email and the name together, because the
+ * person asking has whichever of the three the customer gave them.
+ */
 export async function listOrders(opts: {
   page: number
   perPage: number
   status?: (typeof orders.status.enumValues)[number] | undefined
+  method?: 'card' | 'promptpay' | 'free' | undefined
   q?: string | undefined
 }) {
+  const term = `%${opts.q ?? ''}%`
   const where = [
     opts.status ? eq(orders.status, opts.status) : undefined,
-    opts.q ? sql`${orders.orderNo} LIKE ${'%' + opts.q + '%'}` : undefined,
+    opts.method ? eq(orders.paymentMethod, opts.method) : undefined,
+    opts.q
+      ? or(
+          sql`${orders.orderNo} LIKE ${term}`,
+          sql`${users.email} LIKE ${term}`,
+          sql`CONCAT(${users.firstName}, ' ', ${users.lastName}) LIKE ${term}`,
+        )
+      : undefined,
   ].filter(Boolean)
   const filter = where.length ? and(...(where as never[])) : undefined
 
   const [{ value: total } = { value: 0 }] = await db
     .select({ value: sql<number>`COUNT(*)` })
     .from(orders)
+    .innerJoin(users, eq(users.id, orders.userId))
     .where(filter)
 
   const rows = await db
-    .select()
+    .select({
+      id: orders.id,
+      orderNo: orders.orderNo,
+      userId: orders.userId,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      subtotal: orders.subtotal,
+      courseDiscount: orders.courseDiscount,
+      orderDiscount: orders.orderDiscount,
+      vatAmount: orders.vatAmount,
+      total: orders.total,
+      currency: orders.currency,
+      status: orders.status,
+      paymentMethod: orders.paymentMethod,
+      provider: orders.provider,
+      providerRef: orders.providerRef,
+      paidAt: orders.paidAt,
+      createdAt: orders.createdAt,
+      itemCount: sql<number>`(
+        SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = ${orders.id}
+      )`,
+      // The titles as they were sold, so the row reads without opening it.
+      itemSummary: sql<string | null>`(
+        SELECT GROUP_CONCAT(oi.title_snapshot SEPARATOR ', ')
+        FROM order_items oi WHERE oi.order_id = ${orders.id}
+      )`,
+    })
     .from(orders)
+    .innerJoin(users, eq(users.id, orders.userId))
     .where(filter)
     .orderBy(desc(orders.createdAt))
     .limit(opts.perPage)
     .offset((opts.page - 1) * opts.perPage)
 
   return {
-    data: rows,
+    data: rows.map((r) => ({ ...r, itemCount: Number(r.itemCount) })),
     meta: {
       page: opts.page,
       perPage: opts.perPage,

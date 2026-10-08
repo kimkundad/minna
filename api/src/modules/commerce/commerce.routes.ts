@@ -184,6 +184,7 @@ export default async function commerceRoutes(app: FastifyInstance) {
         page: z.coerce.number().int().min(1).default(1),
         perPage: z.coerce.number().int().min(1).max(100).default(20),
         status: z.enum(['pending', 'paid', 'failed', 'cancelled', 'refunded']).optional(),
+        method: z.enum(['card', 'promptpay', 'free']).optional(),
         q: z.string().max(100).optional(),
       })
       .parse(req.query)
@@ -192,7 +193,7 @@ export default async function commerceRoutes(app: FastifyInstance) {
 
   app.get('/orders/:id', adminOnly, async (req) => {
     const { id } = idParam.parse(req.params)
-    return { data: await service.getOrder(id) }
+    return { data: await service.getOrderDetail(id) }
   })
 
   /**
@@ -215,7 +216,10 @@ export default async function commerceRoutes(app: FastifyInstance) {
       if (typeof intent === 'string') await refundPayment(intent)
     }
 
-    const after = await service.refundOrder(id)
+    await service.refundOrder(id)
+    // The detail shape, not the bare row: this answers the screen that asked,
+    // and it is still showing the buyer and the items beside the status.
+    const after = await service.getOrderDetail(id)
 
     audit(req, {
       action: 'order.refunded',

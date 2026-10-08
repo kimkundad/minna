@@ -1,6 +1,8 @@
+import { eq } from 'drizzle-orm'
 import type { FastifyRequest } from 'fastify'
 import { db } from '../db/client'
 import { auditLogs } from '../db/schema/audit'
+import { users } from '../db/schema/auth'
 import type { RoleName } from '../plugins/auth'
 
 /**
@@ -61,12 +63,33 @@ export function actorOf(req: FastifyRequest, email?: string | null): Actor {
   }
 }
 
+/**
+ * The actor's email, looked up when the caller did not already have it.
+ *
+ * Worth a query: `actorId` has `ON DELETE set null`, so once a staff account is
+ * removed an entry that stored only the id can no longer say who did the thing
+ * — which is the one question an audit log exists to answer. The email is
+ * copied in as it was at the time and survives the account.
+ *
+ * Off the request path, because `record()` is not awaited by callers.
+ */
+async function emailOf(id: number): Promise<string | null> {
+  const [row] = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(eq(users.id, id))
+    .limit(1)
+  return row?.email ?? null
+}
+
 export async function record(actor: Actor, entry: AuditEntry): Promise<void> {
   try {
+    const email = actor.email ?? (actor.id ? await emailOf(actor.id) : null)
+
     await db.insert(auditLogs).values({
       actorId: actor.id,
       actorRole: actor.role,
-      actorEmail: actor.email ?? null,
+      actorEmail: email,
       action: entry.action,
       subjectType: entry.subjectType ?? null,
       subjectId: entry.subjectId ?? null,

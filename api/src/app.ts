@@ -12,6 +12,7 @@ import uploadRoutes from './modules/uploads/uploads.routes'
 import peopleRoutes from './modules/people/people.routes'
 import essayRoutes from './modules/learning/essay.routes'
 import commerceRoutes from './modules/commerce/commerce.routes'
+import couponRoutes from './modules/commerce/coupons.routes'
 import webhookRoutes from './modules/commerce/webhooks.routes'
 
 export async function buildApp() {
@@ -53,6 +54,7 @@ export async function buildApp() {
   await app.register(uploadRoutes, { prefix: '/api/v1' })
   await app.register(peopleRoutes, { prefix: '/api/v1' })
   await app.register(essayRoutes, { prefix: '/api/v1' })
+  await app.register(couponRoutes, { prefix: '/api/v1' })
   await app.register(commerceRoutes, { prefix: '/api/v1' })
   // Its own registration, so its raw-body parser stays inside its own scope.
   await app.register(webhookRoutes, { prefix: '/api/v1' })

@@ -66,6 +66,9 @@ let refreshToken = ''
       firstName: 'มาลี',
       lastName: 'ศรีสุข',
       birthdate: '1995-03-15',
+      // Consent is a literal true, so it has to be sent: a registration without
+      // it is refused, which is the point of the field.
+      acceptedTerms: true,
       locale: 'th',
     },
   })
@@ -79,7 +82,14 @@ let refreshToken = ''
 
 {
   const r = await call('POST', '/api/v1/auth/register', {
-    body: { email: EMAIL, password: PASSWORD, firstName: 'a', lastName: 'b', birthdate: '1995-03-15' },
+    body: {
+      email: EMAIL,
+      password: PASSWORD,
+      firstName: 'a',
+      lastName: 'b',
+      birthdate: '1995-03-15',
+      acceptedTerms: true,
+    },
   })
   check('duplicate email is rejected', r.status === 409 && r.json?.error?.code === 'conflict')
 }
@@ -92,6 +102,9 @@ let refreshToken = ''
       firstName: 'a',
       lastName: 'b',
       birthdate: '1995-03-15',
+      // Consent is a literal true, so it has to be sent: a registration without
+      // it is refused, which is the point of the field.
+      acceptedTerms: true,
     },
   })
   check(

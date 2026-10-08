@@ -109,6 +109,19 @@ const router = createRouter({
     },
 
     {
+      path: '/orders',
+      name: 'Orders',
+      component: () => import('@/views/Sales/Orders.vue'),
+      meta: { title: 'Orders', roles: ['superadmin', 'admin'] },
+    },
+    {
+      path: '/coupons',
+      name: 'Coupons',
+      component: () => import('@/views/Sales/Coupons.vue'),
+      meta: { title: 'Coupons', roles: ['superadmin', 'admin'] },
+    },
+
+    {
       path: '/profile',
       name: 'Profile',
       component: () => import('@/views/Others/UserProfile.vue'),

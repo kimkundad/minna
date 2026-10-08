@@ -701,3 +701,158 @@ export const teachers = {
   saveProfile: (userId: number, body: TeacherProfileInput) =>
     send<{ data: TeacherProfile }>(`/members/${userId}/teacher-profile`, { method: 'PUT', body }),
 }
+
+/* ---------------- sales ---------------- */
+
+export type OrderStatus = 'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded'
+export type PaymentMethod = 'card' | 'promptpay' | 'free'
+
+export interface OrderRow {
+  id: number
+  orderNo: string
+  userId: number
+  email: string
+  firstName: string
+  lastName: string
+  /** Every amount is satang. */
+  subtotal: number
+  courseDiscount: number
+  orderDiscount: number
+  vatAmount: number
+  total: number
+  currency: string
+  status: OrderStatus
+  paymentMethod: PaymentMethod | null
+  provider: string
+  providerRef: string | null
+  paidAt: string | null
+  createdAt: string
+  itemCount: number
+  /** The titles as they were sold, comma-separated. */
+  itemSummary: string | null
+}
+
+export interface OrderItem {
+  id: number
+  courseId: number | null
+  packageId: number | null
+  titleSnapshot: string
+  unitPrice: number
+  discount: number
+  couponId: number | null
+  couponCode: string | null
+  accessType: 'lifetime' | 'limited'
+  accessDurationDays: number | null
+}
+
+export interface OrderDetail extends Omit<OrderRow, 'itemCount' | 'itemSummary' | 'email' | 'firstName' | 'lastName'> {
+  /** The basket-wide coupon, if one was used. Per-line ones are on the items. */
+  orderCouponCode: string | null
+  buyer: {
+    id: number
+    email: string
+    firstName: string
+    lastName: string
+    phoneCountryCode: string | null
+    phoneNational: string | null
+  } | null
+  items: OrderItem[]
+}
+
+export interface OrderListQuery extends Record<string, string | number | boolean | undefined> {
+  page?: number
+  perPage?: number
+  status?: OrderStatus
+  method?: PaymentMethod
+  q?: string
+}
+
+export const orders = {
+  list: (query: OrderListQuery = {}) => send<Paged<OrderRow>>('/orders', { query }),
+
+  get: (id: number) => send<{ data: OrderDetail }>(`/orders/${id}`),
+
+  /** Takes the money back and revokes the access it granted. */
+  refund: (id: number, reason?: string) =>
+    send<{ data: OrderDetail }>(`/orders/${id}/refund`, {
+      method: 'POST',
+      body: reason ? { reason } : {},
+    }),
+}
+
+/** Whether it would work right now, as opposed to whether it is switched on. */
+export type CouponStatus = 'live' | 'scheduled' | 'expired' | 'used_up' | 'off'
+
+export interface Coupon {
+  id: number
+  code: string
+  scope: 'course' | 'order'
+  courseId: number | null
+  courseTitle: string | null
+  discountType: 'percent' | 'fixed'
+  /** Whole percent, or satang for a fixed amount. */
+  value: number
+  maxDiscount: number | null
+  minSubtotal: number | null
+  startsAt: string | null
+  expiresAt: string | null
+  usageLimit: number | null
+  usedCount: number
+  active: boolean
+  createdAt: string
+  status: CouponStatus
+  /** Satang given away so far. Absent on a single fetch. */
+  discountGiven?: number
+}
+
+export interface CouponInput {
+  code: string
+  scope: 'course' | 'order'
+  courseId: number | null
+  discountType: 'percent' | 'fixed'
+  value: number
+  maxDiscount: number | null
+  minSubtotal: number | null
+  /** ISO, or null for no limit. */
+  startsAt: string | null
+  expiresAt: string | null
+  usageLimit: number | null
+  active: boolean
+}
+
+export interface CouponRedemption {
+  id: number
+  orderId: number
+  orderNo: string
+  orderStatus: OrderStatus
+  userId: number
+  email: string
+  firstName: string
+  lastName: string
+  discountAmount: number
+  redeemedAt: string
+}
+
+export interface CouponListQuery extends Record<string, string | number | boolean | undefined> {
+  page?: number
+  perPage?: number
+  scope?: 'course' | 'order'
+  status?: CouponStatus
+  q?: string
+}
+
+export const coupons = {
+  list: (query: CouponListQuery = {}) => send<Paged<Coupon>>('/coupons', { query }),
+
+  get: (id: number) => send<{ data: Coupon }>(`/coupons/${id}`),
+
+  redemptions: (id: number, query: { page?: number; perPage?: number } = {}) =>
+    send<Paged<CouponRedemption>>(`/coupons/${id}/redemptions`, { query }),
+
+  create: (body: CouponInput) => send<{ data: Coupon }>('/coupons', { method: 'POST', body }),
+
+  update: (id: number, body: CouponInput) =>
+    send<{ data: Coupon }>(`/coupons/${id}`, { method: 'PATCH', body }),
+
+  remove: (id: number) => send<void>(`/coupons/${id}`, { method: 'DELETE' }),
+}

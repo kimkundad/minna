@@ -15,6 +15,13 @@
       "when": 1791330463209,
       "tag": "0001_goofy_marten_broadcloak",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1791423426937,
+      "tag": "0002_mute_giant_man",
+      "breakpoints": true
     }
   ]
 }

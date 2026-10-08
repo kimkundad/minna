@@ -84,6 +84,21 @@ export const orders = mysqlTable(
     total: int('total').default(0).notNull(),
     currency: varchar('currency', { length: 3 }).default('THB').notNull(),
     status: mysqlEnum('status', ORDER_STATUSES).default('pending').notNull(),
+    /**
+     * The basket-wide coupon, if one was used.
+     *
+     * Per-line coupons are recorded on the items, but a basket coupon belongs to
+     * no single line, so without this the order would carry the discount as a
+     * bare number and nothing could say where it came from — which meant a
+     * basket coupon's usage limit never counted down.
+     *
+     * Nulled rather than cascaded if the coupon is ever deleted: the amount
+     * charged stays correct either way.
+     */
+    orderCouponId: bigint('order_coupon_id', { mode: 'number', unsigned: true }).references(
+      () => coupons.id,
+      { onDelete: 'set null' },
+    ),
     paymentMethod: mysqlEnum('payment_method', ['card', 'promptpay', 'free']),
     provider: varchar('provider', { length: 32 }).default('stripe').notNull(),
     /** Stripe checkout session id. */
