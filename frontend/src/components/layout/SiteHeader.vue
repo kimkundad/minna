@@ -10,6 +10,7 @@ import LocaleSwitcher from '@/components/layout/LocaleSwitcher.vue'
 import { data, store } from '@/vendor'
 import { useAuthStore } from '@/stores/auth'
 import { openAuth } from '@/components/auth/authChannel'
+import { useCartStore } from '@/stores/cart'
 import logoUrl from '@/assets/img/logo.png'
 
 /**
@@ -98,9 +99,9 @@ const categories = computed(() => {
   }))
 })
 
-const cartCount = computed(() =>
-  (store as unknown as { cartCount: () => number }).cartCount(),
-)
+/** The real basket, so the badge and the cart page cannot disagree. */
+const cart = useCartStore()
+const cartCount = computed(() => cart.count)
 
 /** The header gains .is-stuck once the page scrolls, which the CSS uses to
  *  drop in a background and a shadow. */
@@ -225,11 +226,14 @@ onBeforeUnmount(() => {
 
           <RouterLink
             class="icon-btn"
+            data-cart-link
             :to="path('/cart')"
             :aria-label="t('header.cartItems', { count: cartCount })"
           >
             <AppIcon name="cart" />
-            <span v-if="cartCount" class="count-badge">{{ cartCount }}</span>
+            <!-- Marked, because the notifications bell carries one of these too
+                 and "the count badge" is two different numbers. -->
+            <span v-if="cartCount" class="count-badge" data-cart-count>{{ cartCount }}</span>
           </RouterLink>
 
           <!-- Signed in: a notification bell and the member's own menu. Signed

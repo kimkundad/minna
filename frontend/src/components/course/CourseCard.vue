@@ -9,6 +9,8 @@ import AppProgress from '@/components/ui/AppProgress.vue'
 import CtaButton from '@/components/ui/CtaButton.vue'
 import CourseImage from './CourseImage.vue'
 import InstructorLine from './InstructorLine.vue'
+import { openAuth } from '@/components/auth/authChannel'
+import { useCartStore } from '@/stores/cart'
 import type { CourseView } from '@/lib/course'
 
 /**
@@ -52,12 +54,37 @@ const cid = computed(() => String(props.view.slug || props.view.id))
  * works today: to checkout with this course. The event is still emitted, for a
  * page that wants to say something about it.
  */
-function onRun(action: string, courseId?: string): void {
+const cart = useCartStore()
+const { t: translate } = useI18n()
+
+/** Already in the basket, so the button says so instead of adding it twice. */
+const inCart = computed(() => cart.has(props.view.id))
+
+async function onRun(action: string, courseId?: string): Promise<void> {
   emit('run', action, courseId)
-  if (action === 'buy' || action === 'add-cart' || action === 'enroll-free') {
-    // The locale comes from the card's own link rather than from the route:
-    // `courseView` already put it there, and a card knows where it points.
-    const locale = props.view.href.split('/')[1] || 'th'
+  // The locale comes from the card's own link rather than from the route:
+  // `courseView` already put it there, and a card knows where it points.
+  const locale = props.view.href.split('/')[1] || 'th'
+
+  if (action === 'add-cart') {
+    if (inCart.value) {
+      void router.push(`/${locale}/cart`)
+      return
+    }
+    // The basket needs an account. Rather than refusing, ask — and put the
+    // course in once they are back, so the click is not thrown away.
+    const added = await cart.add(props.view.id)
+    if (!added) {
+      openAuth({
+        step: 'login',
+        reason: translate('auth.reasonCart'),
+        onDone: () => void cart.add(props.view.id),
+      })
+    }
+    return
+  }
+
+  if (action === 'buy' || action === 'enroll-free') {
     void router.push({ path: `/${locale}/checkout`, query: { items: courseId ?? cid.value } })
   }
 }

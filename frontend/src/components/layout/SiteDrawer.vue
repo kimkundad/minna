@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/auth'
 import { openAuth } from '@/components/auth/authChannel'
 import { LOCALES, LOCALE_META, storeLocale, type AppLocale } from '@/locales'
 import logoUrl from '@/assets/img/logo.png'
+import { useCartStore } from '@/stores/cart'
 
 /**
  * The navigation drawer behind the burger, for widths where the pill nav and
@@ -55,7 +56,9 @@ const memberPhoto = computed(() => {
   return photo.startsWith('assets/') ? `/${photo}` : photo
 })
 
-const cartCount = computed(() => (store as unknown as { cartCount: () => number }).cartCount())
+/** The real basket, so the badge and the cart page cannot disagree. */
+const cart = useCartStore()
+const cartCount = computed(() => cart.count)
 
 const categories = computed(() => data.categories)
 

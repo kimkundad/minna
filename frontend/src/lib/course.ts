@@ -95,6 +95,8 @@ export interface CourseView {
   normalPrice: number | null
   isFree: boolean
   inPackage: boolean
+  /** Null for lifetime access. What the basket and the order rows say. */
+  accessDays: number | null
   badges: BadgeSpec[]
   primary: CtaAction
   secondary: CtaAction | null
@@ -249,6 +251,7 @@ export function courseView(course: PublicCourse, ctx: ViewContext): CourseView {
     normalPrice: course.normalPrice === null ? null : baht(course.normalPrice),
     isFree: course.price === 0,
     inPackage: course.inPackage,
+    accessDays: course.accessType === 'limited' ? course.accessDurationDays : null,
     badges: badgesFor(course, t),
     ...actionsFor(course, t, href),
   }

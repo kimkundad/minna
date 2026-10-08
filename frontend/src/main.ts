@@ -4,6 +4,7 @@ import App from './App.vue'
 import router from './router'
 import { i18n } from './locales'
 import { useAuthStore } from './stores/auth'
+import { useCartStore } from './stores/cart'
 
 // Order matters: tokens define the custom properties every later file reads.
 import './assets/css/tokens.css'
@@ -40,4 +41,9 @@ app.use(pinia).use(router).use(i18n)
  */
 useAuthStore(pinia)
   .bootstrap()
-  .finally(() => app.mount('#app'))
+  .finally(() => {
+    app.mount('#app')
+    // After mounting, not before: the basket is a badge in the corner, and
+    // nobody should wait on a page for it. It fills itself in a moment later.
+    void useCartStore(pinia).load()
+  })

@@ -1,3 +1,4 @@
+import { useCartStore } from './cart'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
@@ -119,6 +120,9 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       setAccessToken(null)
       user.value = null
+      // The basket belongs to the account that just left. Leaving it in the
+      // badge would show the next person at this browser somebody else's.
+      useCartStore().clear()
       syncFixtures(false)
       busy.value = false
     }

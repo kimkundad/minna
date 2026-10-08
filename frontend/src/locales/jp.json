@@ -1451,10 +1451,9 @@
       "ended": "Not on sale"
     },
     "trust": {
-      "payment": "Pay by QR or credit/debit card (simulated)",
+      "payment": "PromptPay QR またはクレジット/デビットカードでお支払い",
       "receipt": "You can ask for a receipt or full tax invoice at the next step",
       "keptInCart": "Anything you leave unselected stays in your cart",
-      "simulated": "Payment is simulated — nothing is charged",
       "emailed": "Receipts and tax invoices go to the buyer’s email",
       "startAfterPay": "Start studying as soon as payment succeeds",
       "freeForMembers": "Free for members, nothing to pay",
@@ -1510,7 +1509,11 @@
       "signInFirst": "sign in before confirming",
       "recTitle": "Recommended courses",
       "recSubMember": "Picked from your interests and what you have studied",
-      "recSubGuest": "Courses our editors recommend"
+      "recSubGuest": "Courses our editors recommend",
+      "loading": "カートを読み込んでいます…",
+      "emptyTextGuest": "カートのご利用にはログインが必要です。先にコースをご覧いただくこともできます。",
+      "noteOwned": "このコースはすでに受講権をお持ちです。再購入の必要はありません。",
+      "noteEnded": "このコースの販売は終了しました。"
     },
     "coupon": {
       "percent": "{pct}% off",
@@ -1669,7 +1672,7 @@
       "qrDesc": "Scan with your banking app; confirmed automatically",
       "cardTitle": "Credit or debit card",
       "cardDesc": "Paid straight away with a supported card",
-      "note": "Payment is simulated for this prototype — nothing is charged and no card details are kept",
+      "note": "決済は提供元のページで行われ、カード情報は当サイトを通りません",
       "freeTitle": "Free course, nothing to pay",
       "freeText": "Press “Claim free access” to start straight away. No payment details and no tax invoice needed."
     },
@@ -2334,7 +2337,8 @@
     "verifyNoToken": "リンクが不完全です",
     "verifyNoTokenSub": "メールのリンクが途中で切れているか、このページを直接開いています。",
     "goHome": "ホームへ",
-    "goSignIn": "ログイン"
+    "goSignIn": "ログイン",
+    "reasonCart": "カートのご利用にはログインが必要です"
   },
   "cta": {
     "continue": "Continue",

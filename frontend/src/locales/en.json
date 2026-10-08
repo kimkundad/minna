@@ -1451,10 +1451,9 @@
       "ended": "Not on sale"
     },
     "trust": {
-      "payment": "Pay by QR or credit/debit card (simulated)",
+      "payment": "Pay by PromptPay QR or by card",
       "receipt": "You can ask for a receipt or full tax invoice at the next step",
       "keptInCart": "Anything you leave unselected stays in your cart",
-      "simulated": "Payment is simulated — nothing is charged",
       "emailed": "Receipts and tax invoices go to the buyer’s email",
       "startAfterPay": "Start studying as soon as payment succeeds",
       "freeForMembers": "Free for members, nothing to pay",
@@ -1510,7 +1509,11 @@
       "signInFirst": "sign in before confirming",
       "recTitle": "Recommended courses",
       "recSubMember": "Picked from your interests and what you have studied",
-      "recSubGuest": "Courses our editors recommend"
+      "recSubGuest": "Courses our editors recommend",
+      "loading": "Loading your basket…",
+      "emptyTextGuest": "Sign in to use the basket, or have a look around first.",
+      "noteOwned": "You already have access to this one — no need to buy it again.",
+      "noteEnded": "This course is no longer sold."
     },
     "coupon": {
       "percent": "{pct}% off",
@@ -1669,7 +1672,7 @@
       "qrDesc": "Scan with your banking app; confirmed automatically",
       "cardTitle": "Credit or debit card",
       "cardDesc": "Paid straight away with a supported card",
-      "note": "Payment is simulated for this prototype — nothing is charged and no card details are kept",
+      "note": "Paid on the provider’s own page — no card details reach this site",
       "freeTitle": "Free course, nothing to pay",
       "freeText": "Press “Claim free access” to start straight away. No payment details and no tax invoice needed."
     },
@@ -2334,7 +2337,8 @@
     "verifyNoToken": "This link is incomplete",
     "verifyNoTokenSub": "The link was copied from the email without all of it, or this page was opened directly.",
     "goHome": "Go to the home page",
-    "goSignIn": "Sign in"
+    "goSignIn": "Sign in",
+    "reasonCart": "Sign in to use the basket"
   },
   "cta": {
     "continue": "Continue",

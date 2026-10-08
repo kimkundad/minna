@@ -16,6 +16,8 @@ import { ApiError, api, mediaUrl } from '@/lib/api'
 import type { Curriculum, CurriculumLesson, PublicCategory, PublicCourseDetail } from '@/lib/api'
 import { categoryLabel, courseView, personOf } from '@/lib/course'
 import { dateLong, minutes } from '@/lib/format'
+import { openAuth } from '@/components/auth/authChannel'
+import { useCartStore } from '@/stores/cart'
 
 /**
  * One course, in full — the sales page a visitor reads before buying.
@@ -34,6 +36,7 @@ import { dateLong, minutes } from '@/lib/format'
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+const cart = useCartStore()
 
 const locale = computed(() => String(route.params.locale ?? 'th'))
 const path = (p: string) => `/${locale.value}${p}`
@@ -504,9 +507,29 @@ watch(ctasEl, observeCtas)
  * not exist yet, so every one of them goes the single way that works today:
  * straight to checkout with this course.
  */
-function runAction(action: string, courseId?: string): void {
+async function runAction(action: string, courseId?: string): Promise<void> {
   const cid = courseId ?? course.value?.slug ?? courseRef.value
-  if (action === 'buy' || action === 'add-cart' || action === 'enroll-free') {
+
+  if (action === 'add-cart') {
+    const id = course.value?.id
+    if (!id) return
+    if (cart.has(id)) {
+      void router.push(path('/cart'))
+      return
+    }
+    // The basket needs an account. Rather than refusing, ask — and put the
+    // course in once they are back, so the click is not thrown away.
+    if (!(await cart.add(id))) {
+      openAuth({
+        step: 'login',
+        reason: t('auth.reasonCart'),
+        onDone: () => void cart.add(id),
+      })
+    }
+    return
+  }
+
+  if (action === 'buy' || action === 'enroll-free') {
     void router.push({ path: path('/checkout'), query: { items: cid } })
   }
 }

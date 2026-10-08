@@ -1451,10 +1451,9 @@
       "ended": "Not on sale"
     },
     "trust": {
-      "payment": "Pay by QR or credit/debit card (simulated)",
+      "payment": "Thanh toán bằng QR PromptPay hoặc thẻ",
       "receipt": "You can ask for a receipt or full tax invoice at the next step",
       "keptInCart": "Anything you leave unselected stays in your cart",
-      "simulated": "Payment is simulated — nothing is charged",
       "emailed": "Receipts and tax invoices go to the buyer’s email",
       "startAfterPay": "Start studying as soon as payment succeeds",
       "freeForMembers": "Free for members, nothing to pay",
@@ -1510,7 +1509,11 @@
       "signInFirst": "sign in before confirming",
       "recTitle": "Recommended courses",
       "recSubMember": "Picked from your interests and what you have studied",
-      "recSubGuest": "Courses our editors recommend"
+      "recSubGuest": "Courses our editors recommend",
+      "loading": "Đang tải giỏ hàng…",
+      "emptyTextGuest": "Đăng nhập để dùng giỏ hàng, hoặc xem các khoá học trước.",
+      "noteOwned": "Bạn đã có quyền học khoá này — không cần mua lại.",
+      "noteEnded": "Khoá này đã ngừng bán."
     },
     "coupon": {
       "percent": "{pct}% off",
@@ -1669,7 +1672,7 @@
       "qrDesc": "Scan with your banking app; confirmed automatically",
       "cardTitle": "Credit or debit card",
       "cardDesc": "Paid straight away with a supported card",
-      "note": "Payment is simulated for this prototype — nothing is charged and no card details are kept",
+      "note": "Thanh toán trên trang của nhà cung cấp — thông tin thẻ không qua trang này",
       "freeTitle": "Free course, nothing to pay",
       "freeText": "Press “Claim free access” to start straight away. No payment details and no tax invoice needed."
     },
@@ -2334,7 +2337,8 @@
     "verifyNoToken": "Liên kết này chưa đầy đủ",
     "verifyNoTokenSub": "Liên kết sao chép từ email bị thiếu, hoặc bạn mở trang này trực tiếp.",
     "goHome": "Về trang chủ",
-    "goSignIn": "Đăng nhập"
+    "goSignIn": "Đăng nhập",
+    "reasonCart": "Đăng nhập để dùng giỏ hàng"
   },
   "cta": {
     "continue": "Continue",

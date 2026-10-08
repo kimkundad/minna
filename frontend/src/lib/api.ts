@@ -277,6 +277,37 @@ export const api = {
   /** One of the buyer's own orders, by the number support would ask for. */
   orderByNo: (orderNo: string) =>
     send<{ data: PublicOrder }>(`/orders/by-no/${encodeURIComponent(orderNo)}`),
+
+  /* ---------------- the basket ---------------- */
+
+  /**
+   * Every call returns the whole basket, priced. One round trip per change,
+   * and no chance of the browser's idea of it drifting from the server's.
+   */
+  cart: () => send<{ data: CartResponse }>('/cart'),
+
+  addToCart: (courseId: number) =>
+    send<{ data: CartResponse }>('/cart/items', { method: 'POST', body: { courseId } }),
+
+  removeFromCart: (courseId: number) =>
+    send<{ data: CartResponse }>(`/cart/items/${courseId}`, { method: 'DELETE' }),
+
+  selectInCart: (courseId: number, selected: boolean) =>
+    send<{ data: CartResponse }>(`/cart/items/${courseId}`, {
+      method: 'PATCH',
+      body: { selected },
+    }),
+
+  selectAllInCart: (selected: boolean) =>
+    send<{ data: CartResponse }>('/cart', { method: 'PATCH', body: { selected } }),
+}
+
+export interface CartResponse {
+  items: { courseId: number; selected: boolean; addedAt: string }[]
+  /** Covers the ticked rows only — an unticked course stays in the basket and
+   *  out of the total. Null when nothing is ticked. */
+  quote: Quote | null
+  alreadyOwned: number[]
 }
 
 /* ---------------- buying ---------------- */

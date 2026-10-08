@@ -77,6 +77,7 @@ export function vendorCourseView(courseId: string, locale: string): CourseView {
     normalPrice: (course.normalPrice as number | null) ?? null,
     isFree: Boolean(course.isFree),
     inPackage: Boolean(course.packageIncluded),
+    accessDays: (course.accessDays as number | undefined) ?? null,
     // Package membership is shown on the course page, not on cards: a tile has
     // room for two badges and the marketing ones earn the space.
     badges: view.badges.filter((b) => b.kind !== 'package').slice(0, 2),
