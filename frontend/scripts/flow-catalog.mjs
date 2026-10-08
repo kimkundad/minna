@@ -208,7 +208,34 @@ await page.goto(`${BASE}${href}`, { waitUntil: 'networkidle2' })
 const landed = await page.evaluate(() => document.querySelector('h1')?.textContent.trim() ?? '')
 check('that link opens the same course', landed === cardTitle, `card "${cardTitle}" -> page "${landed}"`)
 
+/* ---------------- 7b. the card's own button ---------------- */
+// It is the card that acts, not the page, so it has to work wherever a card is
+// drawn — this checks the catalog and the home page, which listened to nothing
+// at all until it did.
+
+for (const [where, path] of [
+  ['the catalog', '/th/courses'],
+  ['the home page', '/th'],
+]) {
+  await page.goto(`${BASE}${path}`, { waitUntil: 'networkidle2' })
+  await page.waitForSelector('.cc [data-action]', { timeout: 10000 })
+  const before = page.url()
+  const action = await page.$eval('.cc [data-action]', (el) => el.dataset.action)
+  await page.click('.cc [data-action]')
+  await page
+    .waitForFunction(() => location.pathname.includes('/checkout'), { timeout: 6000 })
+    .catch(() => {})
+  check(
+    `a card's "${action}" button works on ${where}`,
+    page.url().includes('/checkout?items='),
+    before === page.url() ? 'nothing happened' : page.url(),
+  )
+}
+
 /* ---------------- 8. images, and a clean console ---------------- */
+
+await page.goto(`${BASE}/th/courses`, { waitUntil: 'networkidle2' })
+await settle()
 
 await page.goto(`${BASE}/th/courses`, { waitUntil: 'networkidle2' })
 await settle()

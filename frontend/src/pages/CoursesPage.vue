@@ -459,18 +459,6 @@ function setView(next: 'grid' | 'list'): void {
   writeUrl()
 }
 
-/**
- * The cart and free enrolment both need an account and an API that does not
- * exist yet, so the only action wired up is the one that does: going to
- * checkout with this course.
- */
-function runAction(action: string, courseId?: string): void {
-  if (!courseId) return
-  if (action === 'buy' || action === 'add-cart') {
-    void router.push({ path: path('/checkout'), query: { items: courseId } })
-  }
-}
-
 /* ---------------- derived view data ---------------- */
 
 const cards = computed(() =>
@@ -801,14 +789,14 @@ const cardVariant = computed(() => (view.value === 'list' ? 'list' : 'grid'))
           <template v-else>
             <ul class="cat-grid" :class="{ 'is-list': view === 'list' }" role="list">
               <li v-for="c in firstPage" :key="c.id">
-                <CourseCard :view="c" :variant="cardVariant" @run="runAction" />
+                <CourseCard :view="c" :variant="cardVariant" />
               </li>
             </ul>
             <template v-if="splitAds">
               <div class="cat-ads-inline"><AdsSlot placement="catalog-inline" /></div>
               <ul class="cat-grid" :class="{ 'is-list': view === 'list' }" role="list">
                 <li v-for="c in secondPage" :key="c.id">
-                  <CourseCard :view="c" :variant="cardVariant" @run="runAction" />
+                  <CourseCard :view="c" :variant="cardVariant" />
                 </li>
               </ul>
             </template>

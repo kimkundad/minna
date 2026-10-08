@@ -580,7 +580,7 @@ function toInstructors(): void {
           :more-label="t('course.viewAllCourses')"
           :count="fallbackCards.length"
         >
-          <CourseCard v-for="c in fallbackCards" :key="c.id" :view="c" @run="runAction" />
+          <CourseCard v-for="c in fallbackCards" :key="c.id" :view="c" />
         </CourseRail>
       </section>
     </template>
@@ -1073,7 +1073,6 @@ function toInstructors(): void {
                 :key="r.view.id"
                 :view="r.view"
                 :reason="r.reason"
-                @run="runAction"
               />
             </CourseRail>
           </section>

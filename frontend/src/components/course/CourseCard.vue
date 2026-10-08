@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppBadge from '@/components/ui/AppBadge.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
@@ -36,8 +36,31 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const router = useRouter()
 
 const cid = computed(() => String(props.view.slug || props.view.id))
+
+/**
+ * The card acts on its own button rather than emitting and hoping.
+ *
+ * It used to leave that to whichever page drew it, and the home page's two
+ * rails did not listen — so "ซื้อคอร์สนี้" there did nothing at all. A card
+ * that only works on the pages that remembered to wire it up is a card that
+ * will break again the next time one is added.
+ *
+ * Buying, adding to the cart and taking a free course all go the one way that
+ * works today: to checkout with this course. The event is still emitted, for a
+ * page that wants to say something about it.
+ */
+function onRun(action: string, courseId?: string): void {
+  emit('run', action, courseId)
+  if (action === 'buy' || action === 'add-cart' || action === 'enroll-free') {
+    // The locale comes from the card's own link rather than from the route:
+    // `courseView` already put it there, and a card knows where it points.
+    const locale = props.view.href.split('/')[1] || 'th'
+    void router.push({ path: `/${locale}/checkout`, query: { items: courseId ?? cid.value } })
+  }
+}
 
 /** A price unless something has said otherwise. */
 const showPrice = computed(() => props.view.showPrice !== false)
@@ -119,7 +142,7 @@ const showPrice = computed(() => props.view.showPrice !== false)
           :action="view.primary"
           size="sm"
           :course-id="cid"
-          @run="(a, c) => emit('run', a, c)"
+          @run="onRun"
         />
       </div>
     </div>
