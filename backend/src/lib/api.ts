@@ -433,7 +433,7 @@ export const people = {
   member: (id: number) => send<{ data: Member }>(`/members/${id}`),
 
   create: (body: CreateMemberInput) =>
-    send<{ data: Member; inviteUrl: string | null }>('/members', { method: 'POST', body }),
+    send<{ data: Member }>('/members', { method: 'POST', body }),
 
   setPassword: (id: number, password: string, confirmPassword: string) =>
     send<{ data: { id: number; email: string } }>(`/members/${id}/password`, {
@@ -475,10 +475,10 @@ export interface CreateMemberInput {
   lastName: string
   roles: RoleName[]
   locale?: 'th' | 'en' | 'jp' | 'vn'
-  /** False returns the set-password link instead of emailing it. */
-  sendInvite?: boolean
-  /** Set one and the account works immediately, with no link involved. */
-  password?: string
+  password: string
+  /** Checked on both sides: a mistyped password locks someone out of an
+   *  account only a superadmin can rescue. */
+  confirmPassword: string
 }
 
 /* ---------------- quiz ---------------- */

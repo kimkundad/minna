@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import TablePager from '@/components/common/TablePager.vue'
 import { ApiError, people, type CreateMemberInput, type Member, type RoleName } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
@@ -28,9 +28,13 @@ const props = defineProps<{
   createLabel?: string
   /** Roles a newly created account starts with. */
   createRoles?: RoleName[]
+  /** Go straight to the new teacher's public page after creating them: an
+   *  account with no display name or photo cannot go on a course yet. */
+  profileAfterCreate?: boolean
 }>()
 
 const auth = useAuthStore()
+const router = useRouter()
 const { ask } = useConfirm()
 
 const rows = ref<Member[]>([])
@@ -44,8 +48,6 @@ const page = ref(1)
 const q = ref('')
 const status = ref<'active' | 'suspended' | ''>('')
 
-/** Shown once, then gone: not stored anywhere readable. */
-const inviteUrl = ref('')
 
 const creating = ref(false)
 const form = ref<CreateMemberInput>(blank())
@@ -60,10 +62,6 @@ const settingPassword = ref<Member | null>(null)
 const pw1 = ref('')
 const pw2 = ref('')
 
-/** The confirmation on the create form. Checked here as well as by the API:
- *  a mistyped password locks someone out of an account only a superadmin can
- *  rescue. */
-const confirmNew = ref('')
 
 function blank(): CreateMemberInput {
   return {
@@ -72,6 +70,8 @@ function blank(): CreateMemberInput {
     lastName: '',
     roles: [...(props.createRoles ?? ['admin'])],
     locale: 'th',
+    password: '',
+    confirmPassword: '',
   }
 }
 
@@ -161,7 +161,7 @@ async function saveRoles() {
 }
 
 async function create() {
-  if (form.value.password && form.value.password !== confirmNew.value) {
+  if (form.value.password !== form.value.confirmPassword) {
     fieldErrors.value = { password: 'The two passwords do not match.' }
     return
   }
@@ -172,12 +172,14 @@ async function create() {
   try {
     const res = await people.create(form.value)
     creating.value = false
-    inviteUrl.value = res.inviteUrl ?? ''
-    notice.value = res.inviteUrl
-      ? `${res.data.email} created. Send them the link below — it is shown once.`
-      : `${res.data.email} created and invited by email.`
+
+    if (props.profileAfterCreate) {
+      await router.push('/teachers/' + res.data.id)
+      return
+    }
+
+    notice.value = `${res.data.email} created. Tell them to change the password once they are in.`
     form.value = blank()
-    confirmNew.value = ''
     await load()
   } catch (err) {
     if (err instanceof ApiError) {
@@ -282,18 +284,6 @@ onMounted(load)
       {{ notice }}
     </p>
 
-    <div
-      v-if="inviteUrl"
-      class="mx-5 mb-4 rounded-lg border border-warning-500/40 bg-warning-50 px-4 py-3 dark:bg-warning-500/10 sm:mx-6"
-    >
-      <p class="mb-2 text-sm text-warning-700 dark:text-warning-400">
-        Set-password link — copy it now, it will not be shown again.
-      </p>
-      <code class="block break-all text-xs text-gray-700 dark:text-gray-300">{{ inviteUrl }}</code>
-      <button type="button" class="mt-2 text-xs text-brand-500" @click="inviteUrl = ''">
-        Done, hide it
-      </button>
-    </div>
 
     <p
       v-if="error"
@@ -374,13 +364,13 @@ onMounted(load)
         <div>
           <label :class="labelClass">Confirm password<span class="text-error-500">*</span></label>
           <input
-            v-model="confirmNew"
+            v-model="form.confirmPassword"
             type="password"
             required
             autocomplete="new-password"
             :class="inputClass"
           />
-          <p v-if="confirmNew && confirmNew !== form.password" class="mt-1 text-sm text-error-500">
+          <p v-if="form.confirmPassword && form.confirmPassword !== form.password" class="mt-1 text-sm text-error-500">
             The two passwords do not match.
           </p>
         </div>

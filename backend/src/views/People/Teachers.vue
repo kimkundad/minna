@@ -6,9 +6,12 @@ import PeopleList from '@/components/people/PeopleList.vue'
 /**
  * The people who teach.
  *
- * Teachers are not created here. They arrive by applying and being approved,
- * which leaves a record of who decided and why — a teacher conjured out of a
- * form has no such record.
+ * Two ways in: approving a teacher application, which leaves a record of who
+ * decided and why, or adding one here when the decision happened somewhere
+ * else — someone hired directly, or moved over from another system.
+ *
+ * Creating one lands on their profile, because a teacher with no display name,
+ * photo or subject cannot be put on a course anyone would click.
  */
 </script>
 
@@ -18,8 +21,12 @@ import PeopleList from '@/components/people/PeopleList.vue'
     <PeopleList
       group="teachers"
       title="teachers"
-      subtitle="Approved through a teacher application. They see their own courses here."
+      subtitle="Approved through an application, or added here when the decision was made elsewhere."
       :role-options="['teacher']"
+      :create-roles="['teacher']"
+      create-label="Add a teacher"
+      allow-create
+      profile-after-create
     />
   </admin-layout>
 </template>

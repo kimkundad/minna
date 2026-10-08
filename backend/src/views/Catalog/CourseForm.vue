@@ -42,18 +42,10 @@ const audienceText = ref('')
 const categories = ref<Category[]>([])
 const teacherOptions = ref<TeacherOption[]>([])
 
-/** Position matters: the first is the lead, and a course card shows one face. */
-const chosen = ref<number[]>([])
-
-function toggleTeacher(id: number) {
-  chosen.value = chosen.value.includes(id)
-    ? chosen.value.filter((x) => x !== id)
-    : [...chosen.value, id]
-}
-
-function makeLead(id: number) {
-  chosen.value = [id, ...chosen.value.filter((x) => x !== id)]
-}
+/** One course, one teacher. Still sent as a list, because the pivot allows
+ *  more and widening the rule later should not change the shape every caller
+ *  sends. */
+const teacherId = ref<number | null>(null)
 const loading = ref(true)
 const saving = ref(false)
 const formError = ref('')
@@ -123,7 +115,7 @@ async function load() {
     if (!isNew.value) {
       const course = (await api.course(id.value!)).data
       form.value = { ...course }
-      chosen.value = (course.instructors ?? []).map((i) => i.id)
+      teacherId.value = course.instructors?.[0]?.id ?? null
       priceBaht.value = toBahtInput(course.price ?? 0)
       normalPriceBaht.value = toBahtInput(course.normalPrice ?? null)
       outcomesText.value = (course.outcomes ?? []).join('\n')
@@ -149,7 +141,7 @@ async function save() {
 
   const body: CourseInput = {
     ...form.value,
-    instructorIds: chosen.value,
+    instructorIds: teacherId.value ? [teacherId.value] : [],
     price: toSatang(priceBaht.value) ?? 0,
     normalPrice: toSatang(normalPriceBaht.value),
     outcomes: toLines(outcomesText.value),
@@ -272,7 +264,7 @@ onMounted(load)
             <p :class="labelClass">
               Taught by<span class="text-error-500">*</span>
               <span class="font-normal text-gray-400">
-                — the first one is the lead, and a course card shows one face
+                — one course, one teacher
               </span>
             </p>
 
@@ -281,23 +273,18 @@ onMounted(load)
                 v-for="t in teacherOptions"
                 :key="t.id"
                 class="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-700"
-                :class="{ 'border-brand-500': chosen.includes(t.id) }"
+                :class="{ 'border-brand-500': teacherId === t.id }"
               >
                 <input
-                  type="checkbox"
-                  :checked="chosen.includes(t.id)"
-                  class="mt-0.5 h-5 w-5 rounded border-gray-300 text-brand-500 dark:border-gray-700 dark:bg-gray-900"
-                  @change="toggleTeacher(t.id)"
+                  v-model="teacherId"
+                  type="radio"
+                  :value="t.id"
+                  name="course-teacher"
+                  class="mt-0.5 h-5 w-5 border-gray-300 text-brand-500 dark:border-gray-700 dark:bg-gray-900"
                 />
                 <span class="min-w-0 flex-1">
                   <span class="block text-sm font-medium text-gray-800 dark:text-white/90">
                     {{ t.name }}
-                    <span
-                      v-if="chosen[0] === t.id"
-                      class="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-xs text-brand-600 dark:bg-brand-500/15 dark:text-brand-400"
-                    >
-                      lead
-                    </span>
                     <span v-if="!t.hasProfile" class="ml-2 text-xs text-warning-600">
                       no profile yet
                     </span>
@@ -306,20 +293,12 @@ onMounted(load)
                     {{ t.headline ?? t.email }}
                   </span>
                 </span>
-                <button
-                  v-if="chosen.includes(t.id) && chosen[0] !== t.id"
-                  type="button"
-                  class="shrink-0 text-xs text-brand-500"
-                  @click.prevent="makeLead(t.id)"
-                >
-                  Make lead
-                </button>
               </label>
             </div>
 
             <p v-if="!teacherOptions.length" class="text-sm text-gray-400">
               Nobody has the teacher role yet. Approve a teacher application, or add one from
-              Administrators.
+              Teachers.
             </p>
             <p v-if="fieldErrors.instructorIds" class="mt-1 text-sm text-error-500">
               {{ fieldErrors.instructorIds }}
