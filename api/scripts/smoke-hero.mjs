@@ -183,10 +183,11 @@ async function main() {
       !titles.includes('โปรโมชันเดือนหน้า'),
     titles.join(' | '),
   )
+  const mine = (shown.body?.data ?? []).find((s) => s.id === one.body.data.id)
   check(
     'it carries the focal point, so the page can crop',
-    shown.body?.data?.[0]?.focalX === 70,
-    String(shown.body?.data?.[0]?.focalX),
+    mine?.focalX === 70,
+    String(mine?.focalX),
   )
 
   const otherLanguage = await call('GET', '/api/v1/hero-slides/public?locale=en')
@@ -198,17 +199,19 @@ async function main() {
 
   /* ---- order ---- */
 
-  const reordered = await call('PUT', '/api/v1/hero-slides/order', {
-    locale: 'th',
-    ids: [two.body.data.id, one.body.data.id],
-  })
+  const all = (await call('GET', '/api/v1/hero-slides?locale=th')).body.data.map((s) => s.id)
+  const swapped = all.filter((id) => id !== one.body.data.id && id !== two.body.data.id)
+  swapped.push(two.body.data.id, one.body.data.id)
+  const reordered = await call('PUT', '/api/v1/hero-slides/order', { locale: 'th', ids: swapped })
   check('reordering answers', reordered.status === 200)
 
   const afterOrder = await call('GET', '/api/v1/hero-slides/public?locale=th')
+  const order = (afterOrder.body?.data ?? []).map((s) => s.titleA)
   check(
     'and the home page order follows it',
-    afterOrder.body?.data?.[0]?.titleA === 'สไลด์สอง',
-    (afterOrder.body?.data ?? []).map((s) => s.titleA).join(' | '),
+    order.indexOf('สไลด์สอง') < order.indexOf('สไลด์หนึ่ง') &&
+      order[order.length - 1] === 'สไลด์หนึ่ง',
+    order.join(' | '),
   )
 
   /* ---- the picture goes with the slide ---- */
