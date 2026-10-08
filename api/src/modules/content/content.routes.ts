@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { LOCALES } from '../../db/schema/auth'
+import { POST_LOCALES } from '../../db/schema/content'
 import { audit, diff } from '../../lib/audit'
 import * as service from './content.service'
 import { queryBool } from '../../lib/query'
@@ -31,8 +32,11 @@ const postBody = z.object({
   excerpt: z.string().trim().max(500).nullish(),
   coverPath: z.string().trim().max(512).nullish(),
   contentHtml: z.string().max(200000).nullish(),
-  contentLocale: z.enum(LOCALES).default('th'),
+  contentLocale: z.enum(POST_LOCALES).default('th'),
   status: z.enum(['draft', 'published']).default('draft'),
+  /** One of the course categories. An article about kanji files where the
+   *  kanji course does, so each can point at the other. */
+  categoryId: z.coerce.number().int().positive().nullish(),
 })
 
 const testimonialBody = z.object({
@@ -50,11 +54,38 @@ export default async function contentRoutes(app: FastifyInstance) {
 
   /* ---------------- articles ---------------- */
 
+  /* ---------------- articles, for the public site ---------------- */
+
+  /**
+   * Published articles only, and no draft is reachable from here at any URL.
+   * Unauthenticated on purpose: this is what the blog reads.
+   *
+   * Registered above `/posts/:id` because Fastify would otherwise let that
+   * route try to parse "public" as an id.
+   */
+  app.get('/posts/public', async (req) => {
+    const query = paging
+      .extend({
+        locale: z.enum(POST_LOCALES).optional(),
+        categoryId: z.coerce.number().int().positive().optional(),
+        q: z.string().max(100).optional(),
+        excludeId: z.coerce.number().int().positive().optional(),
+      })
+      .parse(req.query)
+    return service.listPublishedPosts({ ...query, perPage: Math.min(query.perPage, 50) })
+  })
+
+  app.get('/posts/public/:slug', async (req) => {
+    const { slug } = z.object({ slug: z.string().min(1).max(255) }).parse(req.params)
+    return { data: await service.getPublishedPost(slug) }
+  })
+
   app.get('/posts', adminOnly, async (req) => {
     const query = paging
       .extend({
         status: z.enum(['draft', 'published']).optional(),
-        locale: z.enum(LOCALES).optional(),
+        locale: z.enum(POST_LOCALES).optional(),
+        categoryId: z.coerce.number().int().positive().optional(),
         q: z.string().max(100).optional(),
       })
       .parse(req.query)
@@ -74,6 +105,7 @@ export default async function contentRoutes(app: FastifyInstance) {
         excerpt: body.excerpt ?? null,
         coverPath: body.coverPath ?? null,
         contentHtml: body.contentHtml ?? null,
+        categoryId: body.categoryId ?? null,
       },
       req.user.sub,
     )
@@ -95,6 +127,7 @@ export default async function contentRoutes(app: FastifyInstance) {
       excerpt: body.excerpt ?? null,
       coverPath: body.coverPath ?? null,
       contentHtml: body.contentHtml ?? null,
+      categoryId: body.categoryId ?? null,
     })
 
     audit(req, {

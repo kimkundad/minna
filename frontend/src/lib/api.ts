@@ -201,6 +201,54 @@ export const api = {
 
   curriculum: (ref: string | number) =>
     send<{ data: Curriculum }>(`/courses/${encodeURIComponent(String(ref))}/curriculum`),
+
+  /** Published articles, newest first. */
+  posts: (params: PostQuery = {}) => send<PostListResponse>(`/posts/public${queryString(params)}`),
+
+  /** One published article, by the slug in its URL. */
+  post: (slug: string) =>
+    send<{ data: PublicPostDetail }>(`/posts/public/${encodeURIComponent(slug)}`),
+}
+
+/* ---------------- the blog ---------------- */
+
+/** An article as a card shows it. The body is only on the detail. */
+export interface PublicPost {
+  id: number
+  title: string
+  slug: string
+  excerpt: string | null
+  coverPath: string | null
+  contentLocale: ContentLocale
+  publishedAt: string | null
+  updatedAt: string | null
+  categoryId: number | null
+  categoryName: string | null
+  /** The teacher's public name where they have one, else the account's. */
+  authorName: string | null
+  authorHeadline: string | null
+  authorBio: string | null
+  authorAvatarPath: string | null
+}
+
+export interface PublicPostDetail extends PublicPost {
+  /** Written in the admin's editor. The school's own markup. */
+  contentHtml: string | null
+}
+
+export interface PostListResponse {
+  data: PublicPost[]
+  meta: { page: number; perPage: number; total: number; totalPages: number }
+}
+
+export interface PostQuery {
+  page?: number
+  perPage?: number
+  locale?: ContentLocale
+  categoryId?: number
+  q?: string
+  /** Left out of the results, for the "other articles" beside one being read. */
+  excludeId?: number
 }
 
 /* ---------------- the catalog ---------------- */
@@ -333,7 +381,7 @@ export interface Curriculum {
  * The filter arrays go as one comma-separated parameter each, which is what
  * the API expects and what keeps a shared link short enough to paste.
  */
-function queryString(params: CourseQuery): string {
+function queryString(params: CourseQuery | PostQuery): string {
   const q = new URLSearchParams()
   for (const [key, value] of Object.entries(params)) {
     if (value === undefined || value === null || value === '') continue

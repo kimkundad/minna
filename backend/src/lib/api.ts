@@ -1260,6 +1260,9 @@ export const me = {
 
 /* ---------------- the site's own content ---------------- */
 
+/** The four languages, plus 'all' for an article shown in every one. */
+export type PostLocale = 'th' | 'en' | 'jp' | 'vn' | 'all'
+
 export interface Post {
   id: number
   title: string
@@ -1267,8 +1270,10 @@ export interface Post {
   excerpt: string | null
   coverPath: string | null
   contentHtml?: string | null
-  contentLocale: 'th' | 'en' | 'jp' | 'vn'
+  contentLocale: PostLocale
   status: 'draft' | 'published'
+  categoryId: number | null
+  categoryName?: string | null
   /** Stamped when it first went live, and never moved afterwards. */
   publishedAt: string | null
   createdAt: string
@@ -1284,8 +1289,11 @@ export interface PostInput {
   excerpt: string | null
   coverPath: string | null
   contentHtml: string | null
-  contentLocale: 'th' | 'en' | 'jp' | 'vn'
+  contentLocale: PostLocale
   status: 'draft' | 'published'
+  /** One of the course categories, so an article and a course about the same
+   *  subject can point at each other. Null when it fits nowhere. */
+  categoryId: number | null
 }
 
 export interface Testimonial {

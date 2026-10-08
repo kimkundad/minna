@@ -49,7 +49,14 @@ export interface Person {
  * from, and slicing two characters out of it would say something else.
  */
 export function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
+  // A teacher's display name often carries a romanisation in brackets —
+  // "田中 愛子 (Aiko Tanaka)". Left in, the last "word" is "Tanaka)" and the
+  // initials come out as "田T", half of one name and half of the other.
+  const plain = name
+    .replace(/[([（【][^)\]）】]*[)\]）】]/g, ' ')
+    .trim()
+
+  const parts = (plain || name).trim().split(/\s+/).filter(Boolean)
   if (!parts.length) return '?'
   if (parts.length === 1) return [...parts[0]!][0] ?? '?'
   const last = parts[parts.length - 1]!

@@ -1,14 +1,18 @@
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, or, sql } from 'drizzle-orm'
 import { db } from '../../db/client'
 import {
+  categories,
   contactMessages,
   posts,
   subscribers,
+  teacherProfiles,
   testimonials,
   users,
 } from '../../db/schema/index'
+import type { POST_LOCALES } from '../../db/schema/content'
 import { conflict, notFound } from '../../lib/errors'
 import { removeOrphanedMedia } from '../../lib/media'
+import { expandCategories } from '../catalog/catalog.service'
 
 /**
  * The site's own content: articles, testimonials, enquiries, subscribers.
@@ -22,27 +26,33 @@ import { removeOrphanedMedia } from '../../lib/media'
 
 /* ---------------- articles ---------------- */
 
+export type PostLocale = (typeof POST_LOCALES)[number]
+
 export interface PostInput {
   title: string
   slug: string
   excerpt: string | null
   coverPath: string | null
   contentHtml: string | null
-  contentLocale: 'th' | 'en' | 'jp' | 'vn'
+  contentLocale: PostLocale
   status: 'draft' | 'published'
+  /** From the same list the courses use. Null when it fits nowhere. */
+  categoryId: number | null
 }
 
 export async function listPosts(opts: {
   page: number
   perPage: number
   status?: 'draft' | 'published' | undefined
-  locale?: 'th' | 'en' | 'jp' | 'vn' | undefined
+  locale?: PostLocale | undefined
+  categoryId?: number | undefined
   q?: string | undefined
 }) {
   const term = `%${opts.q ?? ''}%`
   const where = [
     opts.status ? eq(posts.status, opts.status) : undefined,
     opts.locale ? eq(posts.contentLocale, opts.locale) : undefined,
+    opts.categoryId ? eq(posts.categoryId, opts.categoryId) : undefined,
     opts.q ? sql`(${posts.title} LIKE ${term} OR ${posts.slug} LIKE ${term})` : undefined,
   ].filter(Boolean)
   const filter = where.length ? and(...(where as never[])) : undefined
@@ -67,9 +77,13 @@ export async function listPosts(opts: {
       authorId: posts.authorId,
       authorFirstName: users.firstName,
       authorLastName: users.lastName,
+      categoryId: posts.categoryId,
+      categoryName: categories.name,
     })
     .from(posts)
     .leftJoin(users, eq(users.id, posts.authorId))
+    .leftJoin(teacherProfiles, eq(teacherProfiles.userId, users.id))
+    .leftJoin(categories, eq(categories.id, posts.categoryId))
     .where(filter)
     .orderBy(desc(posts.createdAt))
     .limit(opts.perPage)
@@ -84,6 +98,124 @@ export async function listPosts(opts: {
       totalPages: Math.max(1, Math.ceil(Number(total) / opts.perPage)),
     },
   }
+}
+
+/* ---------------- articles, as a reader sees them ---------------- */
+
+/**
+ * What the public site is told about an article.
+ *
+ * Deliberately narrower than the admin's row: no draft, no `createdAt`, no
+ * author id. A reader gets the author's name because a byline is part of an
+ * article; they do not get the row.
+ */
+const READER_COLUMNS = {
+  id: posts.id,
+  title: posts.title,
+  slug: posts.slug,
+  excerpt: posts.excerpt,
+  coverPath: posts.coverPath,
+  contentLocale: posts.contentLocale,
+  publishedAt: posts.publishedAt,
+  updatedAt: posts.updatedAt,
+  categoryId: posts.categoryId,
+  categoryName: categories.name,
+  /**
+   * The teacher's public name where they have one, falling back to the
+   * account's. The same rule the catalog uses: a byline reading "Aiko Tanaka"
+   * under a course card that says "田中 愛子 (Aiko Tanaka)" reads as two people.
+   */
+  authorName: sql<string>`COALESCE(
+    ${teacherProfiles.displayName},
+    TRIM(CONCAT(COALESCE(${users.firstName}, ''), ' ', COALESCE(${users.lastName}, '')))
+  )`,
+  authorHeadline: teacherProfiles.headline,
+  authorBio: teacherProfiles.bio,
+  authorAvatarPath: users.avatarPath,
+} as const
+
+/**
+ * Published articles, newest first.
+ *
+ * `status = 'published'` is enforced here rather than left to the route, for
+ * the same reason the catalog enforces `approved`: a draft leaking onto the
+ * public site is writing nobody meant to publish, and "the endpoint forgot to
+ * filter" is how that happens.
+ *
+ * An article with no `published_at` is excluded too. That should not happen —
+ * publishing stamps it — but a row edited by hand could, and a dateless
+ * article would sort to the end of time.
+ */
+export async function listPublishedPosts(opts: {
+  page: number
+  perPage: number
+  locale?: PostLocale | undefined
+  categoryId?: number | undefined
+  q?: string | undefined
+  /** Left out of the results. For "other articles" beside the one being read. */
+  excludeId?: number | undefined
+}) {
+  const term = `%${opts.q ?? ''}%`
+  const where = [
+    eq(posts.status, 'published'),
+    sql`${posts.publishedAt} IS NOT NULL`,
+    opts.locale
+      ? opts.locale === 'all'
+        ? eq(posts.contentLocale, 'all')
+        : or(eq(posts.contentLocale, opts.locale), eq(posts.contentLocale, 'all'))
+      : undefined,
+    opts.categoryId ? inArray(posts.categoryId, await expandCategories([opts.categoryId])) : undefined,
+    opts.excludeId ? sql`${posts.id} <> ${opts.excludeId}` : undefined,
+    // The body as well as the title: somebody searching for a word they
+    // remember from inside an article should find it.
+    opts.q
+      ? sql`(${posts.title} LIKE ${term} OR ${posts.excerpt} LIKE ${term} OR ${posts.contentHtml} LIKE ${term})`
+      : undefined,
+  ].filter(Boolean)
+  const filter = and(...(where as never[]))
+
+  const [{ value: total } = { value: 0 }] = await db
+    .select({ value: sql<number>`COUNT(*)` })
+    .from(posts)
+    .where(filter)
+
+  const rows = await db
+    .select(READER_COLUMNS)
+    .from(posts)
+    .leftJoin(users, eq(users.id, posts.authorId))
+    .leftJoin(teacherProfiles, eq(teacherProfiles.userId, users.id))
+    .leftJoin(categories, eq(categories.id, posts.categoryId))
+    .where(filter)
+    .orderBy(desc(posts.publishedAt))
+    .limit(opts.perPage)
+    .offset((opts.page - 1) * opts.perPage)
+
+  return {
+    data: rows,
+    meta: {
+      page: opts.page,
+      perPage: opts.perPage,
+      total: Number(total),
+      totalPages: Math.max(1, Math.ceil(Number(total) / opts.perPage)),
+    },
+  }
+}
+
+/** One published article, by the slug in its URL. */
+export async function getPublishedPost(slug: string) {
+  const [row] = await db
+    .select({ ...READER_COLUMNS, contentHtml: posts.contentHtml })
+    .from(posts)
+    .leftJoin(users, eq(users.id, posts.authorId))
+    .leftJoin(teacherProfiles, eq(teacherProfiles.userId, users.id))
+    .leftJoin(categories, eq(categories.id, posts.categoryId))
+    .where(and(eq(posts.slug, slug), eq(posts.status, 'published')))
+    .limit(1)
+
+  // The same answer for a draft as for a slug that was never used: whether an
+  // unpublished article exists is not a reader's business.
+  if (!row) throw notFound('That article does not exist.')
+  return row
 }
 
 export async function getPost(id: number) {

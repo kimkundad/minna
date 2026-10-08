@@ -15,6 +15,7 @@ import './assets/css/commerce.css'
 import './assets/css/account.css'
 import './assets/css/learning.css'
 import './assets/css/legal.css'
+import './assets/css/blog.css'
 
 // The country picker's own stylesheet, including the flag sprite. It sits
 // before brand.css so the overrides that make it match our inputs still win.

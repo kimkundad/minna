@@ -1,0 +1,177 @@
+/* type rescaled for Noto Sans Thai */
+/* The blog: a list of articles, and one article.
+
+   The list reuses the catalog's grid and its "ดูเพิ่ม" button, so the two
+   browsing pages of the site behave the same way. The article page reuses the
+   legal pages' layout — long prose beside a sticky contents list — because
+   that is the shape this site already has for something you read rather than
+   scan.
+
+   `bl-prose` is the one genuinely new piece. It styles what the admin's editor
+   writes: headings, lists, quotes, tables and dropped-in pictures. `lg-prose`
+   in legal.css covers hand-written markup only, and does not meet a blockquote
+   or an h3 or a figure. */
+
+/* ---------- the list ---------- */
+
+.bl-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); margin: 0; padding: 0; list-style: none; }
+.bl-grid > li { display: flex; }
+
+.bl-more { display: flex; justify-content: center; padding-top: var(--gutter); }
+
+/* ---------- a card ---------- */
+
+.ac { position: relative; display: flex; flex-direction: column; width: 100%; overflow: hidden; border: 1px solid var(--border-default); border-radius: var(--r-card); background: #fff; transition: box-shadow .25s, transform .25s; }
+.ac:hover { box-shadow: var(--shadow-card-hover); transform: translateY(-2px); }
+
+.ac-media { position: relative; display: block; aspect-ratio: 16 / 9; overflow: hidden; background: var(--surface-soft); }
+.ac-media img { width: 100%; height: 100%; object-fit: cover; }
+/* Over the picture, with its own ground so it stays readable on any of them. */
+.ac-cat { position: absolute; left: 12px; top: 12px; z-index: 1; gap: 6px; background: rgb(255 255 255 / .94); border-color: transparent; font-size: 12.5px; font-weight: 700; color: var(--brand-primary-deep); backdrop-filter: blur(4px); }
+.ac-cat:hover { background: #fff; color: var(--brand-primary-active); }
+.ac-cat svg { width: 14px; height: 14px; }
+
+/* The category row above the results, which wraps to two lines once there are
+   a dozen of them. */
+.bl-filter { margin-bottom: 20px; }
+.bl-filter .cat-chips { gap: 8px; }
+.chip-n { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--surface-soft); font-size: 12px; font-weight: 700; color: var(--ink-secondary); }
+.cat-chip.is-on { background: var(--brand-primary); border-color: var(--brand-primary); color: #fff; }
+.cat-chip.is-on .chip-n { background: rgb(255 255 255 / .22); color: #fff; }
+
+.ac-body { display: flex; flex-direction: column; flex: 1; gap: 10px; padding: 18px 20px 20px; }
+
+/* The byline, above the title as in the reference: who wrote it and when is
+   what decides whether an article is worth opening. */
+.ac-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: 13px; color: var(--ink-secondary); }
+.ac-meta span { display: inline-flex; align-items: center; gap: 6px; }
+.ac-meta svg { width: 15px; height: 15px; color: var(--ink-muted); }
+
+.ac-title { margin: 0; font-size: 17.5px; line-height: 1.46; }
+.ac-title a { color: var(--ink-primary); }
+.ac-title a:hover { color: var(--brand-primary-dark); }
+
+.ac-desc { margin: 0; font-size: 14.5px; line-height: 1.68; color: var(--ink-secondary); }
+
+.ac-foot { display: flex; align-items: center; justify-content: flex-end; margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border-default); }
+.ac-read { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; color: var(--brand-primary-dark); }
+.ac-read svg { width: 17px; height: 17px; transition: transform .2s; }
+.ac:hover .ac-read svg { transform: translateX(3px); }
+
+/* ---------- the article page ---------- */
+
+.bl-hero { padding-bottom: 28px; }
+.bl-title { margin: 14px 0 0; max-width: 20ch; }
+.bl-lead { margin: 12px 0 0; max-width: 62ch; font-size: 16.5px; line-height: 1.73; color: var(--ink-secondary); }
+
+/* Byline with a face, which a card has no room for. */
+.bl-byline { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+.bl-byline-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bl-byline-name { font-weight: 700; color: var(--ink-primary); }
+.bl-byline-meta { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: 13.5px; color: var(--ink-secondary); }
+.bl-byline-meta span { display: inline-flex; align-items: center; gap: 6px; }
+.bl-byline-meta svg { width: 15px; height: 15px; color: var(--ink-muted); }
+
+.bl-cover { margin: 0 0 8px; overflow: hidden; border-radius: var(--r-card); aspect-ratio: 16 / 9; background: var(--surface-soft); }
+.bl-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.bl-layout { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 48px; padding-top: 32px; padding-bottom: 56px; }
+.bl-content { min-width: 0; max-width: 760px; }
+
+/* ---------- contents ---------- */
+
+.bl-toc { position: sticky; top: 100px; align-self: start; }
+.bl-toc-title { font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-secondary); margin-bottom: 10px; }
+.bl-toc ol { display: grid; gap: 2px; list-style: none; margin: 0; padding: 0; counter-reset: bltoc; }
+.bl-toc li { counter-increment: bltoc; }
+.bl-toc a { display: block; padding: 8px 12px; border-radius: 10px; font-size: 14px; line-height: 1.53; color: var(--ink-primary); }
+.bl-toc a::before { content: counter(bltoc) ". "; color: var(--ink-muted); }
+.bl-toc a:hover { background: var(--surface-soft); color: var(--brand-primary-dark); }
+.bl-toc a.is-current { background: var(--brand-primary-soft); color: var(--brand-primary-deep); font-weight: 700; }
+
+/* ---------- the body ---------- */
+
+.bl-prose { font-size: 16px; }
+.bl-prose > * + * { margin-top: 18px; }
+.bl-prose p { margin: 0; line-height: 1.81; color: var(--ink-primary); }
+
+.bl-prose h2 { font-size: 22.5px; line-height: 1.41; margin: 38px 0 0; scroll-margin-top: calc(var(--header-h) + 24px); }
+.bl-prose h3 { font-size: 17.5px; line-height: 1.46; margin: 28px 0 0; }
+.bl-prose h4 { font-size: 16px; line-height: 1.5; margin: 24px 0 0; }
+/* The editor offers h5 and h6; nothing in this design uses them, so they land
+   as emphasised body text rather than as something smaller than the paragraph
+   they introduce. */
+.bl-prose h5, .bl-prose h6 { font-size: 16px; line-height: 1.5; margin: 20px 0 0; color: var(--ink-secondary); }
+.bl-prose h2 + *, .bl-prose h3 + *, .bl-prose h4 + * { margin-top: 10px; }
+
+.bl-prose ul, .bl-prose ol { margin: 0; padding-inline-start: 26px; display: grid; gap: 10px; }
+.bl-prose ul { list-style: disc; }
+.bl-prose ol { list-style: decimal; }
+.bl-prose li { line-height: 1.75; padding-inline-start: 4px; }
+.bl-prose li::marker { color: var(--brand-primary-dark); font-weight: 700; }
+.bl-prose ol > li::marker { color: var(--ink-secondary); }
+.bl-prose li > ul, .bl-prose li > ol { margin-top: 10px; }
+
+.bl-prose a { color: var(--brand-primary-deep); text-decoration: underline; text-underline-offset: 3px; }
+.bl-prose a:hover { color: var(--brand-primary-dark); }
+.bl-prose strong, .bl-prose b { font-weight: 700; }
+.bl-prose em { font-style: italic; }
+
+.bl-prose blockquote { margin: 0; padding: 18px 22px; border-inline-start: 3px solid var(--brand-primary); border-radius: 0 var(--r-card) var(--r-card) 0; background: var(--brand-primary-soft); }
+.bl-prose blockquote p { margin: 0; font-size: 16.5px; line-height: 1.73; color: var(--brand-primary-deep); }
+.bl-prose blockquote p + p { margin-top: 10px; }
+
+/* CKEditor wraps a table in `figure.table`; a hand-written one may not be
+   wrapped at all, so both get the scroll container. */
+.bl-prose figure.table, .bl-prose .table-wrap { margin: 0; overflow-x: auto; border: 1px solid var(--border-default); border-radius: 16px; }
+.bl-prose table { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 14.5px; }
+.bl-prose th, .bl-prose td { padding: 12px 16px; text-align: start; vertical-align: top; line-height: 1.65; border-bottom: 1px solid var(--border-default); }
+.bl-prose thead th { background: var(--surface-soft); font-weight: 700; color: var(--ink-primary); }
+.bl-prose tbody tr:last-child th, .bl-prose tbody tr:last-child td { border-bottom: 0; }
+
+/* A picture dropped into the editor. `figure.image` is what CKEditor writes. */
+.bl-prose figure.image { margin: 0; }
+.bl-prose img { max-width: 100%; height: auto; border-radius: var(--r-card); display: block; }
+.bl-prose figcaption { margin-top: 8px; font-size: 13.5px; line-height: 1.6; color: var(--ink-secondary); text-align: center; }
+
+.bl-prose hr { margin: 32px 0; border: 0; border-top: 1px solid var(--border-default); }
+
+/* ---------- share ---------- */
+
+.bl-share { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border-default); }
+.bl-share-label { font-weight: 700; font-size: 14px; color: var(--ink-secondary); }
+.bl-share-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.bl-share-btn { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 14px; border: 1px solid var(--border-default); border-radius: 999px; background: #fff; font-size: 14px; font-weight: 600; color: var(--ink-primary); cursor: pointer; transition: border-color .2s, color .2s, background .2s; }
+.bl-share-btn:hover { border-color: var(--brand-primary); color: var(--brand-primary-dark); background: var(--brand-primary-soft); }
+.bl-share-btn svg { width: 17px; height: 17px; }
+.bl-share-btn.is-done { border-color: var(--brand-primary); color: var(--brand-primary-deep); background: var(--brand-primary-soft); }
+
+/* ---------- the author, at the foot ---------- */
+
+.bl-author { display: flex; align-items: flex-start; gap: 16px; margin-top: 32px; padding: 20px; border: 1px solid var(--border-default); border-radius: var(--r-card); background: var(--surface-soft); }
+.bl-author-body { min-width: 0; }
+.bl-author-name { margin: 2px 0 6px; font-size: 16.5px; line-height: 1.47; }
+.bl-author-body p { margin: 10px 0 0; font-size: 14.5px; line-height: 1.73; color: var(--ink-secondary); }
+
+/* ---------- more articles ---------- */
+
+.bl-more-sec { padding-bottom: 56px; }
+
+@media (max-width: 1099px) {
+  .bl-layout { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .bl-content { max-width: none; }
+  /* The contents list moves above the article and lies flat; sticky in a
+     one-column layout would cover the text it points at. */
+  .bl-toc { position: static; order: -1; padding: 16px 18px; border: 1px solid var(--border-default); border-radius: var(--r-card); background: var(--surface-soft); }
+  .bl-toc ol { display: flex; flex-wrap: wrap; gap: 6px; }
+  .bl-toc a { background: #fff; }
+  .bl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 719px) {
+  .bl-grid { grid-template-columns: minmax(0, 1fr); }
+  .bl-title { max-width: none; }
+  .bl-prose { font-size: 15.5px; }
+  .bl-prose h2 { font-size: 20px; margin-top: 30px; }
+  .bl-author { flex-direction: column; }
+}

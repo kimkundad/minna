@@ -23,17 +23,40 @@ export const NOTIFICATION_TYPES = [
   'welcome',
 ] as const
 
+/** The four languages, plus 'all' for an article that belongs to every one. */
+export const POST_LOCALES = [...LOCALES, 'all'] as const
+
 export const posts = mysqlTable(
   'posts',
   {
     id: bigint('id', { mode: 'number', unsigned: true }).autoincrement().primaryKey(),
     title: varchar('title', { length: 255 }).notNull(),
     slug: varchar('slug', { length: 255 }).notNull(),
+    /**
+     * The same categories the courses use, rather than a list of its own.
+     *
+     * An article about kanji and a course about kanji are about the same thing,
+     * so they file under the same heading — which is what lets a course page
+     * offer the articles near it, and the other way round. Nullable: an article
+     * that fits nowhere in particular is still an article.
+     */
+    categoryId: bigint('category_id', { mode: 'number', unsigned: true }).references(
+      () => categories.id,
+      { onDelete: 'set null' },
+    ),
     excerpt: varchar('excerpt', { length: 500 }),
     coverPath: varchar('cover_path', { length: 512 }),
     contentHtml: text('content_html'),
-    /** Articles are written in one language each; the reader's locale filters them. */
-    contentLocale: mysqlEnum('content_locale', LOCALES).default('th').notNull(),
+    /**
+     * The language the article is written in, or 'all'.
+     *
+     * Most articles are about one language and belong to readers of that one.
+     * Some are not — how long learning takes, how to revise, how the school
+     * works — and filing those under Thai hides them from everyone reading the
+     * site in English. 'all' is for those: shown whichever language the site
+     * is being read in.
+     */
+    contentLocale: mysqlEnum('content_locale', POST_LOCALES).default('th').notNull(),
     status: mysqlEnum('status', ['draft', 'published']).default('draft').notNull(),
     publishedAt: datetime('published_at'),
     authorId: bigint('author_id', { mode: 'number', unsigned: true }).references(() => users.id, {
@@ -48,6 +71,7 @@ export const posts = mysqlTable(
     uniqueIndex('posts_slug_unique').on(t.slug),
     index('posts_published_idx').on(t.status, t.publishedAt),
     index('posts_locale_idx').on(t.contentLocale),
+    index('posts_category_idx').on(t.categoryId),
   ],
 )
 
@@ -164,6 +188,7 @@ export const siteSettings = mysqlTable(
 
 export const postsRelations = relations(posts, ({ one }) => ({
   author: one(users, { fields: [posts.authorId], references: [users.id] }),
+  category: one(categories, { fields: [posts.categoryId], references: [categories.id] }),
 }))
 
 export const teacherApplicationsRelations = relations(teacherApplications, ({ one }) => ({

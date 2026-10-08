@@ -39,6 +39,21 @@ const router = createRouter({
           meta: { headerActive: 'courses', bodyClass: 'page-course' },
         },
 
+        // The blog. Two pages, the same shape as the catalog's: a list that
+        // keeps its state in the URL, and a detail reached by slug.
+        {
+          path: 'blog',
+          name: 'blog',
+          component: () => import('@/pages/BlogPage.vue'),
+          meta: { headerActive: 'blog' },
+        },
+        {
+          path: 'blog/:slug',
+          name: 'article',
+          component: () => import('@/pages/ArticlePage.vue'),
+          meta: { headerActive: 'blog' },
+        },
+
         // The learning group. All three replace the site nav with a compact
         // bar, which SiteHeader does not implement yet — `headerVariant`
         // records the intent, and until then each page renders the bar itself

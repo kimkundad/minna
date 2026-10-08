@@ -3,14 +3,15 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import HeroCarousel from '@/components/home/HeroCarousel.vue'
-import ArticleCard from '@/components/home/ArticleCard.vue'
+import ArticleCard from '@/components/blog/ArticleCard.vue'
 import CourseCard from '@/components/course/CourseCard.vue'
 import CourseRail from '@/components/course/CourseRail.vue'
 import AdsSlot from '@/components/ui/AdsSlot.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import logoUrl from '@/assets/img/logo.png'
 import { api } from '@/lib/api'
-import type { PublicCategory, PublicCourse } from '@/lib/api'
+import type { ContentLocale, PublicCategory, PublicCourse, PublicPost } from '@/lib/api'
+import { articleView } from '@/lib/article'
 import { categoryLabel, courseView } from '@/lib/course'
 import { data } from '@/vendor'
 import { date } from '@/lib/format'
@@ -31,29 +32,34 @@ import { date } from '@/lib/format'
  * bought is worse than no rail.
  */
 const route = useRoute()
-const { t } = useI18n()
+const { t, locale: uiLocale } = useI18n()
 const locale = computed(() => String(route.params.locale ?? 'th'))
 const path = (p: string) => `/${locale.value}${p}`
 
 const newCourses = ref<PublicCourse[]>([])
 const featured = ref<PublicCourse[]>([])
 const allCategories = ref<PublicCategory[]>([])
+const articles = ref<PublicPost[]>([])
 
 const RAIL = 8
 
 /** A rail stays out of the page until it has something in it, rather than
  *  drawing a heading over an empty track while the request is in flight. */
 onMounted(async () => {
-  const [cats, fresh, best] = await Promise.all([
+  const [cats, fresh, best, latest] = await Promise.all([
     api.categories().catch(() => null),
     api.courses({ sort: 'newest', perPage: RAIL }).catch(() => null),
     // Asked for wide, shown narrow: the newest courses are often also the
     // featured ones, and two rails showing the same four cards is one rail's
     // worth of information taking up two rails of the page.
     api.courses({ sort: 'recommended', perPage: RAIL * 3 }).catch(() => null),
+    // Three, because the band is a row of three. The site's own language, so a
+    // reader of the English site is not shown a row of Thai articles.
+    api.posts({ perPage: 3, locale: String(uiLocale.value) as ContentLocale }).catch(() => null),
   ])
   allCategories.value = cats?.data ?? []
   newCourses.value = fresh?.data ?? []
+  articles.value = latest?.data ?? []
 
   const alreadyShown = new Set(newCourses.value.map((c) => c.id))
   const rest = (best?.data ?? []).filter((c) => !alreadyShown.has(c.id))
@@ -96,7 +102,11 @@ const categories = computed(() => {
 const journey = computed(
   () => (data.journey ?? []) as unknown as { icon: string; title: string; text: string }[],
 )
-const articles = computed(() => (data.articles ?? []) as unknown as any[])
+const articleCards = computed(() =>
+  articles.value.map((p) =>
+    articleView(p, { locale: locale.value, categories: allCategories.value, formatDate: date }),
+  ),
+)
 </script>
 
 <template>
@@ -232,22 +242,27 @@ const articles = computed(() => (data.articles ?? []) as unknown as any[])
   </section>
 
   <!-- 9. Articles -->
-  <section class="section home-articles" id="articles" aria-labelledby="art-h">
+  <section
+    v-if="articleCards.length"
+    class="section home-articles"
+    id="articles"
+    aria-labelledby="art-h"
+  >
     <div class="container">
       <div class="section-head">
         <p class="eyebrow">Knowledge</p>
-        <h2 id="art-h">บทความและความรู้ล่าสุด</h2>
-        <p>เคล็ดลับการเรียน ข่าวสาร และสรุปความรู้ที่นำไปใช้ได้ทันที</p>
+        <h2 id="art-h">{{ t('blog.homeTitle') }}</h2>
+        <p>{{ t('blog.homeSub') }}</p>
       </div>
-      <div class="grid-3" id="article-grid">
-        <ArticleCard
-          v-for="a in articles"
-          :key="a.id"
-          :article="{ ...a, date: date(a.date) }"
-        />
-      </div>
+      <ul class="bl-grid" id="article-grid" role="list">
+        <li v-for="a in articleCards" :key="a.id">
+          <ArticleCard :article="a" />
+        </li>
+      </ul>
       <div class="text-center mt-32">
-        <RouterLink class="btn btn--secondary" :to="path('/blog')">ดูบทความทั้งหมด</RouterLink>
+        <RouterLink class="btn btn--secondary" :to="path('/blog')">{{
+          t('blog.homeMore')
+        }}</RouterLink>
       </div>
     </div>
   </section>

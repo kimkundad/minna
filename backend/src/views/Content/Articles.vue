@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import TablePager from '@/components/common/TablePager.vue'
 import FileField from '@/components/forms/FileField.vue'
 import RichTextField from '@/components/forms/RichTextField.vue'
+
 import { useConfirm } from '@/composables/useConfirm'
-import { ApiError, content, type Post, type PostInput } from '@/lib/api'
+import { ApiError, api, content, type Category, type Post, type PostInput, type PostLocale } from '@/lib/api'
 
 /**
  * Articles.
@@ -32,9 +33,18 @@ const PER_PAGE = 20
 
 const q = ref('')
 const status = ref<'' | 'draft' | 'published'>('')
-const locale = ref<'' | 'th' | 'en' | 'jp' | 'vn'>('')
+const locale = ref<'' | PostLocale>('')
 
+/**
+ * 'all' is the article's own setting, not a view of everything: for writing
+ * that is not about one language — how long learning takes, how to revise, how
+ * the school works. Those appear whichever language the site is read in.
+ *
+ * Most articles are not that, which is why the form opens on Thai. In the
+ * filter above the table it means "only the ones set to every language".
+ */
 const LOCALES = [
+  { value: 'all', label: 'ทุกภาษา · every language' },
   { value: 'th', label: 'ไทย' },
   { value: 'en', label: 'English' },
   { value: 'jp', label: '日本語' },
@@ -50,6 +60,29 @@ const fieldErrors = ref<Record<string, string>>({})
 const saving = ref(false)
 const slugTouched = ref(false)
 
+/**
+ * The course categories, shown as "parent · child" because four of them are
+ * called "สนทนา" and the names alone would read as four identical options.
+ */
+const categories = ref<Category[]>([])
+
+const categoryOptions = computed(() =>
+  categories.value
+    .map((c) => {
+      const parent = c.parentId ? categories.value.find((p) => p.id === c.parentId) : null
+      return { id: c.id, label: parent ? `${parent.name} · ${c.name}` : c.name }
+    })
+    .sort((a, b) => a.label.localeCompare(b.label)),
+)
+
+async function loadCategories() {
+  try {
+    categories.value = (await api.categories()).data
+  } catch {
+    // The field falls back to "no category", which is a valid article.
+  }
+}
+
 function blank(): PostInput {
   return {
     title: '',
@@ -59,6 +92,7 @@ function blank(): PostInput {
     contentHtml: null,
     contentLocale: 'th',
     status: 'draft',
+    categoryId: null,
   }
 }
 
@@ -99,6 +133,7 @@ async function openEdit(row: Post) {
       contentHtml: full.contentHtml ?? null,
       contentLocale: full.contentLocale,
       status: full.status,
+      categoryId: full.categoryId ?? null,
     }
     // A published slug is a URL other pages point at; never regenerate it.
     slugTouched.value = true
@@ -191,7 +226,10 @@ watch([status, locale], () => {
 })
 watch(page, load)
 
-onMounted(load)
+onMounted(() => {
+  void load()
+  void loadCategories()
+})
 </script>
 
 <template>
@@ -267,6 +305,22 @@ onMounted(load)
             <select v-model="form.contentLocale" :class="inputClass">
               <option v-for="l in LOCALES" :key="l.value" :value="l.value">{{ l.label }}</option>
             </select>
+            <p class="mt-1 text-xs text-gray-400">
+              Pick a language unless the article is not about one — "every language" shows it to
+              every reader, whichever language they are using the site in.
+            </p>
+          </div>
+
+          <div>
+            <label :class="labelClass">Category</label>
+            <select v-model="form.categoryId" :class="inputClass">
+              <option :value="null">No category</option>
+              <option v-for="c in categoryOptions" :key="c.id" :value="c.id">{{ c.label }}</option>
+            </select>
+            <p class="mt-1 text-xs text-gray-400">
+              The same list the courses use, so an article and a course on the same subject can
+              point at each other.
+            </p>
           </div>
 
           <div>
