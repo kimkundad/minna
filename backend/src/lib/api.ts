@@ -1247,3 +1247,100 @@ export const me = {
   /** Signs out everywhere, including here. */
   endAllSessions: () => send<{ message: string }>('/auth/logout-all', { method: 'POST' }),
 }
+
+/* ---------------- the site's own content ---------------- */
+
+export interface Post {
+  id: number
+  title: string
+  slug: string
+  excerpt: string | null
+  coverPath: string | null
+  contentHtml?: string | null
+  contentLocale: 'th' | 'en' | 'jp' | 'vn'
+  status: 'draft' | 'published'
+  /** Stamped when it first went live, and never moved afterwards. */
+  publishedAt: string | null
+  createdAt: string
+  updatedAt: string
+  authorId: number | null
+  authorFirstName?: string | null
+  authorLastName?: string | null
+}
+
+export interface PostInput {
+  title: string
+  slug: string
+  excerpt: string | null
+  coverPath: string | null
+  contentHtml: string | null
+  contentLocale: 'th' | 'en' | 'jp' | 'vn'
+  status: 'draft' | 'published'
+}
+
+export interface Testimonial {
+  id: number
+  name: string
+  designation: string | null
+  content: string
+  rating: number
+  avatarPath: string | null
+  status: 'draft' | 'published'
+  sortOrder: number
+  createdAt: string
+}
+
+export type TestimonialInput = Omit<Testimonial, 'id' | 'createdAt'>
+
+export interface ContactMessage {
+  id: number
+  name: string
+  email: string
+  subject: string
+  message: string | null
+  /** Set when somebody has dealt with it, and clearable again. */
+  readAt: string | null
+  createdAt: string
+}
+
+export interface Subscriber {
+  id: number
+  email: string
+  confirmedAt: string | null
+  unsubscribedAt: string | null
+  createdAt: string
+}
+
+export const content = {
+  posts: (query: Record<string, string | number | undefined> = {}) =>
+    send<Paged<Post>>('/posts', { query }),
+  post: (id: number) => send<{ data: Post }>(`/posts/${id}`),
+  createPost: (body: PostInput) => send<{ data: Post }>('/posts', { method: 'POST', body }),
+  updatePost: (id: number, body: PostInput) =>
+    send<{ data: Post }>(`/posts/${id}`, { method: 'PUT', body }),
+  deletePost: (id: number) => send<void>(`/posts/${id}`, { method: 'DELETE' }),
+
+  testimonials: (query: Record<string, string | number | undefined> = {}) =>
+    send<Paged<Testimonial>>('/testimonials', { query }),
+  createTestimonial: (body: TestimonialInput) =>
+    send<{ data: Testimonial }>('/testimonials', { method: 'POST', body }),
+  updateTestimonial: (id: number, body: TestimonialInput) =>
+    send<{ data: Testimonial }>(`/testimonials/${id}`, { method: 'PUT', body }),
+  deleteTestimonial: (id: number) => send<void>(`/testimonials/${id}`, { method: 'DELETE' }),
+
+  messages: (query: Record<string, string | number | boolean | undefined> = {}) =>
+    send<Paged<ContactMessage> & { meta: { unread: number } }>('/contact-messages', { query }),
+  setMessageRead: (id: number, read: boolean) =>
+    send<{ data: ContactMessage }>(`/contact-messages/${id}/read`, { method: 'POST', body: { read } }),
+  deleteMessage: (id: number) => send<void>(`/contact-messages/${id}`, { method: 'DELETE' }),
+
+  subscribers: (query: Record<string, string | number | undefined> = {}) =>
+    send<Paged<Subscriber> & { meta: { confirmed: number; pending: number; unsubscribed: number } }>(
+      '/subscribers',
+      { query },
+    ),
+  unsubscribe: (id: number) =>
+    send<{ data: Subscriber }>(`/subscribers/${id}/unsubscribe`, { method: 'POST' }),
+  /** The confirmed addresses as a file, for whoever sends the mail. */
+  exportSubscribers: () => `${BASE}/subscribers/export`,
+}

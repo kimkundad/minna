@@ -145,6 +145,31 @@ const router = createRouter({
     },
 
     {
+      path: '/posts',
+      name: 'Articles',
+      component: () => import('@/views/Content/Articles.vue'),
+      meta: { title: 'Articles', roles: ['superadmin', 'admin'] },
+    },
+    {
+      path: '/testimonials',
+      name: 'Testimonials',
+      component: () => import('@/views/Content/Testimonials.vue'),
+      meta: { title: 'Testimonials', roles: ['superadmin', 'admin'] },
+    },
+    {
+      path: '/contact-messages',
+      name: 'Enquiries',
+      component: () => import('@/views/Content/Enquiries.vue'),
+      meta: { title: 'Enquiries', roles: ['superadmin', 'admin'] },
+    },
+    {
+      path: '/subscribers',
+      name: 'Subscribers',
+      component: () => import('@/views/Content/Subscribers.vue'),
+      meta: { title: 'Subscribers', roles: ['superadmin', 'admin'] },
+    },
+
+    {
       // Superadmin only: the log is about what administrators do, and the
       // people most likely to want a row gone are the ones it is about.
       path: '/audit',
