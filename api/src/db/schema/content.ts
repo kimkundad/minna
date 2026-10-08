@@ -177,3 +177,55 @@ export const teacherApplicationsRelations = relations(teacherApplications, ({ on
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, { fields: [notifications.userId], references: [users.id] }),
 }))
+
+/**
+ * The slides on the home page.
+ *
+ * One row is one slide: a line of copy, a picture, and up to two buttons.
+ *
+ * Written per language, the way articles are. A carousel of Thai headlines
+ * shown to somebody reading the English site is worse than no carousel, and the
+ * copy is short enough that writing it twice is not a burden.
+ *
+ * `startsAt` and `endsAt` are here because a slideshow is where a promotion
+ * goes, and a promotion has dates. Without them somebody has to remember to
+ * come back and switch it off, which is the kind of thing that is remembered
+ * three weeks late.
+ */
+export const heroSlides = mysqlTable(
+  'hero_slides',
+  {
+    id: bigint('id', { mode: 'number', unsigned: true }).autoincrement().primaryKey(),
+    locale: mysqlEnum('locale', LOCALES).default('th').notNull(),
+    /** The small line above the headline. */
+    eyebrow: varchar('eyebrow', { length: 120 }),
+    /** The headline is two lines by design: the second is styled differently. */
+    titleA: varchar('title_a', { length: 200 }).notNull(),
+    titleB: varchar('title_b', { length: 200 }),
+    subtitle: varchar('subtitle', { length: 500 }),
+    imagePath: varchar('image_path', { length: 512 }),
+    /** Read out by screen readers, so it describes the picture rather than
+     *  repeating the headline. */
+    imageAlt: varchar('image_alt', { length: 255 }),
+    /**
+     * Which part of the picture to keep when it is cropped, as percentages.
+     * The box is a tall column on a desktop and a wide strip on a phone, so
+     * every picture is cropped twice and the middle is rarely the right answer.
+     */
+    focalX: tinyint('focal_x', { unsigned: true }).default(50).notNull(),
+    focalY: tinyint('focal_y', { unsigned: true }).default(50).notNull(),
+    ctaLabel: varchar('cta_label', { length: 80 }),
+    ctaHref: varchar('cta_href', { length: 512 }),
+    cta2Label: varchar('cta2_label', { length: 80 }),
+    cta2Href: varchar('cta2_href', { length: 512 }),
+    status: mysqlEnum('status', ['draft', 'published']).default('draft').notNull(),
+    sortOrder: int('sort_order').default(0).notNull(),
+    startsAt: datetime('starts_at'),
+    endsAt: datetime('ends_at'),
+    createdAt: datetime('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
+    updatedAt: datetime('updated_at')
+      .default(sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (t) => [index('hero_slides_shown_idx').on(t.locale, t.status, t.sortOrder)],
+)

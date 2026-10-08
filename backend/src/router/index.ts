@@ -164,6 +164,12 @@ const router = createRouter({
     },
 
     {
+      path: '/hero-slides',
+      name: 'HeroSlides',
+      component: () => import('@/views/Content/HeroSlides.vue'),
+      meta: { title: 'Home slideshow', roles: ['superadmin', 'admin'] },
+    },
+    {
       path: '/posts',
       name: 'Articles',
       component: () => import('@/views/Content/Articles.vue'),

@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { db } from '../db/client'
-import { courses, posts } from '../db/schema/index'
+import { courses, heroSlides, posts } from '../db/schema/index'
 import { deleteFile, isStorageConfigured, scopedPath } from './storage'
 
 /**
@@ -18,12 +18,22 @@ import { deleteFile, isStorageConfigured, scopedPath } from './storage'
  * that fails because a cleanup did is a lost article.
  */
 
-/** Everywhere a picture can be referenced from. Add a column here and the
- *  sweep covers it; forget to, and its pictures start being deleted while
- *  still in use. */
+/**
+ * Everywhere a picture can be referenced from.
+ *
+ * Add a column here when something new starts pointing at `content/`. Forget
+ * to, and that thing's pictures get deleted the next time anything else is
+ * saved — the sweep asks "does anything still point at this", and a column it
+ * does not know about answers no.
+ *
+ * It works for prose columns holding `<img src>` and for plain columns holding
+ * a bare path, because the test is the same either way: does the stored text
+ * contain this path.
+ */
 const REFERENCING_COLUMNS = [
   { table: 'posts', column: 'content_html' },
   { table: 'courses', column: 'description' },
+  { table: 'hero_slides', column: 'image_path' },
 ] as const
 
 /** `/api/v1/media/minna/content/2026/10/x.png`, absolute or relative. */
@@ -74,7 +84,7 @@ async function stillReferenced(path: string): Promise<boolean> {
   const needle = `%${escapeLike(path)}%`
 
   for (const { table, column } of REFERENCING_COLUMNS) {
-    const source = table === 'posts' ? posts : courses
+    const source = table === 'posts' ? posts : table === 'courses' ? courses : heroSlides
     const [row] = await db
       .select({ n: sql<number>`COUNT(*)` })
       .from(source)
@@ -99,12 +109,29 @@ export async function removeOrphanedMedia(
   before: string | null | undefined,
   after: string | null | undefined,
 ): Promise<string[]> {
-  if (!isStorageConfigured()) return []
+  return sweep(mediaPathsIn(before), mediaPathsIn(after))
+}
 
-  const was = mediaPathsIn(before)
+/**
+ * The same, for a column that holds one bare store path rather than prose.
+ *
+ * A hero slide keeps its picture in `image_path`, so replacing the picture
+ * orphans the old one exactly as editing an article does — but there is no HTML
+ * to read it out of.
+ */
+export async function removeOrphanedPath(
+  before: string | null | undefined,
+  after: string | null | undefined,
+): Promise<string[]> {
+  const was = new Set(before ? [scopedPath(before)] : [])
+  const now = new Set(after ? [scopedPath(after)] : [])
+  return sweep(was, now)
+}
+
+async function sweep(was: Set<string>, now: Set<string>): Promise<string[]> {
+  if (!isStorageConfigured()) return []
   if (!was.size) return []
 
-  const now = mediaPathsIn(after)
   const candidates = [...was].filter((p) => !now.has(p))
   if (!candidates.length) return []
 

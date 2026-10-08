@@ -307,6 +307,7 @@ const allGroups = [
         icon: PageIcon,
         name: 'Site',
         subItems: [
+          { name: 'Home slideshow', path: '/hero-slides' },
           { name: 'Articles', path: '/posts' },
           { name: 'Testimonials', path: '/testimonials' },
           { name: 'Enquiries', path: '/contact-messages' },

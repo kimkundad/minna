@@ -1496,3 +1496,56 @@ export const lessonQuestions = {
 export function mediaUrl(path: string): string {
   return `${BASE}/media/${path.replace(/^\/+/, '')}`
 }
+
+/* ---------------- the home page slideshow ---------------- */
+
+/** Whether it would be on the site right now — not the same as `status`. */
+export type HeroState = 'live' | 'scheduled' | 'finished' | 'draft'
+
+export interface HeroSlide {
+  id: number
+  locale: 'th' | 'en' | 'jp' | 'vn'
+  eyebrow: string | null
+  /** The headline is two lines by design; the second is styled differently. */
+  titleA: string
+  titleB: string | null
+  subtitle: string | null
+  imagePath: string | null
+  imageAlt: string | null
+  /** Percentages. Which part of the picture to keep when it is cropped. */
+  focalX: number
+  focalY: number
+  ctaLabel: string | null
+  ctaHref: string | null
+  cta2Label: string | null
+  cta2Href: string | null
+  status: 'draft' | 'published'
+  sortOrder: number
+  startsAt: string | null
+  endsAt: string | null
+  createdAt: string
+  updatedAt: string
+  state: HeroState
+}
+
+export type HeroSlideInput = Omit<
+  HeroSlide,
+  'id' | 'createdAt' | 'updatedAt' | 'state'
+>
+
+export const hero = {
+  list: (locale?: string) =>
+    send<{ data: HeroSlide[] }>('/hero-slides', { query: locale ? { locale } : {} }),
+
+  create: (body: HeroSlideInput) => send<{ data: HeroSlide }>('/hero-slides', { method: 'POST', body }),
+
+  update: (id: number, body: HeroSlideInput) =>
+    send<{ data: HeroSlide }>(`/hero-slides/${id}`, { method: 'PUT', body }),
+
+  remove: (id: number) => send<void>(`/hero-slides/${id}`, { method: 'DELETE' }),
+
+  /** The whole order for one language, not a single move: dragging one slide
+   *  changes the position of several. */
+  reorder: (locale: string, ids: number[]) =>
+    send<{ data: HeroSlide[] }>('/hero-slides/order', { method: 'PUT', body: { locale, ids } }),
+}

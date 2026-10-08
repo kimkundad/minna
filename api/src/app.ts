@@ -8,6 +8,7 @@ import authPlugin from './plugins/auth'
 import errorHandler from './plugins/error-handler'
 import auditRoutes from './modules/audit/audit.routes'
 import contentRoutes from './modules/content/content.routes'
+import heroRoutes from './modules/content/hero.routes'
 import dashboardRoutes from './modules/dashboard/dashboard.routes'
 import authRoutes from './modules/auth/auth.routes'
 import catalogRoutes from './modules/catalog/catalog.routes'
@@ -62,6 +63,7 @@ export async function buildApp() {
   await app.register(auditRoutes, { prefix: '/api/v1' })
   await app.register(dashboardRoutes, { prefix: '/api/v1' })
   await app.register(contentRoutes, { prefix: '/api/v1' })
+  await app.register(heroRoutes, { prefix: '/api/v1' })
   await app.register(catalogRoutes, { prefix: '/api/v1' })
   await app.register(uploadRoutes, { prefix: '/api/v1' })
   // Public on purpose: it serves the pictures inside published writing.
