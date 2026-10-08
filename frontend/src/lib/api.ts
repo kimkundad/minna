@@ -202,6 +202,16 @@ export const api = {
   curriculum: (ref: string | number) =>
     send<{ data: Curriculum }>(`/courses/${encodeURIComponent(String(ref))}/curriculum`),
 
+  /**
+   * A free sample lesson, playable without an account. The link it returns is
+   * signed and expires, so it is fetched when the sample is opened rather than
+   * handed out with the curriculum.
+   */
+  lessonPreview: (ref: string | number, lessonId: number) =>
+    send<{ data: LessonPreview }>(
+      `/courses/${encodeURIComponent(String(ref))}/lessons/${lessonId}/preview`,
+    ),
+
   /** Published articles, newest first. */
   posts: (params: PostQuery = {}) => send<PostListResponse>(`/posts/public${queryString(params)}`),
 
@@ -402,6 +412,16 @@ export interface CurriculumLesson {
   durationSeconds: number
   isPreview: boolean
   sortOrder: number
+}
+
+export interface LessonPreview {
+  id: number
+  title: string
+  subtitle: string | null
+  courseTitle: string
+  durationSeconds: number
+  /** Null when the lesson is marked as a sample but nothing is uploaded yet. */
+  url: string | null
 }
 
 export interface Curriculum {

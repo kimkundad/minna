@@ -11,6 +11,7 @@ import CtaButton from '@/components/ui/CtaButton.vue'
 import CourseCard from '@/components/course/CourseCard.vue'
 import CourseImage from '@/components/course/CourseImage.vue'
 import CourseRail from '@/components/course/CourseRail.vue'
+import LessonPreviewDialog from '@/components/course/LessonPreviewDialog.vue'
 import { ApiError, api, mediaUrl } from '@/lib/api'
 import type { Curriculum, CurriculumLesson, PublicCategory, PublicCourseDetail } from '@/lib/api'
 import { categoryLabel, courseView, personOf } from '@/lib/course'
@@ -123,6 +124,14 @@ const chapters = computed(() => {
 })
 
 const previewLesson = computed(() => lessons.value.find((l) => l.isPreview) ?? null)
+
+/* ---------------- the free sample ---------------- */
+
+const openLesson = ref<CurriculumLesson | null>(null)
+
+function openPreview(lesson: CurriculumLesson): void {
+  openLesson.value = lesson
+}
 
 /* ---------------- loading ---------------- */
 
@@ -739,10 +748,23 @@ function toInstructors(): void {
                     <span>{{ t('course.sampleVideo') }}</span>
                   </span>
                 </button>
-                <p v-else-if="previewLesson" class="cd-media-hint">
-                  <AppIcon name="play-circle" />
-                  <span>{{ previewCaption }}</span>
-                </p>
+                <!-- No uploaded sample for the course, but a lesson is marked
+                     as one: the same button, opening that lesson instead. -->
+                <button
+                  v-else-if="previewLesson"
+                  type="button"
+                  class="cd-media-play"
+                  :data-preview="previewLesson.id"
+                  aria-haspopup="dialog"
+                  @click="openPreview(previewLesson)"
+                >
+                  <span class="cd-play-ico"><AppIcon name="play" /></span>
+                  <span class="cd-play-cap">
+                    <AppIcon name="play-circle" />
+                    <span>{{ previewCaption }}</span>
+                  </span>
+                  <span class="sr-only">: {{ previewLesson.title }}</span>
+                </button>
               </template>
             </div>
 
@@ -917,11 +939,18 @@ function toInstructors(): void {
                 >
                   <ul class="cd-lessons" role="list" :data-mod-list="m.id">
                     <li v-for="l in m.lessons" :key="l.id">
-                      <div
+                      <!-- A sample is a button and opens; everything else is a
+                           row of text, because there is nothing behind it to
+                           open until the course is bought. -->
+                      <component
+                        :is="l.isPreview ? 'button' : 'div'"
                         class="lesson cd-lesson"
                         :class="{ 'is-locked': !l.isPreview }"
+                        :type="l.isPreview ? 'button' : undefined"
+                        :aria-haspopup="l.isPreview ? 'dialog' : undefined"
                         :data-lesson="l.id"
                         :data-mode="l.isPreview ? 'preview' : 'locked'"
+                        @click="l.isPreview && openPreview(l)"
                       >
                         <span class="lesson-ico">
                           <AppIcon :name="(LESSON_TYPE[l.type] ?? LESSON_TYPE.video!).icon" />
@@ -942,7 +971,7 @@ function toInstructors(): void {
                             }}
                           </span>
                         </span>
-                      </div>
+                      </component>
                     </li>
                   </ul>
                 </div>
@@ -1066,6 +1095,19 @@ function toInstructors(): void {
         </div>
         <CtaButton :action="view.primary" :course-id="course.slug" @run="runAction" />
       </div>
+
+      <LessonPreviewDialog
+        :open="openLesson !== null"
+        :course-ref="course.slug"
+        :lesson-id="openLesson?.id ?? null"
+        :course-title="course.title"
+        :lesson-title="openLesson?.title ?? ''"
+        :cover="view.image"
+        :art-icon="categoryIcon"
+        :art-palette="view.categoryPalette"
+        :curriculum-href="`${path(`/courses/${course.slug}`)}#curriculum`"
+        @close="openLesson = null"
+      />
     </template>
   </div>
 </template>

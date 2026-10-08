@@ -291,6 +291,52 @@ ul.cd-meta { display: flex; flex-wrap: wrap; gap: 10px 22px; margin: 24px 0 0; p
 .cd-media-lock b { font-size: 16px; line-height: 1.41; }
 .cd-media-lock > span:last-child { font-size: 13px; opacity: .88; }
 
+/* ---------- the free sample, in its dialog ---------- */
+
+.pv-stage { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: var(--r-tile); background: var(--surface-subtle); }
+.pv-stage img, .pv-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* A video is letterboxed rather than cropped: a lesson's slides are the point
+   of it, and cutting their edges off loses the words on them. */
+.pv-video { object-fit: contain; background: #0D1618; }
+
+.pv-badge {
+  position: absolute; left: 14px; top: 14px; z-index: 2;
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 30px; padding: 0 12px; border-radius: 999px;
+  background: rgba(255, 255, 255, .94); color: var(--brand-primary-deep);
+  font-size: 13px; font-weight: 700; backdrop-filter: blur(4px);
+}
+.pv-badge svg { width: 15px; height: 15px; }
+
+.pv-play {
+  position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; width: 100%;
+  background: linear-gradient(180deg, rgba(13, 22, 24, 0) 40%, rgba(13, 22, 24, .34) 100%);
+}
+.pv-play-ico {
+  display: grid; place-items: center; width: 84px; height: 84px; border-radius: 50%;
+  background: rgba(255, 255, 255, .96); color: var(--brand-primary-dark);
+  box-shadow: 0 14px 34px rgba(13, 22, 24, .34); transition: transform .2s var(--ease-out);
+}
+.pv-play-ico svg { width: 32px; height: 32px; margin-left: 5px; }
+.pv-play:hover .pv-play-ico { transform: scale(1.07); }
+
+/* Nothing to play: the poster stays, dimmed, under an explanation. */
+.pv-overlay {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  padding: 24px; text-align: center; color: #fff; background: rgba(13, 22, 24, .62);
+}
+.pv-overlay svg { width: 30px; height: 30px; opacity: .9; }
+.pv-note { font-size: 14.5px; line-height: 1.6; max-width: 42ch; }
+
+.pv-foot-note { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; font-size: 13.5px; line-height: 1.6; color: var(--ink-secondary); }
+.pv-foot-note svg { width: 17px; height: 17px; flex-shrink: 0; margin-top: 1px; color: var(--ink-muted); }
+
+@media (max-width: 767px) {
+  .pv-play-ico { width: 68px; height: 68px; }
+  .pv-play-ico svg { width: 26px; height: 26px; }
+}
+
 .cd-buy { display: grid; gap: 16px; padding: 22px 24px 24px; }
 .cd-buy-top, .cd-buy-foot { display: grid; gap: 14px; }
 .cd-buy-top:empty, .cd-buy-foot:empty { display: none; }

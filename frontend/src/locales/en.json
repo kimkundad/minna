@@ -131,7 +131,16 @@
     "lessonTypeEssay": "Written work",
     "lessonTypeLive": "Live class",
     "sameFamilyReason": "More {name} courses",
-    "popularReason": "Popular with learners"
+    "popularReason": "Popular with learners",
+    "previewTitle": "Free sample: {title}",
+    "previewLoading": "Getting the video ready…",
+    "previewPlay": "Play the free sample of {title}",
+    "previewComingSoon": "This lesson is offered as a free sample, but nothing has been uploaded to it yet.",
+    "previewUnplayable": "This browser cannot play that video. Try Safari, or read the curriculum instead.",
+    "previewFailed": "The sample could not be loaded. Please try again.",
+    "previewFree": "A sample lesson — free for anyone, no account needed.",
+    "previewFreeWithLength": "A sample lesson, {length} — free for anyone, no account needed.",
+    "previewSeeCurriculum": "See the whole curriculum"
   },
   "minutes": "{n} min",
   "hours": "{n} hr",

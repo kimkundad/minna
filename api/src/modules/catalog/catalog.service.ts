@@ -868,6 +868,45 @@ export async function isCourseInstructor(courseId: number, userId: number): Prom
  * a short course can be a flat list and deleting a module leaves its lessons
  * on the course rather than taking them with it.
  */
+/**
+ * One lesson that the school has marked as a free sample.
+ *
+ * Checked here rather than left to the route, and checked in full: the course
+ * has to be published, the lesson has to belong to that course, and it has to
+ * be the one marked as a preview. Any of those missing is the same answer —
+ * whether a lesson exists behind a paywall is not a visitor's business.
+ *
+ * The file stays in the private folder where every other lesson video lives.
+ * What a visitor gets is a signature that expires, for that one file.
+ */
+export async function getPreviewLesson(courseId: number, lessonId: number) {
+  const [row] = await db
+    .select({
+      id: lessons.id,
+      title: lessons.title,
+      subtitle: lessons.subtitle,
+      type: lessons.type,
+      durationSeconds: lessons.durationSeconds,
+      videoPath: lessons.videoPath,
+      courseTitle: courses.title,
+      courseSlug: courses.slug,
+    })
+    .from(lessons)
+    .innerJoin(courses, eq(courses.id, lessons.courseId))
+    .where(
+      and(
+        eq(lessons.id, lessonId),
+        eq(lessons.courseId, courseId),
+        eq(lessons.isPreview, true),
+        eq(courses.status, 'approved'),
+      ),
+    )
+    .limit(1)
+
+  if (!row) throw notFound('There is no free sample at that address.')
+  return row
+}
+
 export async function getCurriculum(courseId: number) {
   const mods = await db
     .select()

@@ -131,7 +131,16 @@
     "lessonTypeEssay": "Bài viết",
     "lessonTypeLive": "Lớp trực tiếp",
     "sameFamilyReason": "Khoá {name} khác",
-    "popularReason": "Được học viên chọn nhiều"
+    "popularReason": "Được học viên chọn nhiều",
+    "previewTitle": "Học thử: {title}",
+    "previewLoading": "Đang chuẩn bị video…",
+    "previewPlay": "Phát bài học thử {title}",
+    "previewComingSoon": "Bài này được mở học thử miễn phí, nhưng chưa tải video lên.",
+    "previewUnplayable": "Trình duyệt này không phát được video đó. Thử Safari, hoặc xem nội dung khoá học.",
+    "previewFailed": "Không tải được bài học thử. Vui lòng thử lại.",
+    "previewFree": "Bài học thử — miễn phí cho mọi người, không cần tài khoản.",
+    "previewFreeWithLength": "Bài học thử, {length} — miễn phí cho mọi người, không cần tài khoản.",
+    "previewSeeCurriculum": "Xem toàn bộ nội dung khoá học"
   },
   "minutes": "{n} min",
   "hours": "{n} hr",

@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { audit, diff } from '../../lib/audit'
 import { forbidden } from '../../lib/errors'
+import { isStorageConfigured, signedUrl } from '../../lib/storage'
 import * as schemas from './catalog.schemas'
 import * as service from './catalog.service'
 import * as quizSchemas from './quiz.schemas'
@@ -18,6 +19,10 @@ import * as quiz from './quiz.service'
 const idParam = z.object({ id: z.coerce.number().int().positive() })
 
 /** An id or a slug. Only the two public course reads take one. */
+/** How long a free sample's link stays good: long enough to watch a lesson,
+ *  not long enough to be worth passing around. */
+const PREVIEW_TTL = 3600
+
 const refParam = z.object({ id: z.string().min(1).max(255) })
 
 /** True when the caller may see drafts: staff only. */
@@ -188,6 +193,49 @@ export default async function catalogRoutes(app: FastifyInstance) {
 
   // Guests see the curriculum of a published course, which is how a sales page
   // lists what is inside before anyone pays. getCourse does the status check.
+  /**
+   * A free sample lesson, playable by anybody.
+   *
+   * Public on purpose: the point of a sample is that somebody who has not
+   * bought the course can watch it. The file itself stays private — what this
+   * hands back is a signature for one file that expires within the hour, which
+   * is long enough to watch a lesson and not long enough to pass around.
+   */
+  app.get('/courses/:id/lessons/:lessonId/preview', async (req) => {
+    const { id, lessonId } = z
+      .object({ id: z.string().min(1).max(255), lessonId: z.coerce.number().int().positive() })
+      .parse(req.params)
+
+    const courseId = await service.resolveCourseRef(id)
+    const lesson = await service.getPreviewLesson(courseId, lessonId)
+
+    if (!lesson.videoPath || !isStorageConfigured()) {
+      // The lesson is a sample, but nothing has been uploaded to it yet. Said
+      // plainly, because "not found" would send the reader looking for a typo.
+      return {
+        data: {
+          id: lesson.id,
+          title: lesson.title,
+          subtitle: lesson.subtitle,
+          courseTitle: lesson.courseTitle,
+          durationSeconds: lesson.durationSeconds,
+          url: null,
+        },
+      }
+    }
+
+    return {
+      data: {
+        id: lesson.id,
+        title: lesson.title,
+        subtitle: lesson.subtitle,
+        courseTitle: lesson.courseTitle,
+        durationSeconds: lesson.durationSeconds,
+        url: signedUrl(lesson.videoPath, PREVIEW_TTL),
+      },
+    }
+  })
+
   app.get('/courses/:id/curriculum', { preHandler: app.optionalAuth }, async (req) => {
     const { id } = refParam.parse(req.params)
     const courseId = await service.resolveCourseRef(id)

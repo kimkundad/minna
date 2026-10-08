@@ -131,7 +131,16 @@
     "lessonTypeEssay": "งานเขียน",
     "lessonTypeLive": "เรียนสด",
     "sameFamilyReason": "คอร์ส{name}อื่น ๆ",
-    "popularReason": "ผู้เรียนเลือกมาก"
+    "popularReason": "ผู้เรียนเลือกมาก",
+    "previewTitle": "ตัวอย่างบทเรียน: {title}",
+    "previewLoading": "กำลังเตรียมวิดีโอ…",
+    "previewPlay": "เล่นตัวอย่างบทเรียน {title}",
+    "previewComingSoon": "บทเรียนนี้เปิดให้ดูตัวอย่างฟรี แต่ยังไม่ได้อัปโหลดวิดีโอ",
+    "previewUnplayable": "เบราว์เซอร์นี้เล่นวิดีโอรูปแบบนี้ไม่ได้ ลองเปิดด้วย Safari หรือดูเนื้อหาคอร์สทั้งหมดแทน",
+    "previewFailed": "โหลดตัวอย่างไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+    "previewFree": "บทเรียนตัวอย่าง เปิดให้ทุกคนดูได้ฟรี ไม่ต้องเข้าสู่ระบบ",
+    "previewFreeWithLength": "บทเรียนตัวอย่าง {length} เปิดให้ทุกคนดูได้ฟรี ไม่ต้องเข้าสู่ระบบ",
+    "previewSeeCurriculum": "ดูเนื้อหาคอร์สทั้งหมด"
   },
   "minutes": "{n} นาที",
   "hours": "{n} ชม.",

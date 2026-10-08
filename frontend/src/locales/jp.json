@@ -131,7 +131,16 @@
     "lessonTypeEssay": "記述課題",
     "lessonTypeLive": "ライブ授業",
     "sameFamilyReason": "ほかの{name}コース",
-    "popularReason": "受講者に人気"
+    "popularReason": "受講者に人気",
+    "previewTitle": "無料サンプル：{title}",
+    "previewLoading": "動画を準備しています…",
+    "previewPlay": "{title} の無料サンプルを再生",
+    "previewComingSoon": "このレッスンは無料サンプルですが、動画はまだアップロードされていません。",
+    "previewUnplayable": "このブラウザーでは再生できません。Safari でお試しいただくか、カリキュラムをご覧ください。",
+    "previewFailed": "サンプルを読み込めませんでした。もう一度お試しください。",
+    "previewFree": "サンプルレッスン — 登録不要で、どなたでも無料でご覧いただけます。",
+    "previewFreeWithLength": "サンプルレッスン（{length}）— 登録不要で、どなたでも無料でご覧いただけます。",
+    "previewSeeCurriculum": "カリキュラムをすべて見る"
   },
   "minutes": "{n} min",
   "hours": "{n} hr",

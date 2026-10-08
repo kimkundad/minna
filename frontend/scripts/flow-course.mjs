@@ -126,6 +126,62 @@ check(
   (await page.$$eval('.cd-lesson', (els) => els.filter((e) => e.tagName === 'A').length)) === 0,
 )
 
+/* ---------------- 3b. the free sample opens ---------------- */
+
+if (apiPreviews > 0) {
+  const row = await page.$('.cd-lesson[data-mode="preview"]')
+  check(
+    'a free sample is a button, not a line of text',
+    await page.$eval('.cd-lesson[data-mode="preview"]', (el) => el.tagName) === 'BUTTON',
+  )
+  await row.click()
+  await page.waitForSelector('.pv-stage', { timeout: 8000 })
+
+  const head = await page.$eval('.modal-title', (el) => el.textContent.trim())
+  const previewLesson = apiLessons.find((l) => l.isPreview)
+  check('opening it names the lesson', head.includes(previewLesson.title), head)
+  check(
+    'and the course under it',
+    (await page.$eval('.modal-sub', (el) => el.textContent.trim())) === detail.title,
+  )
+
+  // Waited out, or the assertion below only ever sees "getting ready".
+  await page
+    .waitForFunction(
+      () =>
+        document.querySelector('.pv-play') !== null ||
+        document.querySelector('.pv-video') !== null ||
+        (document.querySelector('.pv-stage .pv-note')?.textContent ?? '').trim().length > 0,
+      { timeout: 8000 },
+    )
+    .catch(() => {})
+  await new Promise((r) => setTimeout(r, 400))
+
+  // Either a player or a reason there is not one. Never an empty box.
+  const state = await page.evaluate(() => ({
+    play: document.querySelector('.pv-play') !== null,
+    note: document.querySelector('.pv-stage .pv-note')?.textContent.trim() ?? '',
+  }))
+  check(
+    'it offers a player, or says why it cannot',
+    state.play || state.note.length > 0,
+    state.play ? 'play button' : state.note,
+  )
+
+  await page.keyboard.press('Escape')
+  await new Promise((r) => setTimeout(r, 400))
+  check('escape closes it', (await page.$('.pv-stage')) === null)
+  check('and leaves nothing playing', (await page.$$eval('video', (e) => e.length)) === 0)
+}
+
+// A lesson that is not a sample must not be openable at all.
+check(
+  'a locked lesson is not a button',
+  (await page.$$eval('.cd-lesson[data-mode="locked"]', (els) =>
+    els.filter((e) => e.tagName === 'BUTTON').length,
+  )) === 0,
+)
+
 /* ---------------- 4. the teacher, in full ---------------- */
 
 const body = await text()
