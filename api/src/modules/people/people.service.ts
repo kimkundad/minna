@@ -1,10 +1,11 @@
 import { randomBytes } from 'node:crypto'
-import { and, asc, count, desc, eq, inArray, like, or, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, inArray, like, ne, or, sql } from 'drizzle-orm'
 import { db } from '../../db/client'
 import {
   categories,
   roles as rolesTable,
   teacherApplications,
+  teacherProfiles,
   userRoles,
   users,
 } from '../../db/schema/index'
@@ -358,4 +359,105 @@ export async function setPassword(userId: number, password: string) {
   await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, userId))
   await revokeAllSessions(userId)
   return member
+}
+
+/* ---------------- teacher profiles ---------------- */
+
+export async function getTeacherProfile(userId: number) {
+  const [row] = await db
+    .select()
+    .from(teacherProfiles)
+    .where(eq(teacherProfiles.userId, userId))
+    .limit(1)
+  return row ?? null
+}
+
+export async function saveTeacherProfile(
+  userId: number,
+  input: {
+    displayName: string
+    shortName: string
+    slug: string
+    headline?: string | null | undefined
+    bio?: string | null | undefined
+    languages?: string[] | undefined
+    credentials?: string | null | undefined
+    yearsExperience?: number | null | undefined
+    listed: boolean
+    avatarPath?: string | null | undefined
+  },
+) {
+  // The member has to exist, and the profile belongs to an account rather
+  // than standing alone.
+  await getMember(userId)
+
+  const clash = await db
+    .select({ userId: teacherProfiles.userId })
+    .from(teacherProfiles)
+    .where(and(eq(teacherProfiles.slug, input.slug), ne(teacherProfiles.userId, userId)))
+    .limit(1)
+  if (clash.length) {
+    throw conflict('Another teacher already uses that slug.', { slug: 'Already in use.' })
+  }
+
+  const values = {
+    displayName: input.displayName,
+    shortName: input.shortName,
+    slug: input.slug,
+    headline: input.headline ?? null,
+    bio: input.bio ?? null,
+    languages: (input.languages ?? []) as never,
+    credentials: input.credentials ?? null,
+    yearsExperience: input.yearsExperience ?? null,
+    listed: input.listed,
+  }
+
+  // The picture belongs to the account; everything else to the profile.
+  if (input.avatarPath !== undefined) {
+    await db.update(users).set({ avatarPath: input.avatarPath }).where(eq(users.id, userId))
+  }
+
+  const existing = await getTeacherProfile(userId)
+  if (existing) {
+    await db.update(teacherProfiles).set(values).where(eq(teacherProfiles.userId, userId))
+  } else {
+    await db.insert(teacherProfiles).values({ userId, ...values })
+  }
+
+  return { before: existing, after: (await getTeacherProfile(userId))! }
+}
+
+/**
+ * Everyone who can be put on a course.
+ *
+ * Returns the display name where there is a profile and the account name where
+ * there is not, so a teacher appointed this morning can still be assigned
+ * before anyone has written their page.
+ */
+export async function listTeachersForPicker() {
+  const rows = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      avatarPath: users.avatarPath,
+      displayName: teacherProfiles.displayName,
+      shortName: teacherProfiles.shortName,
+      headline: teacherProfiles.headline,
+      languages: teacherProfiles.languages,
+    })
+    .from(users)
+    .innerJoin(userRoles, eq(userRoles.userId, users.id))
+    .innerJoin(rolesTable, eq(rolesTable.id, userRoles.roleId))
+    .leftJoin(teacherProfiles, eq(teacherProfiles.userId, users.id))
+    .where(and(eq(rolesTable.name, 'teacher'), eq(users.status, 'active')))
+    .orderBy(asc(users.firstName))
+
+  return rows.map((r) => ({
+    ...r,
+    name: r.displayName ?? `${r.firstName} ${r.lastName}`.trim(),
+    short: r.shortName ?? `${r.firstName} ${r.lastName}`.trim(),
+    hasProfile: Boolean(r.displayName),
+  }))
 }

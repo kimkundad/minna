@@ -153,6 +153,32 @@ export default async function peopleRoutes(app: FastifyInstance) {
     return { data: await service.getMember(id) }
   })
 
+  /* ---------------- teacher profiles ---------------- */
+
+  /** Everyone who can be put on a course, for the picker on the course form. */
+  app.get('/teachers', adminOnly, async () => ({
+    data: await service.listTeachersForPicker(),
+  }))
+
+  app.get('/members/:id/teacher-profile', adminOnly, async (req) => {
+    const { id } = idParam.parse(req.params)
+    return { data: await service.getTeacherProfile(id) }
+  })
+
+  app.put('/members/:id/teacher-profile', adminOnly, async (req) => {
+    const { id } = idParam.parse(req.params)
+    const body = schemas.teacherProfileBody.parse(req.body)
+    const { before, after } = await service.saveTeacherProfile(id, body)
+
+    audit(req, {
+      action: before ? 'teacher_profile.updated' : 'teacher_profile.created',
+      subjectType: 'user',
+      subjectId: id,
+      summary: after.displayName,
+    })
+    return { data: after }
+  })
+
   /* ---------------- teacher applications ---------------- */
 
   app.get('/teacher-applications', adminOnly, async (req) => {

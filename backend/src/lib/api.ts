@@ -649,3 +649,55 @@ export interface QuizListQuery extends Record<string, string | number | boolean 
 export const quizzes = {
   list: (query: QuizListQuery = {}) => send<Paged<QuizOverviewRow>>('/quizzes', { query }),
 }
+
+/* ---------------- teacher profiles ---------------- */
+
+export interface TeacherOption {
+  id: number
+  email: string
+  firstName: string
+  lastName: string
+  avatarPath: string | null
+  /** The display name when there is a profile, the account name otherwise. */
+  name: string
+  short: string
+  headline: string | null
+  languages: ('th' | 'en' | 'jp' | 'vn')[] | null
+  hasProfile: boolean
+}
+
+export interface TeacherProfile {
+  userId: number
+  displayName: string
+  shortName: string
+  slug: string
+  headline: string | null
+  bio: string | null
+  languages: ('th' | 'en' | 'jp' | 'vn')[] | null
+  credentials: string | null
+  yearsExperience: number | null
+  listed: boolean
+}
+
+export interface TeacherProfileInput {
+  displayName: string
+  shortName: string
+  slug: string
+  headline?: string | null
+  bio?: string | null
+  languages?: ('th' | 'en' | 'jp' | 'vn')[]
+  credentials?: string | null
+  yearsExperience?: number | null
+  listed?: boolean
+}
+
+export const teachers = {
+  /** Everyone who can be put on a course. */
+  options: () => send<{ data: TeacherOption[] }>('/teachers'),
+
+  profile: (userId: number) =>
+    send<{ data: TeacherProfile | null }>(`/members/${userId}/teacher-profile`),
+
+  saveProfile: (userId: number, body: TeacherProfileInput) =>
+    send<{ data: TeacherProfile }>(`/members/${userId}/teacher-profile`, { method: 'PUT', body }),
+}

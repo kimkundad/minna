@@ -102,3 +102,29 @@ export const setPasswordBody = z
     message: 'The two passwords do not match.',
     path: ['confirmPassword'],
   })
+
+/**
+ * A teacher's public profile.
+ *
+ * Separate from the account because it is a different kind of fact: the
+ * account is how someone signs in, this is a page strangers read before
+ * deciding to pay.
+ */
+export const teacherProfileBody = z.object({
+  displayName: z.string().min(1, 'A display name is required.').max(150),
+  shortName: z.string().min(1, 'A short name is required.').max(100),
+  slug: z
+    .string()
+    .min(1, 'A slug is required.')
+    .max(150)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Use lowercase letters, numbers and hyphens.'),
+  headline: z.string().max(180).nullable().optional(),
+  bio: z.string().max(5000).nullable().optional(),
+  languages: z.array(z.enum(['th', 'en', 'jp', 'vn'])).max(4).optional(),
+  credentials: z.string().max(2000).nullable().optional(),
+  yearsExperience: z.coerce.number().int().min(0).max(80).nullable().optional(),
+  listed: z.boolean().default(true),
+  /** Saved onto the account, not the profile: a person has one picture, and
+   *  two would mean choosing which is current every time it changes. */
+  avatarPath: z.string().max(512).nullable().optional(),
+})

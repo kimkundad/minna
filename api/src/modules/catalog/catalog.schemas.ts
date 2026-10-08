@@ -63,11 +63,20 @@ const courseFields = z.object({
     repurchase: z.boolean().default(true),
     badge: z.enum(['bestseller', 'recommended', 'new', 'free']).nullable().optional(),
     featured: z.boolean().default(false),
-    /** User ids. The first is the lead, which is the one a course card shows. */
+    /** User ids. The first is the lead, which is the one a course card shows.
+     *  Optional on a PATCH, which may be changing something else entirely;
+     *  `courseBody` makes it required when a course is created. */
     instructorIds: z.array(z.coerce.number().int().positive()).max(10).optional(),
 })
 
 export const courseBody = courseFields
+  // Every course belongs to somebody who teaches it. A course with no teacher
+  // has nobody to answer its questions or mark its written answers, and the
+  // card has no face to show.
+  .refine((v) => (v.instructorIds?.length ?? 0) > 0, {
+    message: 'Choose who teaches this course.',
+    path: ['instructorIds'],
+  })
   // 'limited' access without a length is access that never expires, dressed up
   // as access that does. The two fields only mean something together.
   .refine((v) => v.accessType !== 'limited' || Boolean(v.accessDurationDays), {

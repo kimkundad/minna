@@ -112,9 +112,11 @@ export default async function catalogRoutes(app: FastifyInstance) {
     const body = schemas.courseBody.parse(req.body)
 
     // A teacher who leaves themselves off their own course cannot open it
-    // again, so they are added when they did not say otherwise.
-    const instructorIds =
-      body.instructorIds ?? (isAdmin(req) ? [] : [req.user.sub])
+    // again, so they are added when they did not say otherwise. An admin has
+    // to pick somebody; the schema already refused an empty list.
+    const instructorIds = body.instructorIds?.length
+      ? body.instructorIds
+      : [req.user.sub]
 
     const created = await service.createCourse({ ...body, instructorIds }, req.user.sub)
 

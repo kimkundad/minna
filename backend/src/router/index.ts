@@ -86,6 +86,14 @@ const router = createRouter({
       meta: { title: 'Teachers', roles: ['superadmin', 'admin'] },
     },
     {
+      // The page strangers read before deciding to enrol, which is a different
+      // thing from the account and lives on its own screen.
+      path: '/teachers/:id',
+      name: 'TeacherProfile',
+      component: () => import('@/views/People/TeacherProfile.vue'),
+      meta: { title: 'Teacher profile', roles: ['superadmin', 'admin'] },
+    },
+    {
       // Creating staff and granting roles are the two powers that could be
       // turned on the people who hold them, so this one is superadmin only.
       path: '/admins',

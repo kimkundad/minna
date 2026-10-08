@@ -27,6 +27,7 @@ const PURPOSES = {
   'course-thumbnail': { folder: (id: number) => `courses/${id}`, maxSize: 8 * 1024 * 1024, ttl: 600 },
   'course-video': { folder: (id: number) => `courses/${id}/video`, maxSize: 8 * 1024 * 1024 * 1024, ttl: 3600 },
   'course-document': { folder: (id: number) => `courses/${id}/docs`, maxSize: 200 * 1024 * 1024, ttl: 1800 },
+  // A teacher's photo is their account avatar: one person, one picture.
   'avatar': { folder: (id: number) => `avatars/${id}`, maxSize: 4 * 1024 * 1024, ttl: 600 },
 } as const
 
@@ -34,6 +35,8 @@ const ticketBody = z.object({
   purpose: z.enum(['course-thumbnail', 'course-video', 'course-document', 'avatar']),
   /** The course the file belongs to. Ignored for an avatar. */
   courseId: z.coerce.number().int().positive().optional(),
+  /** Whose avatar, when an admin is setting it for somebody else. */
+  userId: z.coerce.number().int().positive().optional(),
 })
 
 const signBody = z.object({
@@ -54,7 +57,10 @@ export default async function uploadRoutes(app: FastifyInstance) {
     const rule = PURPOSES[body.purpose]
     const isAdmin = req.user.roles.includes('admin')
 
-    let subjectId = req.user.sub
+    let subjectId = body.userId ?? req.user.sub
+    if (body.purpose === 'avatar' && body.userId && body.userId !== req.user.sub && !isAdmin) {
+      throw forbidden('Only an administrator can set the photo of another account.')
+    }
     if (body.purpose !== 'avatar') {
       if (!body.courseId) {
         throw new AppError(422, 'validation_failed', 'A course is required for this upload.', {

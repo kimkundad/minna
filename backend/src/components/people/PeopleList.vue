@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { RouterLink } from 'vue-router'
 import TablePager from '@/components/common/TablePager.vue'
 import { ApiError, people, type CreateMemberInput, type Member, type RoleName } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
@@ -571,6 +572,13 @@ onMounted(load)
               </span>
             </td>
             <td class="px-5 py-3.5 text-right text-sm sm:px-6">
+              <RouterLink
+                v-if="props.group === 'teachers'"
+                :to="'/teachers/' + m.id"
+                class="mr-4 text-brand-500 hover:text-brand-600"
+              >
+                Profile
+              </RouterLink>
               <template v-if="auth.isSuperadmin">
                 <button
                   v-if="showRoles"
@@ -596,7 +604,11 @@ onMounted(load)
                   {{ m.status === 'active' ? 'Suspend' : 'Reinstate' }}
                 </button>
               </template>
-              <span v-else class="text-gray-300 dark:text-gray-600">—</span>
+              <span
+                v-else-if="props.group !== 'teachers'"
+                class="text-gray-300 dark:text-gray-600"
+                >—</span
+              >
             </td>
           </tr>
         </tbody>
