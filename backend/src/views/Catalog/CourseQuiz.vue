@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
@@ -183,11 +183,25 @@ async function removeQuiz() {
   }
 }
 
+/**
+ * The form sits above the question list, so opening it from a row further down
+ * changes something off screen. Bring it into view and put the cursor in the
+ * question, so the next thing typed lands where it was meant to.
+ */
+const formEl = ref<HTMLElement | null>(null)
+
+async function revealForm() {
+  await nextTick()
+  formEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  formEl.value?.querySelector<HTMLTextAreaElement>('textarea')?.focus({ preventScroll: true })
+}
+
 function openNew() {
   open.value = 'new'
   form.value = blank()
   fieldErrors.value = {}
   formError.value = ''
+  void revealForm()
 }
 
 function openEdit(q: QuizQuestion) {
@@ -202,6 +216,7 @@ function openEdit(q: QuizQuestion) {
   }
   fieldErrors.value = {}
   formError.value = ''
+  void revealForm()
 }
 
 /** Switching type reshapes the choices, because each type needs a different
@@ -420,7 +435,8 @@ onMounted(load)
         <!-- The question being written. -->
         <form
           v-if="open !== null"
-          class="mb-6 rounded-2xl border border-brand-500/40 bg-white p-5 dark:bg-white/[0.03] sm:p-6"
+          ref="formEl"
+          class="mb-6 scroll-mt-24 rounded-2xl border border-brand-500/40 bg-white p-5 dark:bg-white/[0.03] sm:p-6"
           @submit.prevent="saveQuestion"
         >
           <h3 class="mb-5 text-base font-medium text-gray-800 dark:text-white/90">
