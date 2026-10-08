@@ -452,7 +452,13 @@ export async function listTeachersForPicker() {
     .innerJoin(rolesTable, eq(rolesTable.id, userRoles.roleId))
     .leftJoin(teacherProfiles, eq(teacherProfiles.userId, users.id))
     .where(and(eq(rolesTable.name, 'teacher'), eq(users.status, 'active')))
-    .orderBy(asc(users.firstName))
+    // By the name that is shown, not the one on the account. A school with
+    // twenty teachers whose accounts all say the same first name sorts into an
+    // arbitrary order otherwise, and a picker you cannot scan is no better than
+    // no picker.
+    .orderBy(
+      asc(sql`COALESCE(${teacherProfiles.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}))`),
+    )
 
   return rows.map((r) => ({
     ...r,

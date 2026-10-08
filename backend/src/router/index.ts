@@ -128,6 +128,15 @@ const router = createRouter({
     },
 
     {
+      // Reading is admin; saving is superadmin, which the screen enforces by
+      // showing the fields read-only rather than hiding them.
+      path: '/settings',
+      name: 'Settings',
+      component: () => import('@/views/Others/Settings.vue'),
+      meta: { title: 'Settings', roles: ['superadmin', 'admin'] },
+    },
+
+    {
       path: '/profile',
       name: 'Profile',
       component: () => import('@/views/Others/UserProfile.vue'),

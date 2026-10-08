@@ -311,7 +311,7 @@ const allGroups = [
           { name: 'Subscribers', path: '/subscribers', soon: true },
         ],
       },
-      { icon: SettingsIcon, name: 'Settings', path: '/settings', soon: true },
+      { icon: SettingsIcon, name: 'Settings', path: '/settings' },
     ],
   },
 ]

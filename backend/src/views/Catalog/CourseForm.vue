@@ -46,6 +46,56 @@ const teacherOptions = ref<TeacherOption[]>([])
  *  more and widening the rule later should not change the shape every caller
  *  sends. */
 const teacherId = ref<number | null>(null)
+
+/** Below this many, a search box is more work than reading the list. */
+const SEARCH_FROM = 8
+const teacherSearch = ref('')
+
+/** Name, subject and email together, because a school with two 田中 on the
+ *  books is found by subject and one with two Sarahs is found by email. */
+function teacherHaystack(t: TeacherOption): string {
+  return `${t.name} ${t.short} ${t.headline ?? ''} ${t.email}`.toLowerCase()
+}
+
+function teacherLabel(t: TeacherOption): string {
+  const suffix = t.hasProfile ? '' : '  (no profile yet)'
+  return t.headline ? `${t.name} — ${t.headline}${suffix}` : `${t.name}${suffix}`
+}
+
+/** What the search found, before the chosen teacher is pinned back on. */
+const teacherMatches = computed(() => {
+  const term = teacherSearch.value.trim().toLowerCase()
+  if (!term) return teacherOptions.value
+  return teacherOptions.value.filter((t) => teacherHaystack(t).includes(term))
+})
+
+const visibleTeachers = computed(() => {
+  // The one already chosen stays in the list even when the search excludes it,
+  // so filtering never silently empties a required field.
+  const chosen = teacherOptions.value.find((t) => t.id === teacherId.value)
+  const matches = teacherMatches.value
+  return chosen && !matches.some((t) => t.id === chosen.id) ? [chosen, ...matches] : matches
+})
+
+const selectedTeacher = computed(
+  () => teacherOptions.value.find((t) => t.id === teacherId.value) ?? null,
+)
+
+/**
+ * The course names somebody who cannot be chosen here.
+ *
+ * Happens when a course was set up before the teacher role existed, or when
+ * whoever taught it has since lost the role. Without this the select simply
+ * renders blank and the course looks as though it has no teacher — and saving
+ * the form would quietly hand it to whoever was picked instead.
+ */
+const strandedInstructor = computed(() => {
+  if (teacherId.value === null) return null
+  return selectedTeacher.value ? null : (currentInstructorName.value ?? 'Someone')
+})
+
+/** Kept from the loaded course, because the teacher list cannot name them. */
+const currentInstructorName = ref<string | null>(null)
 const loading = ref(true)
 const saving = ref(false)
 const formError = ref('')
@@ -115,7 +165,11 @@ async function load() {
     if (!isNew.value) {
       const course = (await api.course(id.value!)).data
       form.value = { ...course }
-      teacherId.value = course.instructors?.[0]?.id ?? null
+      const current = course.instructors?.[0]
+      teacherId.value = current?.id ?? null
+      currentInstructorName.value = current
+        ? `${current.firstName} ${current.lastName}`.trim()
+        : null
       priceBaht.value = toBahtInput(course.price ?? 0)
       normalPriceBaht.value = toBahtInput(course.normalPrice ?? null)
       outcomesText.value = (course.outcomes ?? []).join('\n')
@@ -268,33 +322,69 @@ onMounted(load)
               </span>
             </p>
 
-            <div class="space-y-2">
-              <label
-                v-for="t in teacherOptions"
-                :key="t.id"
-                class="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-700"
-                :class="{ 'border-brand-500': teacherId === t.id }"
-              >
-                <input
-                  v-model="teacherId"
-                  type="radio"
-                  :value="t.id"
-                  name="course-teacher"
-                  class="mt-0.5 h-5 w-5 border-gray-300 text-brand-500 dark:border-gray-700 dark:bg-gray-900"
-                />
-                <span class="min-w-0 flex-1">
-                  <span class="block text-sm font-medium text-gray-800 dark:text-white/90">
-                    {{ t.name }}
-                    <span v-if="!t.hasProfile" class="ml-2 text-xs text-warning-600">
-                      no profile yet
-                    </span>
-                  </span>
-                  <span class="block text-xs text-gray-500 dark:text-gray-400">
-                    {{ t.headline ?? t.email }}
-                  </span>
-                </span>
-              </label>
+            <!-- A list of every teacher was fine at five and unusable at a
+                 hundred, so this is one control. The search box appears only
+                 once the list is long enough to need it: typing to filter two
+                 names is more work than reading them. -->
+            <div v-if="teacherOptions.length" class="space-y-2">
+              <input
+                v-if="teacherOptions.length > SEARCH_FROM"
+                v-model="teacherSearch"
+                type="search"
+                placeholder="Search by name, subject or email"
+                :class="inputClass"
+              />
+
+              <select v-model="teacherId" :class="inputClass">
+                <option :value="null" disabled>— choose a teacher —</option>
+                <option v-for="t in visibleTeachers" :key="t.id" :value="t.id">
+                  {{ teacherLabel(t) }}
+                </option>
+              </select>
             </div>
+
+            <p
+              v-if="strandedInstructor"
+              class="mt-2 rounded-lg border border-warning-500/40 bg-warning-50 px-4 py-3 text-sm text-warning-700 dark:bg-warning-500/10 dark:text-warning-400"
+            >
+              This course is down to <strong>{{ strandedInstructor }}</strong
+              >, who is not a teacher, so they are not in the list. The public course page has no
+              teacher to show. Choose one — saving will move the course to whoever is picked.
+            </p>
+
+            <!-- What the old list showed under each name, kept for the one that
+                 is chosen: picking the wrong 田中 is easy with names alone. -->
+            <p
+              v-if="selectedTeacher"
+              class="mt-2 rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:bg-white/[0.02] dark:text-gray-300"
+            >
+              <span class="font-medium text-gray-800 dark:text-white/90">
+                {{ selectedTeacher.name }}
+              </span>
+              <span v-if="selectedTeacher.headline"> — {{ selectedTeacher.headline }}</span>
+              <span class="block text-xs text-gray-500 dark:text-gray-400">
+                {{ selectedTeacher.email }}
+              </span>
+              <router-link
+                v-if="!selectedTeacher.hasProfile"
+                :to="`/teachers/${selectedTeacher.id}`"
+                class="mt-1 inline-block text-xs text-warning-600 hover:underline dark:text-warning-400"
+              >
+                No public profile yet — the course page will have nothing to show. Write one.
+              </router-link>
+            </p>
+
+            <!-- On `teacherMatches`, not `visibleTeachers`: the chosen teacher
+                 is pinned into the list whatever the search says, so going by
+                 the visible list would leave the collapse unexplained. -->
+            <p
+              v-if="teacherSearch.trim() && !teacherMatches.length"
+              class="mt-1 text-sm text-gray-400"
+            >
+              Nobody matches “{{ teacherSearch }}”<template v-if="selectedTeacher">
+                — only the teacher already on this course is left</template
+              >.
+            </p>
 
             <p v-if="!teacherOptions.length" class="text-sm text-gray-400">
               Nobody has the teacher role yet. Approve a teacher application, or add one from

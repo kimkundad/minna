@@ -8,9 +8,16 @@
  *   npm run seed:teachers
  */
 import 'dotenv/config'
-import { eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { db } from '../src/db/client'
-import { roles as rolesTable, teacherProfiles, userRoles, users } from '../src/db/schema/index'
+import {
+  courseInstructors,
+  courses,
+  roles as rolesTable,
+  teacherProfiles,
+  userRoles,
+  users,
+} from '../src/db/schema/index'
 import { hashPassword } from '../src/lib/password'
 
 const PASSWORD = process.env.SEED_TEACHER_PASSWORD ?? 'TeachMe!2026'
@@ -151,6 +158,82 @@ async function main() {
 
   console.log(`\n  ${TEACHERS.length} teachers ready. Password for all of them: ${PASSWORD}`)
   console.log('  They have no photo yet; add one from Teachers in the admin.\n')
+
+  await adoptAdminCourses()
+}
+
+/**
+ * Hands over any course still taught by an administrator.
+ *
+ * `db/seed.ts` makes the sample course and has nobody to put on it — it runs
+ * before teachers exist — so it names the admin. That leaves a course whose
+ * teacher cannot be chosen in the admin's own form and whose public page has no
+ * teacher to show, which is exactly the state the one-course-one-teacher rule
+ * is there to prevent.
+ *
+ * Matched by the course's content language, so a Japanese course goes to a
+ * Japanese teacher. A course in a language none of these teach is left alone
+ * and reported, because guessing would be worse than saying so.
+ */
+async function adoptAdminCourses() {
+  const adminRows = await db
+    .select({ userId: userRoles.userId })
+    .from(userRoles)
+    .innerJoin(rolesTable, eq(rolesTable.id, userRoles.roleId))
+    .where(inArray(rolesTable.name, ['admin', 'superadmin']))
+  const adminIds = [...new Set(adminRows.map((r) => r.userId))]
+  if (!adminIds.length) return
+
+  const stranded = await db
+    .select({
+      courseId: courses.id,
+      title: courses.title,
+      language: courses.contentLocale,
+      userId: courseInstructors.userId,
+    })
+    .from(courseInstructors)
+    .innerJoin(courses, eq(courses.id, courseInstructors.courseId))
+    .where(inArray(courseInstructors.userId, adminIds))
+
+  if (!stranded.length) return
+
+  const byEmail = new Map<string, number>()
+  for (const t of TEACHERS) {
+    const [row] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, t.email))
+      .limit(1)
+    if (row) byEmail.set(t.email, row.id)
+  }
+
+  /** Who takes a course in each language the sample data uses. */
+  const PICK: Record<string, string> = {
+    jp: 'aiko.tanaka@minna.local',
+    en: 'sarah.whitfield@minna.local',
+    vn: 'nguyen.thi.mai@minna.local',
+    // The sample Japanese course is filed as Thai, because that is the language
+    // it is taught in rather than the one it teaches.
+    th: 'aiko.tanaka@minna.local',
+  }
+
+  for (const row of stranded) {
+    const email = PICK[row.language ?? 'th']
+    const teacherId = email ? byEmail.get(email) : undefined
+    if (!teacherId) {
+      console.log(`  LEFT   "${row.title}" is taught by an admin and no teacher matches its language`)
+      continue
+    }
+
+    await db
+      .update(courseInstructors)
+      .set({ userId: teacherId, role: 'ผู้สอนหลัก' })
+      .where(
+        and(eq(courseInstructors.courseId, row.courseId), eq(courseInstructors.userId, row.userId)),
+      )
+    console.log(`  MOVED  "${row.title}" from an administrator to ${email}`)
+  }
+  console.log('')
 }
 
 main().then(

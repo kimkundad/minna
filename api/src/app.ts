@@ -14,6 +14,7 @@ import essayRoutes from './modules/learning/essay.routes'
 import commerceRoutes from './modules/commerce/commerce.routes'
 import couponRoutes from './modules/commerce/coupons.routes'
 import invoiceRoutes from './modules/commerce/invoices.routes'
+import settingsRoutes from './modules/settings/settings.routes'
 import webhookRoutes from './modules/commerce/webhooks.routes'
 
 export async function buildApp() {
@@ -57,6 +58,7 @@ export async function buildApp() {
   await app.register(essayRoutes, { prefix: '/api/v1' })
   await app.register(couponRoutes, { prefix: '/api/v1' })
   await app.register(invoiceRoutes, { prefix: '/api/v1' })
+  await app.register(settingsRoutes, { prefix: '/api/v1' })
   await app.register(commerceRoutes, { prefix: '/api/v1' })
   // Its own registration, so its raw-body parser stays inside its own scope.
   await app.register(webhookRoutes, { prefix: '/api/v1' })

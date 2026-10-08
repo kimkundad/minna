@@ -917,3 +917,38 @@ export const invoices = {
   amend: (id: number, body: InvoiceInput) =>
     send<{ data: InvoiceDetail }>(`/invoices/${id}`, { method: 'PATCH', body }),
 }
+
+/* ---------------- settings ---------------- */
+
+export interface SiteSetting {
+  key: string
+  group: 'billing' | 'contact' | 'social'
+  label: string
+  help?: string
+  type: 'percent' | 'boolean' | 'email' | 'phone' | 'url'
+  /** False where nothing reads it yet, so the screen can say so. */
+  live: boolean
+  value: string
+}
+
+export interface VatPreview {
+  percent: number
+  inclusive: boolean
+  /** All satang. */
+  listed: number
+  tax: number
+  customerPays: number
+}
+
+export const settings = {
+  list: () => send<{ data: SiteSetting[] }>('/settings'),
+
+  /** Superadmin only. Sends just the keys that changed. */
+  save: (changes: Record<string, string>) =>
+    send<{ data: SiteSetting[] }>('/settings', { method: 'PUT', body: changes }),
+
+  /** What the saved rules do to one price, worked out by the API so this
+   *  screen cannot disagree with the checkout about the same sum. */
+  vatPreview: (amount: number) =>
+    send<{ data: VatPreview }>('/settings/vat-preview', { query: { amount } }),
+}
