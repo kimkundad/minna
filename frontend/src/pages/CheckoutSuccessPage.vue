@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '@/components/ui/AppIcon.vue'
@@ -107,6 +107,47 @@ const isProblem = computed(() => status.value === 'failed' || status.value === '
 const isPending = computed(() => status.value === 'pending')
 const isFree = computed(() => order.value?.total === 0 && status.value === 'paid')
 const settled = computed(() => status.value === 'paid')
+
+/**
+ * While an order is pending, ask again.
+ *
+ * PromptPay is paid minutes later from a banking app, often on another device,
+ * so the tab that started it never hears anything. Without this the buyer sits
+ * on "waiting" after the money has gone and has to work out that reloading is
+ * what they are supposed to do.
+ *
+ * Every few seconds, and only for a few minutes: by then the transfer has
+ * either landed or it is not coming, and a page left open overnight should not
+ * still be asking.
+ */
+const POLL_EVERY = 4000
+const POLL_FOR = 5 * 60 * 1000
+
+let poller: ReturnType<typeof setInterval> | undefined
+let pollingSince = 0
+
+function stopPolling(): void {
+  clearInterval(poller)
+  poller = undefined
+}
+
+watch(isPending, (pending) => {
+  if (!pending) {
+    stopPolling()
+    return
+  }
+  if (poller) return
+  pollingSince = Date.now()
+  poller = setInterval(() => {
+    if (Date.now() - pollingSince > POLL_FOR) {
+      stopPolling()
+      return
+    }
+    void load()
+  }, POLL_EVERY)
+})
+
+onBeforeUnmount(stopPolling)
 
 /* ---------------- the lines ---------------- */
 
