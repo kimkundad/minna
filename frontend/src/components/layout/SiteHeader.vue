@@ -27,7 +27,7 @@ import logoUrl from '@/assets/img/logo.png'
 const props = withDefaults(
   defineProps<{
     variant?: 'solid' | 'overlay' | 'compact'
-    active?: 'home' | 'courses' | 'about' | null
+    active?: 'home' | 'courses' | 'blog' | 'about' | null
     /** Compact only: what the back link says and where it goes. */
     backLabel?: string
     backTo?: string
@@ -195,6 +195,12 @@ onBeforeUnmount(() => {
           >
             {{ t('common.categories') }}<AppIcon name="chevron-down" />
           </button>
+          <RouterLink
+            :to="path('/blog')"
+            :aria-current="props.active === 'blog' ? 'page' : undefined"
+          >
+            {{ t('common.articles') }}
+          </RouterLink>
           <RouterLink
             :to="path('/about')"
             :aria-current="props.active === 'about' ? 'page' : undefined"

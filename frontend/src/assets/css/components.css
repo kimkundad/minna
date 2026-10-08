@@ -184,6 +184,9 @@
 .nav-pill > a, .nav-pill > button {
   display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 26px;
   border-radius: var(--r-pill); font-size: 15px; font-weight: var(--fw-semibold); color: var(--ink-primary);
+  /* A label that wrapped would make the pill two lines tall and take the
+     header's fixed height with it. */
+  white-space: nowrap;
   transition: color var(--dur-btn) var(--ease-btn), background-color var(--dur-btn) var(--ease-btn);
 }
 .nav-pill > a svg, .nav-pill > button svg { width: 16px; height: 16px; transition: transform .2s; }
@@ -208,8 +211,20 @@
   .avatar-btn .ab-name { display: none; }
   .avatar-btn { padding-right: 10px; }
 }
+/* The pill holds five sections, and between the logo and the action buttons it
+   runs out of room before the drawer takes over at 959px. Each step gives it
+   back a little; without them the pill is pushed onto a second line and the
+   header, which is 56px everywhere else, grows with it. */
+@media (max-width: 1199px) {
+  .nav-pill > a, .nav-pill > button { padding-inline: 13px; font-size: 14.5px; }
+}
 @media (max-width: 1099px) {
-  .nav-pill > a, .nav-pill > button { padding-inline: 14px; }
+  .nav-pill > a, .nav-pill > button { padding-inline: 10px; }
+  .hdr-actions { gap: 6px; }
+}
+@media (max-width: 1023px) {
+  .nav-pill > a, .nav-pill > button { padding-inline: 8px; font-size: 14px; }
+  .nav-pill { gap: 0; padding: 3px; }
 }
 @media (max-width: 959px) {
   .nav-pill, .hdr-auth, .avatar-btn, .hdr-bell { display: none !important; }

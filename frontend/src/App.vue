@@ -15,7 +15,7 @@ const headerVariant = computed(
   () => (route.meta.headerVariant as 'solid' | 'overlay' | 'compact') ?? 'solid',
 )
 const headerActive = computed(
-  () => (route.meta.headerActive as 'home' | 'courses' | 'about' | null) ?? null,
+  () => (route.meta.headerActive as 'home' | 'courses' | 'blog' | 'about' | null) ?? null,
 )
 
 /**

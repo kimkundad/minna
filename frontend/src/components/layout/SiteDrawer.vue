@@ -24,7 +24,7 @@ import logoUrl from '@/assets/img/logo.png'
  */
 const props = defineProps<{
   open: boolean
-  active?: 'home' | 'courses' | 'about' | null
+  active?: 'home' | 'courses' | 'blog' | 'about' | null
 }>()
 const emit = defineEmits<{ close: [] }>()
 
@@ -220,6 +220,12 @@ onBeforeUnmount(() => {
             </RouterLink>
           </div>
 
+          <RouterLink
+            :to="path('/blog')"
+            :aria-current="props.active === 'blog' ? 'page' : undefined"
+          >
+            <AppIcon name="newspaper" />{{ t('common.articles') }}
+          </RouterLink>
           <RouterLink
             :to="path('/about')"
             :aria-current="props.active === 'about' ? 'page' : undefined"

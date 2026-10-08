@@ -51,6 +51,9 @@ const year = new Date().getFullYear()
                 </RouterLink>
               </li>
               <li><RouterLink :to="path('/packages')">{{ t('footer.packages') }}</RouterLink></li>
+              <!-- Under "learn" rather than "about us": an article is a
+                   lesson you did not pay for, not a page about the school. -->
+              <li><RouterLink :to="path('/blog')">{{ t('common.articles') }}</RouterLink></li>
             </ul>
           </div>
 
