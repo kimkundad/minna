@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
@@ -151,6 +151,19 @@ async function move(what: 'modules' | 'lessons', ids: number[], index: number, b
   }
 }
 
+/**
+ * The form sits above the modules, so opening it from a row further down
+ * changes something off screen. Bring it into view and put the cursor in the
+ * title, so the next thing typed lands where it was meant to.
+ */
+const formEl = ref<HTMLElement | null>(null)
+
+async function revealForm() {
+  await nextTick()
+  formEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  formEl.value?.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true })
+}
+
 function openNewLesson(moduleId: number | null) {
   lessonOpen.value = 'new'
   lessonParent.value = moduleId
@@ -158,6 +171,7 @@ function openNewLesson(moduleId: number | null) {
   lessonMinutes.value = 0
   fieldErrors.value = {}
   formError.value = ''
+  void revealForm()
 }
 
 function openLesson(lesson: Lesson) {
@@ -167,6 +181,7 @@ function openLesson(lesson: Lesson) {
   lessonMinutes.value = Math.round(lesson.durationSeconds / 60)
   fieldErrors.value = {}
   formError.value = ''
+  void revealForm()
 }
 
 async function saveLesson() {
@@ -260,7 +275,8 @@ onMounted(load)
            where the lesson is going. -->
       <form
         v-if="lessonOpen !== null"
-        class="mb-6 rounded-2xl border border-brand-500/40 bg-white p-5 dark:bg-white/[0.03] sm:p-6"
+        ref="formEl"
+        class="mb-6 scroll-mt-24 rounded-2xl border border-brand-500/40 bg-white p-5 dark:bg-white/[0.03] sm:p-6"
         @submit.prevent="saveLesson"
       >
         <h3 class="mb-5 text-base font-medium text-gray-800 dark:text-white/90">
