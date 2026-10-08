@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import AppAvatar from '@/components/ui/AppAvatar.vue'
-import { store } from '@/vendor'
+import type { Person } from '@/lib/course'
 
 /**
  * The row of instructor face and name under a course title.
@@ -13,8 +14,8 @@ import { store } from '@/vendor'
  */
 const props = withDefaults(
   defineProps<{
-    instructors: { id: string }[]
-    courseId: string
+    people: Person[]
+    courseId: string | number
     size?: 'sm' | 'md' | 'lg'
     /** Use full names instead of the short form. */
     full?: boolean
@@ -22,33 +23,20 @@ const props = withDefaults(
   { size: 'sm' },
 )
 
-const emit = defineEmits<{ open: [courseId: string] }>()
+const emit = defineEmits<{ open: [courseId: string | number] }>()
 
-interface Person {
-  id: string
-  name: string
-  short: string
-  initials: string
-  color: number
-  photo?: string | null
-}
-
-const people = computed<Person[]>(() =>
-  props.instructors.map(
-    (i) => (store as unknown as { instructor: (id: string) => Person }).instructor(i.id),
-  ),
-)
+const { t } = useI18n()
 
 /** Whoever the data lists first; the order is the one the course was set up
  *  with, so it is the lead instructor rather than an arbitrary pick. */
-const lead = computed<Person | null>(() => people.value[0] ?? null)
+const lead = computed<Person | null>(() => props.people[0] ?? null)
 
 const name = computed(() => (lead.value ? (props.full ? lead.value.name : lead.value.short) : ''))
 
 /** The label still names everyone, because the button opens all of them and a
  *  screen reader should not be told less than the button does. */
-const ariaLabel = computed(
-  () => `ผู้สอน ${people.value.map((p) => p.name).join(', ')} — ดูรายชื่อผู้สอนทั้งหมด`,
+const ariaLabel = computed(() =>
+  t('course.instructorsAria', { names: props.people.map((p) => p.name).join(', ') }),
 )
 </script>
 

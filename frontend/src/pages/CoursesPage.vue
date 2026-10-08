@@ -7,22 +7,26 @@ import CourseCard from '@/components/course/CourseCard.vue'
 import FilterGroups, { type FilterGroup } from '@/components/discovery/FilterGroups.vue'
 import SkeletonCards from '@/components/discovery/SkeletonCards.vue'
 import AdsLink from '@/components/discovery/AdsLink.vue'
-import { data, store } from '@/vendor'
+import { api } from '@/lib/api'
+import type { CourseFacets, CourseQuery, CourseSort, PublicCategory, PublicCourse } from '@/lib/api'
+import { categoryLabel, courseView } from '@/lib/course'
 import { num } from '@/lib/format'
 
 /**
- * The course catalog: search, six facet groups with live counts, six sort
+ * The course catalog: search, five facet groups with live counts, five sort
  * orders, a grid/list toggle, chips for whatever is on, and all of it in the
  * URL so a filtered view can be linked and reloaded.
  *
- * Filtering and sorting are `store.filterCourses` / `store.sortCourses`
- * unchanged — the facet rules (what "1–3 ชม." means, which courses count as
- * "รายคอร์ส") are business rules, not display, and the only way for the counts
- * beside each option to agree with the results is for both to come out of the
- * same function.
+ * Filtering, sorting and the counts beside each option all come from one
+ * request to `/courses`. That matters for the counts in particular: a facet's
+ * count is "how many results if this were the only choice in its own group",
+ * which is a question about the whole catalog, and the browser is only ever
+ * sent one page of it. Computing them here from `data.length` would print the
+ * size of a page and call it a total.
  *
- * The brief delay before results appear is the reference's, not an accident: a
- * skeleton appearing for a moment is what tells you the list is answering you.
+ * The reference's brief skeleton is kept, but it is now the real wait rather
+ * than a staged one — and it is held for a moment longer than the response so a
+ * fast answer still reads as an answer rather than a flicker.
  */
 const route = useRoute()
 const router = useRouter()
@@ -31,26 +35,32 @@ const { t } = useI18n()
 const locale = computed(() => String(route.params.locale ?? 'th'))
 const path = (p: string) => `/${locale.value}${p}`
 
-const s = store as unknown as Record<string, (...args: any[]) => any>
-
 const CAT_VISIBLE = 8
-const LOAD_MS = 350
-
-type Course = { id: string; category: string; [key: string]: unknown }
+/** The least time a skeleton stays up, so a 40ms response is not a flash. */
+const MIN_SKELETON_MS = 250
+const PER_PAGE = 24
 
 /* ---------------- facet definitions ---------------- */
 
-/** Categories that have courses come first, then the rest A–Z. The order is
- *  fixed once, from the full catalog, so it does not reshuffle under you as you
- *  filter. */
-const categoryOpts = computed<[string, string][]>(() => {
-  const counts: Record<string, number> = {}
-  for (const c of s.catalog() as Course[]) counts[c.category] = (counts[c.category] ?? 0) + 1
-  return data.categories
+const categories = ref<PublicCategory[]>([])
+
+/**
+ * Categories that have courses come first, then the rest A–Z.
+ *
+ * `courseCount` is the whole catalog's count, not the filtered one, so the
+ * order is fixed and does not reshuffle under you as you filter. A
+ * sub-category carries its parent's name: four categories are called "สนทนา"
+ * and the list would read as four identical checkboxes without it.
+ */
+const categoryOpts = computed<[string, string][]>(() =>
+  categories.value
     .slice()
-    .sort((a, b) => (counts[b.id] ?? 0) - (counts[a.id] ?? 0) || a.name.localeCompare(b.name))
-    .map((c) => [c.id, c.name] as [string, string])
-})
+    .sort(
+      (a, b) =>
+        b.courseCount - a.courseCount || categoryLabel(a, categories.value).localeCompare(categoryLabel(b, categories.value)),
+    )
+    .map((c) => [String(c.id), categoryLabel(c, categories.value)] as [string, string]),
+)
 
 const groups = computed<FilterGroup[]>(() => [
   { key: 'category', label: t('catalog.groupCategory'), opts: categoryOpts.value },
@@ -63,14 +73,16 @@ const groups = computed<FilterGroup[]>(() => [
       ['advanced', t('catalog.levelAdvanced')],
     ],
   },
+  // What the teaching is delivered in. Minna teaches four languages and a
+  // beginner wants the explanation in one they already have.
   {
-    key: 'ce',
-    label: t('catalog.groupCe'),
+    key: 'locale',
+    label: t('catalog.groupSpoken'),
     opts: [
-      ['none', t('catalog.ceNone')],
-      ['1-3', t('catalog.ce13')],
-      ['4-6', t('catalog.ce46')],
-      ['gt6', t('catalog.ceGt6')],
+      ['th', t('spoken.th')],
+      ['en', t('spoken.en')],
+      ['jp', t('spoken.jp')],
+      ['vn', t('spoken.vn')],
     ],
   },
   {
@@ -104,18 +116,23 @@ const groups = computed<FilterGroup[]>(() => [
   },
 ])
 
-const GROUP_KEYS = ['category', 'level', 'ce', 'duration', 'access', 'price'] as const
+/**
+ * No CE group. That is the reference project's professional-credit scheme —
+ * continuing-education units a vet collects — and Minna awards none, so there
+ * is nothing to filter on and no column to filter it by.
+ */
+const GROUP_KEYS = ['category', 'level', 'locale', 'duration', 'access', 'price'] as const
 type GroupKey = (typeof GROUP_KEYS)[number]
 
-const SORTS = [
-  'recommended',
-  'new',
-  'popular',
-  'price-asc',
-  'price-desc',
-  'ce-desc',
-] as const
-type SortKey = (typeof SORTS)[number]
+/** The sort names the URL uses, and what each one means to the API. */
+const SORTS = {
+  recommended: 'recommended',
+  new: 'newest',
+  popular: 'popularity',
+  'price-asc': 'price',
+  'price-desc': 'price-desc',
+} as const
+type SortKey = keyof typeof SORTS
 
 const SORT_LABEL: Record<SortKey, string> = {
   recommended: 'catalog.sortRecommended',
@@ -123,13 +140,12 @@ const SORT_LABEL: Record<SortKey, string> = {
   popular: 'catalog.sortPopular',
   'price-asc': 'catalog.sortPriceAsc',
   'price-desc': 'catalog.sortPriceDesc',
-  'ce-desc': 'catalog.sortCeDesc',
 }
 
 /* ---------------- state, read from the URL ---------------- */
 
 function emptyFilters(): Record<GroupKey, string[]> {
-  return { category: [], level: [], ce: [], duration: [], access: [], price: [] }
+  return { category: [], level: [], locale: [], duration: [], access: [], price: [] }
 }
 
 const VIEW_KEY = 'rv:v1:ui:catalogView'
@@ -149,13 +165,17 @@ const filters = ref<Record<GroupKey, string[]>>(emptyFilters())
 const sort = ref<SortKey>('recommended')
 const view = ref<'grid' | 'list'>('grid')
 const loading = ref(true)
+const failed = ref(false)
 const catOpen = ref(false)
 const pinned = ref<Record<string, boolean>>({})
-/** Bumped after an action so the vendor store's new answer is re-read. */
-const tick = ref(0)
 
-/** Accepts a category by id or by English name, because the home page links in
- *  by id and people paste either. */
+const results = ref<PublicCourse[]>([])
+const total = ref(0)
+const loadedPages = ref(1)
+const facets = ref<CourseFacets | null>(null)
+
+/** Accepts a category by id or by slug, because the home page links in by id
+ *  and a hand-written link is likelier to say `?category=japanese-n5`. */
 function readUrl(): void {
   const q = route.query
   const one = (k: string) => (Array.isArray(q[k]) ? q[k][0] : q[k]) as string | undefined
@@ -163,9 +183,9 @@ function readUrl(): void {
   query.value = (one('q') ?? '').trim().slice(0, 80)
 
   const alias: Record<string, string> = {}
-  for (const c of data.categories) {
-    alias[c.id] = c.id
-    alias[c.name.toLowerCase()] = c.id
+  for (const c of categories.value) {
+    alias[String(c.id)] = String(c.id)
+    alias[c.slug.toLowerCase()] = String(c.id)
   }
 
   const next = emptyFilters()
@@ -177,13 +197,16 @@ function readUrl(): void {
       let v = part.trim()
       if (g.key === 'category') v = alias[v.toLowerCase()] ?? v
       const key = g.key as GroupKey
-      if (valid.includes(v) && !next[key].includes(v)) next[key].push(v)
+      // A category id is only checked against the options once they have
+      // loaded; before that it is kept, and the first load validates it.
+      const ok = g.key === 'category' ? (categories.value.length ? valid.includes(v) : /^\d+$/.test(v)) : valid.includes(v)
+      if (ok && !next[key].includes(v)) next[key].push(v)
     }
   }
   filters.value = next
 
   const sk = one('sort') as SortKey | undefined
-  sort.value = sk && SORTS.includes(sk) ? sk : 'recommended'
+  sort.value = sk && sk in SORTS ? sk : 'recommended'
 
   const v = one('view')
   view.value = v === 'list' || v === 'grid' ? v : (storedView() ?? 'grid')
@@ -203,47 +226,29 @@ function writeUrl(): void {
   void router.replace({ query: q })
 }
 
-/* ---------------- results ---------------- */
+/* ---------------- loading ---------------- */
 
-interface FilterOpts extends Record<string, unknown> {
-  q: string
+/** The URL's filters, as the API's query parameters. */
+function params(page = 1): CourseQuery {
+  const f = filters.value
+  return {
+    page,
+    perPage: PER_PAGE,
+    q: query.value || undefined,
+    categoryIds: f.category.map(Number).filter(Number.isFinite),
+    levels: f.level as CourseQuery['levels'],
+    locales: f.locale as CourseQuery['locales'],
+    durations: f.duration as CourseQuery['durations'],
+    prices: f.price as CourseQuery['prices'],
+    access: f.access as CourseQuery['access'],
+    sort: SORTS[sort.value] as CourseSort,
+    facets: true,
+  }
 }
 
-function opts(f: Record<GroupKey, string[]>): FilterOpts {
-  const o: FilterOpts = { q: query.value }
-  for (const key of GROUP_KEYS) o[key] = f[key]
-  return o
-}
-
-const results = computed<Course[]>(() => {
-  void tick.value
-  return s.sortCourses(s.filterCourses(opts(filters.value)), sort.value) as Course[]
-})
-
-/** A facet's count is the result count with that one option standing alone in
- *  its own group, every other group left as it is — so ticking it tells you
- *  exactly how many you will get. */
-function countOf(key: string, value: string): number {
-  void tick.value
-  const o = opts(filters.value)
-  o[key] = [value]
-  return (s.filterCourses(o) as Course[]).length
-}
-
-const filterCount = computed(() =>
-  GROUP_KEYS.reduce((n, key) => n + filters.value[key].length, 0),
-)
-
-const simulateError = computed(() => {
-  void tick.value
-  return Boolean(s.simulateError())
-})
-
-/** Everything the catalog shows is public; the grid never waits on a session. */
-const sortNote = computed(() => t(SORT_LABEL[sort.value]))
-
-/* ---------------- the delay before results swap ---------------- */
-
+/** Only the newest request may write to the page; an earlier answer arriving
+ *  late would otherwise overwrite a later one. */
+let seq = 0
 let timer: ReturnType<typeof setTimeout> | undefined
 
 /** The live region stays quiet on arrival — the heading already says how many
@@ -251,36 +256,115 @@ let timer: ReturnType<typeof setTimeout> | undefined
  *  the moment the page opens. It speaks once you change something. */
 const announce = ref(false)
 
-function load(ms = LOAD_MS): void {
+async function load(): Promise<void> {
+  const mine = ++seq
   loading.value = true
+  failed.value = false
   clearTimeout(timer)
+
+  const started = Date.now()
+  try {
+    const res = await api.courses(params(1))
+    if (mine !== seq) return
+    results.value = res.data
+    total.value = res.meta.total
+    facets.value = res.facets ?? null
+    loadedPages.value = 1
+  } catch {
+    if (mine !== seq) return
+    failed.value = true
+    results.value = []
+    total.value = 0
+  }
+
+  const left = Math.max(0, MIN_SKELETON_MS - (Date.now() - started))
   timer = setTimeout(() => {
-    loading.value = false
-  }, ms)
+    if (mine === seq) loading.value = false
+  }, left)
+}
+
+const loadingMore = ref(false)
+const hasMore = computed(() => results.value.length < total.value)
+
+async function loadMore(): Promise<void> {
+  if (loadingMore.value || !hasMore.value) return
+  const mine = seq
+  loadingMore.value = true
+  try {
+    const res = await api.courses(params(loadedPages.value + 1))
+    if (mine !== seq) return
+    results.value = [...results.value, ...res.data]
+    total.value = res.meta.total
+    loadedPages.value += 1
+  } catch {
+    // The courses already on screen stay; the button can be pressed again.
+  } finally {
+    if (mine === seq) loadingMore.value = false
+  }
 }
 
 function refresh(): void {
   announce.value = true
   writeUrl()
-  load()
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // Categories first: the URL's `?category=` is read against them, and the
+  // filter panel cannot be drawn without them.
+  try {
+    categories.value = (await api.categories()).data.filter((c) => c.courseCount > 0 || !c.parentId)
+  } catch {
+    // The rest of the catalog still works; only the category group is empty.
+  }
   readUrl()
-  load(450)
+  await load()
 })
 onBeforeUnmount(() => clearTimeout(timer))
 
-/** Back and forward move through filter states, so the page follows the URL
- *  rather than owning it outright. */
+/**
+ * The URL is what the page reads from, not just what it writes to — so a link
+ * into a filtered catalog, a reload and a route change all land on the same
+ * state.
+ *
+ * Changing a filter `replace`s the entry rather than pushing one: ticking five
+ * boxes should not mean pressing back five times to leave the catalog. The
+ * cost is that back does not step through filter states, which is the right
+ * trade for a panel somebody clicks through quickly.
+ */
 watch(
   () => route.fullPath,
   () => {
     if (route.name !== 'courses') return
     readUrl()
-    load()
+    void load()
   },
 )
+
+/* ---------------- facet counts ---------------- */
+
+/**
+ * How many courses this option would give.
+ *
+ * Straight from the response: the API counts each option with that one choice
+ * standing alone in its own group and every other group left as it is, which
+ * is what makes the number a promise about what clicking it does.
+ *
+ * While a request is in flight the previous answer is left on screen rather
+ * than zeroed, so the panel does not blink to nothing between keystrokes.
+ */
+function countOf(key: string, value: string): number {
+  const f = facets.value
+  if (!f) return 0
+  const group = f[key as keyof CourseFacets]
+  if (typeof group !== 'object') return 0
+  return (group as Record<string, number>)[value] ?? 0
+}
+
+const filterCount = computed(() =>
+  GROUP_KEYS.reduce((n, key) => n + filters.value[key].length, 0),
+)
+
+const sortNote = computed(() => t(SORT_LABEL[sort.value]))
 
 /* ---------------- interactions ---------------- */
 
@@ -373,20 +457,23 @@ function setView(next: 'grid' | 'list'): void {
   writeUrl()
 }
 
-/** Card CTAs that change the store rather than navigate. Signing in is not
- *  wired up yet, so those buttons stay inert for now. */
+/**
+ * The cart and free enrolment both need an account and an API that does not
+ * exist yet, so the only action wired up is the one that does: going to
+ * checkout with this course.
+ */
 function runAction(action: string, courseId?: string): void {
   if (!courseId) return
-  if (action === 'add-cart') s.addToCart(courseId)
-  else if (action === 'enroll-free') s.enrollFree(courseId)
-  else if (action === 'buy') {
+  if (action === 'buy' || action === 'add-cart') {
     void router.push({ path: path('/checkout'), query: { items: courseId } })
-    return
   }
-  tick.value++
 }
 
 /* ---------------- derived view data ---------------- */
+
+const cards = computed(() =>
+  results.value.map((c) => courseView(c, { locale: locale.value, t, categories: categories.value })),
+)
 
 const chips = computed(() => {
   const out: { key: string; value: string; label: string }[] = []
@@ -405,13 +492,14 @@ const chips = computed(() => {
   return out
 })
 
-/** Categories can be real but empty — the home page shows them as "เร็ว ๆ นี้"
- *  and links here, so that deserves its own answer rather than "no match". */
+/** A category can be real but empty — the home page lists those and links
+ *  here, so that deserves its own answer rather than "no match". */
 const onlyEmptyCategories = computed(() => {
   if (query.value || !filters.value.category.length) return false
   if (filterCount.value !== filters.value.category.length) return false
-  const published = s.catalog() as Course[]
-  return filters.value.category.every((id) => !published.some((c) => c.category === id))
+  return filters.value.category.every(
+    (id) => (categories.value.find((c) => String(c.id) === id)?.courseCount ?? 0) === 0,
+  )
 })
 
 const emptyCategoryNames = computed(() =>
@@ -420,13 +508,13 @@ const emptyCategoryNames = computed(() =>
     .join(', '),
 )
 
-const firstPage = computed(() => (results.value.length > 6 ? results.value.slice(0, 6) : results.value))
-const secondPage = computed(() => (results.value.length > 6 ? results.value.slice(6) : []))
-const splitAds = computed(() => results.value.length > 6)
+const firstPage = computed(() => (cards.value.length > 6 ? cards.value.slice(0, 6) : cards.value))
+const secondPage = computed(() => (cards.value.length > 6 ? cards.value.slice(6) : []))
+const splitAds = computed(() => cards.value.length > 6)
 
 /** The ads block lives between the two halves of a long grid, and below the
  *  results when there is only one half. */
-const adsBelow = computed(() => simulateError.value || loading.value || !splitAds.value)
+const adsBelow = computed(() => failed.value || loading.value || !splitAds.value)
 
 const cardVariant = computed(() => (view.value === 'list' ? 'list' : 'grid'))
 </script>
@@ -447,7 +535,7 @@ const cardVariant = computed(() => (view.value === 'list' ? 'list' : 'grid'))
         </ol>
       </nav>
       <h1 id="cat-title">{{ t('catalog.title') }}</h1>
-      <p>{{ t('catalog.lead', { count: data.categories.length }) }}</p>
+      <p>{{ t('catalog.lead', { count: categories.length }) }}</p>
       <form
         class="cat-search"
         id="cat-search"
@@ -553,10 +641,10 @@ const cardVariant = computed(() => (view.value === 'list' ? 'list' : 'grid'))
             </div>
 
             <h2 class="cat-count" id="cat-count" tabindex="-1">
-              <template v-if="simulateError">{{ t('catalog.countError') }}</template>
+              <template v-if="failed">{{ t('catalog.countError') }}</template>
               <template v-else-if="loading">{{ t('catalog.countLoading') }}</template>
               <template v-else
-                >{{ t('catalog.countFound', { count: num(results.length) })
+                >{{ t('catalog.countFound', { count: num(total) })
                 }}<small v-if="query">{{
                   ` ${t('catalog.countFor', { q: query })}`
                 }}</small
@@ -575,7 +663,9 @@ const cardVariant = computed(() => (view.value === 'list' ? 'list' : 'grid'))
                   :value="sort"
                   @change="onSortChange"
                 >
-                  <option v-for="k in SORTS" :key="k" :value="k">{{ t(SORT_LABEL[k]) }}</option>
+                  <option v-for="(_, k) in SORTS" :key="k" :value="k">
+                    {{ t(SORT_LABEL[k]) }}
+                  </option>
                 </select>
               </div>
               <div class="cat-view" role="group" :aria-label="t('catalog.viewGroup')">
@@ -630,16 +720,12 @@ const cardVariant = computed(() => (view.value === 'list' ? 'list' : 'grid'))
         </div>
 
         <p class="sr-only" id="cat-status" aria-live="polite" aria-atomic="true">
-          {{
-            announce && !loading && !simulateError
-              ? t('catalog.countFound', { count: results.length })
-              : ''
-          }}
+          {{ announce && !loading && !failed ? t('catalog.countFound', { count: total }) : '' }}
         </p>
 
         <div class="cat-list" id="cat-list" :aria-busy="loading ? 'true' : 'false'">
           <!-- Error -->
-          <div v-if="simulateError" class="state-box state-box--error" role="alert">
+          <div v-if="failed" class="state-box state-box--error" role="alert">
             <div class="state-ico"><AppIcon name="wifi-off" /></div>
             <h3>{{ t('catalog.errorTitle') }}</h3>
             <p>{{ t('catalog.errorText') }}</p>
@@ -661,7 +747,7 @@ const cardVariant = computed(() => (view.value === 'list' ? 'list' : 'grid'))
           </div>
 
           <!-- No results -->
-          <div v-else-if="!results.length" class="state-box">
+          <div v-else-if="!cards.length" class="state-box">
             <div class="state-ico">
               <AppIcon :name="onlyEmptyCategories ? 'hourglass' : 'search'" />
             </div>
@@ -676,7 +762,7 @@ const cardVariant = computed(() => (view.value === 'list' ? 'list' : 'grid'))
               {{
                 onlyEmptyCategories
                   ? t('catalog.emptyComingText')
-                  : t('catalog.emptyText', { count: data.categories.length })
+                  : t('catalog.emptyText', { count: categories.length })
               }}
             </p>
             <div class="state-actions">
@@ -713,17 +799,33 @@ const cardVariant = computed(() => (view.value === 'list' ? 'list' : 'grid'))
           <template v-else>
             <ul class="cat-grid" :class="{ 'is-list': view === 'list' }" role="list">
               <li v-for="c in firstPage" :key="c.id">
-                <CourseCard :course-id="c.id" :variant="cardVariant" @run="runAction" />
+                <CourseCard :view="c" :variant="cardVariant" @run="runAction" />
               </li>
             </ul>
             <template v-if="splitAds">
               <div class="cat-ads-inline"><AdsLink href="#sponsor-catalog" /></div>
               <ul class="cat-grid" :class="{ 'is-list': view === 'list' }" role="list">
                 <li v-for="c in secondPage" :key="c.id">
-                  <CourseCard :course-id="c.id" :variant="cardVariant" @run="runAction" />
+                  <CourseCard :view="c" :variant="cardVariant" @run="runAction" />
                 </li>
               </ul>
             </template>
+
+            <div v-if="hasMore" class="cat-more">
+              <button
+                type="button"
+                class="btn btn--secondary"
+                data-load-more
+                :disabled="loadingMore"
+                @click="loadMore"
+              >
+                <AppIcon name="chevron-down" />{{
+                  loadingMore
+                    ? t('catalog.loadingMore')
+                    : t('catalog.loadMore', { count: num(total - results.length) })
+                }}
+              </button>
+            </div>
           </template>
         </div>
       </div>

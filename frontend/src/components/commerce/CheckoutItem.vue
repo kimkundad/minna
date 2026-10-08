@@ -12,6 +12,7 @@ import { assetUrl, call, protoHref } from './useCommerce'
 import { data, store } from '@/vendor'
 import type { AccessNote, CommerceCategory, Coupon, TotalsLine } from './types'
 import { num } from '@/lib/format'
+import { vendorPeople } from '@/lib/vendor-view'
 
 /**
  * One course on the order, with its own coupon field.
@@ -111,12 +112,12 @@ const lessonCount = computed(
 
     <div class="co-item-info">
       <InstructorLine
-        :instructors="course.instructors"
+        :people="vendorPeople(course.instructors)"
         :course-id="cid"
         @open="emit('instructors', cid)"
       />
       <div class="co-item-meta">
-        <span><AppIcon name="book-open" />{{ t('course.lessonCount', lessonCount) }}</span>
+        <span><AppIcon name="book-open" />{{ t('course.lessonCount', { count: lessonCount }) }}</span>
         <span><AppIcon name="clock" />{{ course.durationLabel }}</span>
       </div>
       <CoAccessNote :note="note" />

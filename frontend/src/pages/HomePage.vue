@@ -10,6 +10,7 @@ import AppIcon from '@/components/ui/AppIcon.vue'
 import logoUrl from '@/assets/img/logo.png'
 import { data, store } from '@/vendor'
 import { date } from '@/lib/format'
+import { vendorCourseView } from '@/lib/vendor-view'
 
 /**
  * The home page, in the order the design sets out: hero, the three course
@@ -22,6 +23,9 @@ import { date } from '@/lib/format'
 const route = useRoute()
 const locale = computed(() => String(route.params.locale ?? 'th'))
 const path = (p: string) => `/${locale.value}${p}`
+/** Until this page is served by our own API, its cards come from the
+ *  prototype store. See `vendor-view.ts`. */
+const vendorView = (id: string) => vendorCourseView(id, locale.value)
 
 const s = store as unknown as Record<string, (...args: unknown[]) => any>
 
@@ -66,7 +70,7 @@ const articles = computed(() => (data.articles ?? []) as unknown as any[])
         <CourseCard
           v-for="c in myCourses"
           :key="c.id"
-          :course-id="c.id"
+          :view="vendorView(c.id)"
           variant="continue"
         />
       </CourseRail>
@@ -85,7 +89,7 @@ const articles = computed(() => (data.articles ?? []) as unknown as any[])
         more-label="ดูคอร์สใหม่ทั้งหมด"
         :count="newCourses.length"
       >
-        <CourseCard v-for="c in newCourses" :key="c.id" :course-id="c.id" />
+        <CourseCard v-for="c in newCourses" :key="c.id" :view="vendorView(c.id)" />
       </CourseRail>
     </div>
   </section>
@@ -109,7 +113,7 @@ const articles = computed(() => (data.articles ?? []) as unknown as any[])
         <CourseCard
           v-for="r in recommended"
           :key="r.course.id"
-          :course-id="r.course.id"
+          :view="vendorView(r.course.id)"
           :reason="isLoggedIn ? r.reason : undefined"
         />
       </CourseRail>

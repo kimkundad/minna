@@ -13,6 +13,7 @@ import { call, fixImage, protoHref } from './account'
 import type { LearningItemLike } from './types'
 import { date } from '@/lib/format'
 import type { CtaAction } from '@/vendor'
+import { vendorPeople } from '@/lib/vendor-view'
 
 /**
  * One course in "My learning": what you were granted, how long it lasts, how
@@ -153,32 +154,32 @@ const actions = computed<CtaAction[]>(() => {
   switch (state.value) {
     case 'ended':
       return [
-        { label: t('account.cta.courseDetail'), href: path(`/courses/${id}`), variant: 'secondary', icon: 'info' },
+        { label: t('cta.courseDetail'), href: path(`/courses/${id}`), variant: 'secondary', icon: 'info' },
       ]
     case 'access-expired':
       return [
         inCart.value
-          ? { label: t('account.cta.inCart'), href: path('/cart'), variant: 'secondary', icon: 'check' }
-          : { label: t('account.cta.addToCart'), action: 'add-cart', variant: 'secondary', icon: 'cart' },
-        { label: t('account.cta.buyAgain'), action: 'buy', variant: 'primary', icon: 'refresh' },
+          ? { label: t('cta.inCart'), href: path('/cart'), variant: 'secondary', icon: 'check' }
+          : { label: t('cta.addToCart'), action: 'add-cart', variant: 'secondary', icon: 'cart' },
+        { label: t('cta.buyAgain'), action: 'buy', variant: 'primary', icon: 'refresh' },
       ]
     case 'pkg-expired':
       return [
-        { label: t('account.cta.buyCourse'), action: 'buy', variant: 'secondary' },
-        { label: t('account.cta.renewPackage'), href: path('/account/package'), variant: 'primary', icon: 'refresh' },
+        { label: t('cta.buyCourse'), action: 'buy', variant: 'secondary' },
+        { label: t('cta.renewPackage'), href: path('/account/package'), variant: 'primary', icon: 'refresh' },
       ]
     case 'completed':
     case 'result-pending':
-      return [{ label: t('account.cta.viewResult'), href: result, variant: 'primary' }]
+      return [{ label: t('cta.viewResult'), href: result, variant: 'primary' }]
     case 'in-progress':
       return [
         ...(props.item.progress.lessonsDone && !props.item.quiz.choicePassed
-          ? [{ label: t('account.cta.takeQuiz'), href: protoHref(`quiz.html?id=${id}`, locale.value), variant: 'secondary', icon: 'clipboard-check' }]
+          ? [{ label: t('cta.takeQuiz'), href: protoHref(`quiz.html?id=${id}`, locale.value), variant: 'secondary', icon: 'clipboard-check' }]
           : []),
-        { label: t('account.cta.continue'), href: learn, variant: 'primary', icon: 'play' },
+        { label: t('cta.continue'), href: learn, variant: 'primary', icon: 'play' },
       ]
     default:
-      return [{ label: t('account.cta.start'), href: learn, variant: 'primary', icon: 'play' }]
+      return [{ label: t('cta.start'), href: learn, variant: 'primary', icon: 'play' }]
   }
 })
 </script>
@@ -209,7 +210,7 @@ const actions = computed<CtaAction[]>(() => {
         <h3 :id="`li-${course.id}`">
           <RouterLink :to="path(`/courses/${course.id}`)">{{ course.title }}</RouterLink>
         </h3>
-        <InstructorLine :instructors="course.instructors" :course-id="course.id" />
+        <InstructorLine :people="vendorPeople(course.instructors)" :course-id="course.id" />
       </div>
     </div>
 

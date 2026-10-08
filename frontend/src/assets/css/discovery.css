@@ -123,6 +123,11 @@
 .cat-grid.is-list .sk-card .sk-media { width: 300px; min-height: 200px; aspect-ratio: auto; flex-shrink: 0; }
 .cat-grid.is-list .sk-card .sk-body { flex: 1; }
 .cat-ads-inline { margin: var(--gutter) 0; }
+
+/* The catalog is paged rather than endless: twenty-four courses, then this.
+   Centred because it belongs to the grid above it, not to the page. */
+.cat-more { display: flex; justify-content: center; padding-top: var(--gutter); }
+
 .cat-ads-slot { padding-top: 40px; }
 .cat-ads-slot:empty { display: none; }
 

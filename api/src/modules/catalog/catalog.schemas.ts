@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { LOCALES } from '../../db/schema/auth'
 import { COURSE_LEVELS, LESSON_TYPES } from '../../db/schema/catalog'
+import { queryBool } from '../../lib/query'
 
 /**
  * Validation for the catalog.
@@ -143,6 +144,14 @@ export const courseListQuery = listQuery.extend({
   sort: z
     .enum(['recommended', 'newest', 'title', 'price', 'price-desc', 'popularity'])
     .default('newest'),
+  /**
+   * Also return how many courses each filter option would give.
+   *
+   * On the list endpoint rather than its own, so the numbers beside the
+   * checkboxes and the results they sit next to come from one request — two
+   * requests can land either side of a course being published and disagree.
+   */
+  facets: queryBool,
 })
 
 /* ---------------- curriculum ---------------- */

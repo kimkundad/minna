@@ -35,6 +35,7 @@ import type {
   QuizStatus,
 } from '@/components/learning/types'
 import { courseView, type CourseView } from '@/vendor'
+import { vendorPeople } from '@/lib/vendor-view'
 
 /**
  * The learning room.
@@ -701,7 +702,7 @@ const playerPosition = computed(() =>
                     {{ t('learning.overview.instructors', { n: course.instructors.length }) }}
                   </span>
                   <InstructorLine
-                    :instructors="course.instructors"
+                    :people="vendorPeople(course.instructors)"
                     :course-id="course.id"
                     size="md"
                     full

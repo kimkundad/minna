@@ -186,12 +186,163 @@ export const api = {
 
   sessions: () => send<{ data: unknown[] }>('/auth/sessions'),
 
-  categories: () =>
-    send<{ data: { id: number; parentId: number | null; name: string; slug: string }[] }>(
-      '/categories',
-    ),
+  /** Every category, flat. `courseCount` counts only published courses. */
+  categories: () => send<{ data: PublicCategory[] }>('/categories'),
 
   acceptPrivacy: () => send<{ user: SessionUser }>('/auth/accept-privacy', { method: 'POST', body: {} }),
+
+  /** The catalog. `facets: true` adds the counts beside each filter option. */
+  courses: (params: CourseQuery = {}) =>
+    send<CourseListResponse>(`/courses${queryString(params)}`),
+
+  /** One course, by slug or by id. */
+  course: (ref: string | number) =>
+    send<{ data: PublicCourse }>(`/courses/${encodeURIComponent(String(ref))}`),
+
+  curriculum: (ref: string | number) =>
+    send<{ data: Curriculum }>(`/courses/${encodeURIComponent(String(ref))}/curriculum`),
+}
+
+/* ---------------- the catalog ---------------- */
+
+export interface PublicCategory {
+  id: number
+  parentId: number | null
+  name: string
+  slug: string
+  /** A lucide glyph name. Null on most sub-categories, which borrow a parent's. */
+  icon: string | null
+  sortOrder: number
+  courseCount: number
+}
+
+export type CourseLevel = 'beginner' | 'intermediate' | 'advanced'
+export type ContentLocale = 'th' | 'en' | 'jp' | 'vn'
+export type DurationBand = 'le1' | '1-3' | '3-6' | 'gt6'
+export type PriceBand = 'free' | 'lt1000' | '1000-2000' | 'gt2000'
+export type AccessBand = 'free' | 'course' | 'package'
+export type CourseSort =
+  | 'recommended'
+  | 'newest'
+  | 'title'
+  | 'price'
+  | 'price-desc'
+  | 'popularity'
+
+export interface CourseInstructor {
+  id: number
+  name: string
+  short: string | null
+  headline: string | null
+  slug: string | null
+  avatarPath: string | null
+}
+
+/** A course as the catalog and the cards show it. Money is satang. */
+export interface PublicCourse {
+  id: number
+  title: string
+  slug: string
+  categoryId: number | null
+  categoryName: string | null
+  shortDesc: string | null
+  thumbnailPath: string | null
+  level: CourseLevel | null
+  contentLocale: ContentLocale
+  price: number
+  normalPrice: number | null
+  badge: 'bestseller' | 'recommended' | 'new' | 'free' | null
+  featured: boolean
+  sellable: boolean
+  repurchase: boolean
+  accessType: 'lifetime' | 'limited'
+  accessDurationDays: number | null
+  durationSeconds: number
+  lessonCount: number
+  inPackage: boolean
+  popularity: number
+  publishedAt: string | null
+  updatedAt: string | null
+  instructors: CourseInstructor[]
+}
+
+/** The course page needs more than a card does. */
+export interface PublicCourseDetail extends PublicCourse {
+  description: string | null
+  outcomes: string[] | null
+  audience: string[] | null
+  sampleVideoPath: string | null
+  status: string
+}
+
+export interface CourseFacets {
+  total: number
+  /** Keyed by category id, as a string. */
+  category: Record<string, number>
+  level: Record<string, number>
+  locale: Record<string, number>
+  duration: Record<string, number>
+  price: Record<string, number>
+  access: Record<string, number>
+}
+
+export interface CourseListResponse {
+  data: PublicCourse[]
+  meta: { page: number; perPage: number; total: number; totalPages: number }
+  facets?: CourseFacets
+}
+
+export interface CourseQuery {
+  page?: number
+  perPage?: number
+  q?: string
+  categoryIds?: number[]
+  levels?: CourseLevel[]
+  locales?: ContentLocale[]
+  durations?: DurationBand[]
+  prices?: PriceBand[]
+  access?: AccessBand[]
+  sort?: CourseSort
+  facets?: boolean
+}
+
+export interface CurriculumLesson {
+  id: number
+  moduleId: number | null
+  type: 'video' | 'document' | 'quiz' | 'essay' | 'live'
+  title: string
+  subtitle: string | null
+  description: string | null
+  durationSeconds: number
+  isPreview: boolean
+  sortOrder: number
+}
+
+export interface Curriculum {
+  modules: { id: number; title: string; sortOrder: number; lessons: CurriculumLesson[] }[]
+  /** Lessons attached to the course rather than to a module. */
+  loose: CurriculumLesson[]
+  totalSeconds: number
+}
+
+/**
+ * The filter arrays go as one comma-separated parameter each, which is what
+ * the API expects and what keeps a shared link short enough to paste.
+ */
+function queryString(params: CourseQuery): string {
+  const q = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue
+    if (Array.isArray(value)) {
+      if (value.length) q.set(key, value.join(','))
+    } else if (typeof value === 'boolean') {
+      if (value) q.set(key, 'true')
+    } else {
+      q.set(key, String(value))
+    }
+  }
+  const s = q.toString()
+  return s ? `?${s}` : ''
 }
 
 /* ---------------- the home slideshow ---------------- */

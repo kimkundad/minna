@@ -1,3 +1,4 @@
+import type { SQL } from 'drizzle-orm'
 import { and, asc, count, desc, eq, inArray, like, ne, or, sql } from 'drizzle-orm'
 import { db } from '../../db/client'
 import {
@@ -235,19 +236,42 @@ function bandClause(
   return parts.length ? or(...parts) : undefined
 }
 
-export async function listCourses(opts: CourseListOptions): Promise<Paged<unknown>> {
+/**
+ * A filter group, named the way the catalog's panel names it.
+ *
+ * `skip` leaves one group out. That is what a facet count needs: how many you
+ * would get if this one option were the only thing ticked in its own group,
+ * with every other group left as it is.
+ */
+export type FacetGroup = 'category' | 'level' | 'locale' | 'duration' | 'price' | 'access'
+
+function courseWhere(opts: CourseListOptions, skip?: FacetGroup) {
   const where = [
     opts.includeUnpublished ? undefined : eq(courses.status, 'approved'),
     opts.status ? eq(courses.status, opts.status) : undefined,
     opts.categoryId ? eq(courses.categoryId, opts.categoryId) : undefined,
-    opts.categoryIds?.length ? inArray(courses.categoryId, opts.categoryIds) : undefined,
-    opts.levels?.length ? inArray(courses.level, opts.levels) : undefined,
-    opts.locales?.length ? inArray(courses.contentLocale, opts.locales) : undefined,
-    opts.durations?.length
-      ? bandClause(courses.durationSeconds, DURATION_BANDS, opts.durations)
-      : undefined,
-    opts.prices?.length ? bandClause(courses.price, PRICE_BANDS, opts.prices) : undefined,
-    opts.access?.length ? accessClause(opts.access) : undefined,
+    skip === 'category'
+      ? undefined
+      : opts.categoryIds?.length
+        ? inArray(courses.categoryId, opts.categoryIds)
+        : undefined,
+    skip === 'level' ? undefined : opts.levels?.length ? inArray(courses.level, opts.levels) : undefined,
+    skip === 'locale'
+      ? undefined
+      : opts.locales?.length
+        ? inArray(courses.contentLocale, opts.locales)
+        : undefined,
+    skip === 'duration'
+      ? undefined
+      : opts.durations?.length
+        ? bandClause(courses.durationSeconds, DURATION_BANDS, opts.durations)
+        : undefined,
+    skip === 'price'
+      ? undefined
+      : opts.prices?.length
+        ? bandClause(courses.price, PRICE_BANDS, opts.prices)
+        : undefined,
+    skip === 'access' ? undefined : opts.access?.length ? accessClause(opts.access) : undefined,
     /**
      * Searches the teacher's name too, because that is how somebody looks for
      * "the course Aiko teaches". The display name is matched as well as the
@@ -278,7 +302,11 @@ export async function listCourses(opts: CourseListOptions): Promise<Paged<unknow
       : undefined,
   ].filter(Boolean)
 
-  const filter = where.length ? and(...(where as never[])) : undefined
+  return where.length ? and(...(where as never[])) : undefined
+}
+
+export async function listCourses(opts: CourseListOptions): Promise<Paged<unknown>> {
+  const filter = courseWhere(opts)
 
   const order =
     opts.sort === 'title'
@@ -373,6 +401,103 @@ function accessClause(chosen: string[]) {
   return parts.length ? or(...(parts as never[])) : undefined
 }
 
+/** A band column as a `CASE` that names the band a row falls in. */
+function bandCase(
+  column: typeof courses.price | typeof courses.durationSeconds,
+  bands: Record<string, [number, number]>,
+) {
+  const whens = Object.entries(bands).map(
+    ([key, [lo, hi]]) => sql`WHEN ${column} BETWEEN ${lo} AND ${hi} THEN ${key}`,
+  )
+  return sql<string>`CASE ${sql.join(whens, sql` `)} END`
+}
+
+/** How many courses each filter option would give you. */
+export interface CourseFacets {
+  total: number
+  category: Record<string, number>
+  level: Record<string, number>
+  locale: Record<string, number>
+  duration: Record<string, number>
+  price: Record<string, number>
+  access: Record<string, number>
+}
+
+/**
+ * The number beside each checkbox in the catalog's filter panel.
+ *
+ * A count is what you would get with that one option ticked and nothing else
+ * in its own group, every other group left exactly as it is — so the number
+ * says what clicking it does. That is why each group is counted with its own
+ * filter lifted: counting "beginner" while "beginner" is the active filter
+ * would only ever return the current result, and every other level would read
+ * zero the moment you ticked one.
+ *
+ * Counted here rather than in the browser because the browser is only ever
+ * sent one page of results, and a count of a page is not a count.
+ *
+ * One query per group, and the same `courseWhere` the listing uses — a count
+ * built from a second, similar clause is a count that disagrees with the list
+ * it sits next to.
+ */
+export async function courseFacets(opts: CourseListOptions): Promise<CourseFacets> {
+  const tally = async (
+    group: FacetGroup,
+    key: SQL<string> | typeof courses.level | typeof courses.contentLocale | typeof courses.categoryId,
+  ) => {
+    const rows = await db
+      .select({ key, n: count() })
+      .from(courses)
+      .where(courseWhere(opts, group))
+      .groupBy(key)
+    const out: Record<string, number> = {}
+    for (const row of rows) {
+      if (row.key === null) continue
+      out[String(row.key)] = Number(row.n)
+    }
+    return out
+  }
+
+  const durationKey = bandCase(courses.durationSeconds, DURATION_BANDS)
+  const priceKey = bandCase(courses.price, PRICE_BANDS)
+
+  /**
+   * Access is three overlapping questions, not one column — a free course
+   * inside a package belongs under both — so it cannot be grouped. Three sums
+   * over the same rows answer all three in one pass.
+   */
+  const accessRow = db
+    .select({
+      free: sql<number>`SUM(${courses.price} = 0)`,
+      course: sql<number>`SUM(${courses.price} > 0 AND ${courses.sellable} = 1)`,
+      pkg: sql<number>`SUM(EXISTS (
+        SELECT 1 FROM package_courses pc WHERE pc.course_id = ${outer(courses.id)}
+      ))`,
+    })
+    .from(courses)
+    .where(courseWhere(opts, 'access'))
+
+  const [total, category, level, locale, duration, price, access] = await Promise.all([
+    db
+      .select({ value: count() })
+      .from(courses)
+      .where(courseWhere(opts))
+      .then(([r]) => Number(r?.value ?? 0)),
+    tally('category', courses.categoryId),
+    tally('level', courses.level),
+    tally('locale', courses.contentLocale),
+    tally('duration', durationKey),
+    tally('price', priceKey),
+    accessRow.then(([r]) => ({
+      free: Number(r?.free ?? 0),
+      course: Number(r?.course ?? 0),
+      package: Number(r?.pkg ?? 0),
+    })),
+  ])
+
+  return { total, category, level, locale, duration, price, access }
+}
+
 /**
  * The teachers on each of these courses.
  *
@@ -380,7 +505,12 @@ function accessClause(chosen: string[]) {
  * A course page that says "Aiko Tanaka" where the site everywhere else says
  * "田中 愛子 (Aiko Tanaka)" reads as two different people.
  */
-async function instructorsFor(courseIds: number[]) {
+/**
+ * `withBio` is for the course page, which has room for a paragraph about
+ * each teacher. A card has not, and `bio` is a TEXT column — sending one per
+ * course with a page of twenty-four would be most of the response.
+ */
+async function instructorsFor(courseIds: number[], withBio = false) {
   const map = new Map<number, CourseInstructor[]>()
   if (!courseIds.length) return map
 
@@ -396,6 +526,13 @@ async function instructorsFor(courseIds: number[]) {
       headline: teacherProfiles.headline,
       slug: teacherProfiles.slug,
       sortOrder: courseInstructors.sortOrder,
+      ...(withBio
+        ? {
+            bio: teacherProfiles.bio,
+            credentials: teacherProfiles.credentials,
+            yearsExperience: teacherProfiles.yearsExperience,
+          }
+        : {}),
     })
     .from(courseInstructors)
     .innerJoin(users, eq(users.id, courseInstructors.userId))
@@ -414,6 +551,13 @@ async function instructorsFor(courseIds: number[]) {
       slug: r.slug,
       avatarPath: r.avatarPath,
       sortOrder: r.sortOrder,
+      ...(withBio
+        ? {
+            bio: (r as { bio?: string | null }).bio ?? null,
+            credentials: (r as { credentials?: string | null }).credentials ?? null,
+            yearsExperience: (r as { yearsExperience?: number | null }).yearsExperience ?? null,
+          }
+        : {}),
     })
     map.set(r.courseId, list)
   }
@@ -432,6 +576,29 @@ export interface CourseInstructor {
   sortOrder: number
 }
 
+/**
+ * The numeric id behind whatever the URL said.
+ *
+ * Public links carry the slug, because `/courses/japanese-n5` survives a
+ * reseed and says what it is; the admin links by id, because a slug is
+ * editable and a link held open in a tab must not start pointing somewhere
+ * else. Both arrive here, so both are accepted: all digits is an id, anything
+ * else is a slug.
+ *
+ * Throws rather than returning null, so a caller cannot forget to check.
+ */
+export async function resolveCourseRef(ref: string): Promise<number> {
+  if (/^\d+$/.test(ref)) return Number(ref)
+
+  const [row] = await db
+    .select({ id: courses.id })
+    .from(courses)
+    .where(eq(courses.slug, ref))
+    .limit(1)
+  if (!row) throw notFound('That course does not exist.')
+  return row.id
+}
+
 export async function getCourse(id: number, includeUnpublished: boolean) {
   const [row] = await db.select().from(courses).where(eq(courses.id, id)).limit(1)
   if (!row || (!includeUnpublished && row.status !== 'approved')) {
@@ -440,7 +607,7 @@ export async function getCourse(id: number, includeUnpublished: boolean) {
 
   // The same shape the list returns, so a card and a course page never
   // disagree about what a teacher is called.
-  const instructors = (await instructorsFor([id])).get(id) ?? []
+  const instructors = (await instructorsFor([id], true)).get(id) ?? []
 
   const [extra] = await db
     .select({

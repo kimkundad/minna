@@ -17,6 +17,9 @@ import * as quiz from './quiz.service'
 
 const idParam = z.object({ id: z.coerce.number().int().positive() })
 
+/** An id or a slug. Only the two public course reads take one. */
+const refParam = z.object({ id: z.string().min(1).max(255) })
+
 /** True when the caller may see drafts: staff only. */
 function staff(req: FastifyRequest): boolean {
   const roles = req.user?.roles ?? []
@@ -92,20 +95,28 @@ export default async function catalogRoutes(app: FastifyInstance) {
   /* ---------------- courses ---------------- */
 
   app.get('/courses', { preHandler: app.optionalAuth }, async (req) => {
-    const query = schemas.courseListQuery.parse(req.query)
+    const { facets, ...query } = schemas.courseListQuery.parse(req.query)
     const canSeeDrafts = staff(req)
 
-    return service.listCourses({
+    const opts = {
       ...query,
       includeUnpublished: canSeeDrafts,
       // A teacher's list is their own courses. An admin's is everything.
       instructorId: canSeeDrafts && !isAdmin(req) ? req.user.sub : undefined,
-    })
+    }
+
+    const page = await service.listCourses(opts)
+    if (!facets) return page
+
+    // Alongside the page, not instead of it: the catalog draws both at once.
+    return { ...page, facets: await service.courseFacets(opts) }
   })
 
+  // The only two reads a visitor makes by name rather than by number. See
+  // `resolveCourseRef` for why both are allowed.
   app.get('/courses/:id', { preHandler: app.optionalAuth }, async (req) => {
-    const { id } = idParam.parse(req.params)
-    return { data: await service.getCourse(id, staff(req)) }
+    const { id } = refParam.parse(req.params)
+    return { data: await service.getCourse(await service.resolveCourseRef(id), staff(req)) }
   })
 
   app.post('/courses', staffOnly, async (req, reply) => {
@@ -178,9 +189,10 @@ export default async function catalogRoutes(app: FastifyInstance) {
   // Guests see the curriculum of a published course, which is how a sales page
   // lists what is inside before anyone pays. getCourse does the status check.
   app.get('/courses/:id/curriculum', { preHandler: app.optionalAuth }, async (req) => {
-    const { id } = idParam.parse(req.params)
-    await service.getCourse(id, staff(req))
-    return { data: await service.getCurriculum(id) }
+    const { id } = refParam.parse(req.params)
+    const courseId = await service.resolveCourseRef(id)
+    await service.getCourse(courseId, staff(req))
+    return { data: await service.getCurriculum(courseId) }
   })
 
   app.post('/courses/:id/modules', staffOnly, async (req, reply) => {

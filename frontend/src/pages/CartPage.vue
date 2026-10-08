@@ -22,6 +22,7 @@ import {
 } from '@/components/commerce/useCommerce'
 import type { CommerceCourse, Totals } from '@/components/commerce/types'
 import { num } from '@/lib/format'
+import { vendorCourseView } from '@/lib/vendor-view'
 
 /**
  * The cart — step one of four.
@@ -48,6 +49,9 @@ const tick = useStoreTick()
  *  on the page has to stay inside the path the visitor is already on. */
 const locale = computed(() => String(route.params.locale ?? 'th'))
 const path = (p: string) => `/${locale.value}${p}`
+/** Until this page is served by our own API, its cards come from the
+ *  prototype store. See `vendor-view.ts`. */
+const vendorView = (id: string) => vendorCourseView(id, locale.value)
 
 interface CartEntry {
   cid: string
@@ -392,7 +396,7 @@ useBottomBar('page-cart', bar, () => items.value.length > 0)
         <CourseCard
           v-for="r in recommended"
           :key="r.course.id"
-          :course-id="r.course.id"
+          :view="vendorView(r.course.id)"
           :reason="isLoggedIn ? r.reason : undefined"
           @run="runAction"
         />

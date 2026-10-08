@@ -10,6 +10,7 @@ import CourseRail from '@/components/course/CourseRail.vue'
 import { call, useStoreTick } from '@/components/account/account'
 import type { CourseLike, PkgInfoLike, PlanLike } from '@/components/account/types'
 import { date, num } from '@/lib/format'
+import { vendorCourseView } from '@/lib/vendor-view'
 
 /**
  * The membership: what you are on now, how much of the term is left, and the
@@ -24,6 +25,9 @@ const tick = useStoreTick()
 
 const locale = computed(() => String(route.params.locale ?? 'th'))
 const path = (p: string) => `/${locale.value}${p}`
+/** Until this page is served by our own API, its cards come from the
+ *  prototype store. See `vendor-view.ts`. */
+const vendorView = (id: string) => vendorCourseView(id, locale.value)
 
 const TERM_DAYS = 365
 
@@ -294,7 +298,7 @@ function choose(planId: string) {
           :more-label="t('common.viewAll')"
           :count="includedCourses.length"
         >
-          <CourseCard v-for="c in includedCourses" :key="c.id" :course-id="c.id" />
+          <CourseCard v-for="c in includedCourses" :key="c.id" :view="vendorView(c.id)" />
         </CourseRail>
       </section>
     </div>

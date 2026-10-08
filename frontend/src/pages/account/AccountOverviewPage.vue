@@ -13,6 +13,7 @@ import InstructorLine from '@/components/course/InstructorLine.vue'
 import { assetUrl, call, fixImage, protoHref, useStoreTick } from '@/components/account/account'
 import { data } from '@/vendor'
 import { date, relative } from '@/lib/format'
+import { vendorPeople } from '@/lib/vendor-view'
 
 /**
  * The account landing page: who you are, what your package covers, what you
@@ -301,7 +302,7 @@ function category(id: string) {
               <h3 class="acct-rs-title" :id="`rs-${item.course.id}`">
                 <RouterLink :to="path(`/courses/${item.course.id}`)">{{ item.course.title }}</RouterLink>
               </h3>
-              <InstructorLine :instructors="item.course.instructors" :course-id="item.course.id" />
+              <InstructorLine :people="vendorPeople(item.course.instructors)" :course-id="item.course.id" />
               <div class="acct-rs-prog">
                 <AppProgress
                   :value="item.progress.pct"
@@ -322,7 +323,7 @@ function category(id: string) {
 
             <div class="acct-rs-cta">
               <a class="btn btn--primary" :href="learnHref(item)">
-                <AppIcon name="play" />{{ t('account.cta.continue') }}
+                <AppIcon name="play" />{{ t('cta.continue') }}
               </a>
             </div>
           </article>

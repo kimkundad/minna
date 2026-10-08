@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import AppBadge from '@/components/ui/AppBadge.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import AppPrice from '@/components/ui/AppPrice.vue'
@@ -8,8 +9,7 @@ import AppProgress from '@/components/ui/AppProgress.vue'
 import CtaButton from '@/components/ui/CtaButton.vue'
 import CourseImage from './CourseImage.vue'
 import InstructorLine from './InstructorLine.vue'
-import { courseView, store } from '@/vendor'
-import type { CtaAction } from '@/vendor'
+import type { CourseView } from '@/lib/course'
 
 /**
  * One course, in the three shapes the design uses:
@@ -18,12 +18,15 @@ import type { CtaAction } from '@/vendor'
  *   list      wider row with a description, level and language
  *   continue  adds which lesson you stopped on and when
  *
- * Every piece of state — badges, lock, price-or-progress, which button — comes
- * from `courseView`, so a card can never disagree with the course page it links
- * to.
+ * Everything it draws arrives in one `view` object, so a card can never
+ * disagree with the course page it links to: both are built by `courseView`.
+ *
+ * The learner's own state — progress, a lock, a note — is optional on that
+ * object and simply absent on the public catalog, which has no session behind
+ * it. The card shows the price instead, which is what a visitor needs.
  */
 const props = withDefaults(
-  defineProps<{ courseId: string; variant?: 'grid' | 'list' | 'continue'; reason?: string }>(),
+  defineProps<{ view: CourseView; variant?: 'grid' | 'list' | 'continue'; reason?: string }>(),
   { variant: 'grid' },
 )
 
@@ -32,108 +35,72 @@ const emit = defineEmits<{
   instructors: [courseId: string]
 }>()
 
-const route = useRoute()
-const locale = computed(() => String(route.params.locale ?? 'th'))
-const href = computed(() => `/${locale.value}/courses/${props.courseId}`)
+const { t } = useI18n()
 
-const view = computed(() => courseView(props.courseId))
-const course = computed(
-  () => (view.value as unknown as { course: Record<string, any> }).course,
-)
-const category = computed(() =>
-  (store as unknown as { category: (id: string) => { name: string; icon: string; palette?: number } })
-    .category(course.value.category),
-)
+const cid = computed(() => String(props.view.slug || props.view.id))
 
-/** Package membership is shown on the course page, not on cards: a tile has
- *  room for two badges and the marketing ones earn the space. */
-const badges = computed(() =>
-  view.value.badges.filter((b) => b.kind !== 'package').slice(0, 2),
-)
-
-const isLocked = computed(() =>
-  ['ended', 'access-expired', 'pkg-expired'].includes(view.value.state),
-)
-
-const resumeTitle = computed(() => {
-  const r = view.value.progress.resume
-  if (!r) return ''
-  return r.type === 'quiz' ? 'แบบทดสอบท้ายคอร์ส' : r.title
-})
-
-const lessonCount = computed(
-  () => (store as unknown as { lessons: (c: unknown) => unknown[] }).lessons(course.value).length,
-)
-
-/**
- * The reference offers a certificate link once a course is finished. Minna
- * issues none, so that action falls back to the course's own CTA rather than
- * pointing at a page that will not exist.
- */
-const cardAction = computed(() => {
-  const action = (view.value as unknown as { card?: CtaAction }).card ?? view.value.primary
-  const target = action?.act ?? action?.action ?? ''
-  const isCertificate = target.includes('cert') || action?.href?.includes('certificate')
-  return isCertificate ? view.value.primary : action
-})
+/** A price unless something has said otherwise. */
+const showPrice = computed(() => props.view.showPrice !== false)
 </script>
 
 <template>
   <article
     class="cc"
-    :class="{ 'cc--list': variant === 'list', 'cc--expired': view.state === 'ended' }"
-    :data-cid="courseId"
+    :class="{ 'cc--list': variant === 'list', 'cc--expired': view.expired }"
+    :data-cid="cid"
   >
-    <RouterLink class="cc-media" :to="href" tabindex="-1" aria-hidden="true">
+    <RouterLink class="cc-media" :to="view.href" tabindex="-1" aria-hidden="true">
       <CourseImage
-        :image="course.image"
+        :image="view.image"
         :width="640"
         :height="360"
-        :art-icon="category?.icon"
-        :art-palette="category?.palette ?? 0"
+        :art-icon="view.categoryIcon"
+        :art-palette="view.categoryPalette"
       />
       <div class="cc-badges">
-        <AppBadge v-for="(b, i) in badges" :key="i" :badge="b" on-media />
+        <AppBadge v-for="(b, i) in view.badges" :key="i" :badge="b" on-media />
       </div>
-      <span v-if="isLocked" class="cc-lock" aria-hidden="true"><AppIcon name="lock" /></span>
+      <span v-if="view.locked" class="cc-lock" aria-hidden="true"><AppIcon name="lock" /></span>
     </RouterLink>
 
     <div class="cc-body">
       <div v-if="reason" class="cc-reason"><AppIcon name="sparkles" />{{ reason }}</div>
 
-      <div class="cc-cat">{{ category?.name }}</div>
+      <div class="cc-cat">{{ view.categoryName }}</div>
 
-      <h3 class="cc-title"><RouterLink :to="href">{{ course.title }}</RouterLink></h3>
+      <h3 class="cc-title"><RouterLink :to="view.href">{{ view.title }}</RouterLink></h3>
 
-      <p v-if="variant === 'list'" class="cc-desc clamp-2">{{ course.shortDesc }}</p>
+      <p v-if="variant === 'list'" class="cc-desc clamp-2">{{ view.shortDesc }}</p>
 
       <InstructorLine
-        :instructors="course.instructors"
-        :course-id="courseId"
-        @open="emit('instructors', courseId)"
+        :people="view.people"
+        :course-id="cid"
+        @open="emit('instructors', cid)"
       />
 
       <!-- No CE unit here: that is the reference project's professional-credit
            scheme, and Minna awards none. -->
       <div class="cc-meta">
-        <span><AppIcon name="clock" />{{ course.durationLabel }}</span>
-        <span><AppIcon name="book-open" />{{ lessonCount }} บทเรียน</span>
+        <span><AppIcon name="clock" />{{ view.durationLabel }}</span>
+        <span
+          ><AppIcon name="book-open" />{{ t('course.lessonCount', { count: view.lessonCount }) }}</span
+        >
         <template v-if="variant === 'list'">
-          <span><AppIcon name="signal" />{{ course.levelLabel }}</span>
-          <span class="lang"><AppIcon name="mic" />{{ course.languageLabel }}</span>
+          <span v-if="view.levelLabel"><AppIcon name="signal" />{{ view.levelLabel }}</span>
+          <span class="lang"><AppIcon name="mic" />{{ view.spokenLabel }}</span>
         </template>
       </div>
 
       <AppProgress
         v-if="view.showProgress"
-        :value="view.progress.pct"
-        :muted="view.state === 'ended' || view.state === 'access-expired'"
-        :label="`ความคืบหน้า ${course.title}`"
+        :value="view.progressPct ?? 0"
+        :muted="view.expired"
+        :label="t('course.progressAria', { title: view.title })"
       />
 
       <div v-if="variant === 'continue' && view.showProgress" class="cc-progress-info">
-        <template v-if="resumeTitle && view.progress.pct < 100">
-          บทล่าสุด: <b>{{ resumeTitle }}</b><br />
+        <template v-if="view.resumeTitle && (view.progressPct ?? 0) < 100">
+          {{ t('course.lastLesson') }}: <b>{{ view.resumeTitle }}</b><br />
         </template>
       </div>
 
@@ -141,17 +108,17 @@ const cardAction = computed(() => {
         <AppIcon name="info" />{{ view.note }}
       </p>
 
-      <div class="cc-foot" :class="{ 'cc-foot--end': !view.showPrice }">
+      <div class="cc-foot" :class="{ 'cc-foot--end': !showPrice }">
         <AppPrice
-          v-if="view.showPrice"
-          :price="course.price"
-          :normal-price="course.normalPrice"
-          :is-free="course.isFree"
+          v-if="showPrice"
+          :price="view.price"
+          :normal-price="view.normalPrice"
+          :is-free="view.isFree"
         />
         <CtaButton
-          :action="cardAction"
+          :action="view.primary"
           size="sm"
-          :course-id="courseId"
+          :course-id="cid"
           @run="(a, c) => emit('run', a, c)"
         />
       </div>

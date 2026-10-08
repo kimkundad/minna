@@ -10,6 +10,7 @@ import { courseView, store } from '@/vendor'
 import { assetUrl, call, protoHref } from './useCommerce'
 import type { AccessNote, CommerceCategory, CommerceCourse } from './types'
 import { num } from '@/lib/format'
+import { vendorPeople } from '@/lib/vendor-view'
 
 /**
  * One line in the cart.
@@ -171,12 +172,12 @@ const lessonCount = computed(
 
     <div class="ct-info">
       <InstructorLine
-        :instructors="course.instructors"
+        :people="vendorPeople(course.instructors)"
         :course-id="courseId"
         @open="emit('instructors', courseId)"
       />
       <div class="ct-meta">
-        <span><AppIcon name="book-open" />{{ t('course.lessonCount', lessonCount) }}</span>
+        <span><AppIcon name="book-open" />{{ t('course.lessonCount', { count: lessonCount }) }}</span>
         <span><AppIcon name="clock" />{{ course.durationLabel }}</span>
       </div>
     </div>

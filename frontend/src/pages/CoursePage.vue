@@ -5,30 +5,30 @@ import { useI18n } from 'vue-i18n'
 import AppAvatar from '@/components/ui/AppAvatar.vue'
 import AppBadge from '@/components/ui/AppBadge.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import AppNotice from '@/components/ui/AppNotice.vue'
 import AppPrice from '@/components/ui/AppPrice.vue'
-import AppProgress from '@/components/ui/AppProgress.vue'
 import AdsSlot from '@/components/ui/AdsSlot.vue'
 import CtaButton from '@/components/ui/CtaButton.vue'
 import CourseCard from '@/components/course/CourseCard.vue'
 import CourseImage from '@/components/course/CourseImage.vue'
 import CourseRail from '@/components/course/CourseRail.vue'
-import { courseView, store, type CourseView } from '@/vendor'
-import { date, dateLong, levelShort, minutes, relative } from '@/lib/format'
+import { ApiError, api, mediaUrl } from '@/lib/api'
+import type { Curriculum, CurriculumLesson, PublicCategory, PublicCourseDetail } from '@/lib/api'
+import { categoryLabel, courseView, personOf } from '@/lib/course'
+import { dateLong, minutes } from '@/lib/format'
 
 /**
- * One course, in full.
+ * One course, in full — the sales page a visitor reads before buying.
  *
- * Every piece of state on this page — which badges sit by the category, whether
- * the panel shows a price or a progress bar, which notice explains the lock,
- * and the one, two or three CTAs underneath — comes out of `courseView(id)`.
- * Nothing here decides any of that for itself, so the page cannot disagree with
- * the card that linked to it or with the lesson rows further down.
+ * It is public throughout. The prototype's version also showed the signed-in
+ * learner's own state: a progress bar instead of the price, where to resume,
+ * which lessons were finished, how far through the completion steps they were.
+ * None of that is here, because none of it exists yet — entitlements and lesson
+ * progress need a student API that has not been written, and a bar drawn from
+ * the prototype's localStorage would be claiming progress on a purchase that
+ * never happened.
  *
- * The curriculum is the one place that asks per lesson: `lessonMode` is the
- * same ladder the prototype walks — ended, then access, then a free preview,
- * then signed out, then expired, then buy — and it decides whether a row is a
- * link into the player or a button that explains why not.
+ * So what a lesson row offers has two answers rather than six: a free sample is
+ * marked as one, and everything else is locked until the course is bought.
  */
 const route = useRoute()
 const router = useRouter()
@@ -37,134 +37,222 @@ const { t } = useI18n()
 const locale = computed(() => String(route.params.locale ?? 'th'))
 const path = (p: string) => `/${locale.value}${p}`
 
-const s = store as unknown as Record<string, (...args: any[]) => any>
-
 const LESSON_TYPE: Record<string, { icon: string; label: string }> = {
   video: { icon: 'play-circle', label: 'course.lessonTypeVideo' },
-  pdf: { icon: 'file-text', label: 'course.lessonTypeDocument' },
+  document: { icon: 'file-text', label: 'course.lessonTypeDocument' },
   quiz: { icon: 'clipboard-check', label: 'course.lessonTypeQuiz' },
+  essay: { icon: 'pen', label: 'course.lessonTypeEssay' },
+  live: { icon: 'video', label: 'course.lessonTypeLive' },
 }
-const LOCK_TONE: Record<string, 'info' | 'warning' | 'danger'> = {
-  ended: 'danger',
-  'access-expired': 'warning',
-  'pkg-expired': 'warning',
-  guest: 'info',
-  buy: 'info',
-}
-const LOCK_ICON: Record<string, string> = {
-  ended: 'ban',
-  'access-expired': 'hourglass',
-  'pkg-expired': 'package',
-  guest: 'lock',
-  buy: 'lock',
-}
-const AUDIENCE_ICONS = ['stethoscope', 'users', 'graduation', 'briefcase']
-const STEP_ICONS = ['play-circle', 'clipboard-check', 'pen', 'award']
+const AUDIENCE_ICONS = ['users', 'graduation', 'briefcase', 'compass']
 
-/** Bumped after an action so the vendor store's new answer is re-read. */
-const tick = ref(0)
+/** A slug, or an id. The API accepts either and both appear in links. */
+const courseRef = computed(() => String(route.params.id ?? '').trim().slice(0, 255))
 
-const id = computed(() => String(route.params.id ?? '').trim().toUpperCase().slice(0, 40))
+const course = ref<PublicCourseDetail | null>(null)
+const curriculum = ref<Curriculum | null>(null)
+const categories = ref<PublicCategory[]>([])
+/** Each with why it is here, because "same category" is only true of the
+ *  first few: see `loadRelated`. */
+type RelatedScope = 'category' | 'family' | 'popular'
+const related = ref<{ course: PublicCourseDetail; why: RelatedScope }[]>([])
+const loading = ref(true)
+/** Told apart on purpose: "no such course" is the visitor's to fix and "could
+ *  not load" is ours, and they do not deserve the same page. */
+const missing = ref(false)
+const failed = ref(false)
 
-interface Lesson {
-  id: string
-  moduleId: string
-  title: string
-  type: string
-  duration: string | null
-  sec: number
-  preview: boolean
-  subtitle: string | null
-  hasPdf: boolean
-}
-interface Module {
-  id: string
-  title: string
-  lessons: Lesson[]
-}
-interface Course {
-  id: string
-  title: string
-  shortDesc: string
-  category: string
-  level: string
-  levelLabel: string
-  languageLabel: string
-  durationLabel: string
-  ce: number
-  price: number
-  normalPrice: number | null
-  isFree: boolean
-  packageIncluded: boolean
-  certificate: boolean
-  accessDays: number
-  status: string
-  endedAt?: string
-  updatedAt: string
-  outcomes: string[]
-  audience: string[]
-  completion: string[]
-  modules: Module[]
-  quiz: { questions: unknown[] }
-  instructors: { id: string; role: string }[]
-  image: { src?: string; id?: string; alt?: string; fp?: string } | null
-}
+const category = computed(() => {
+  const id = course.value?.categoryId
+  return id ? (categories.value.find((c) => c.id === id) ?? null) : null
+})
 
-const course = computed<Course | null>(() => (id.value ? (s.course(id.value) as Course) : null))
-const category = computed(() =>
+const categoryName = computed(() =>
+  category.value
+    ? categoryLabel(category.value, categories.value)
+    : (course.value?.categoryName ?? ''),
+)
+
+const categoryIcon = computed(
+  () =>
+    category.value?.icon ??
+    categories.value.find((c) => c.id === category.value?.parentId)?.icon ??
+    'book-open',
+)
+
+/** The same mapping the cards use, so this page and the card that linked to it
+ *  cannot describe one course two ways. */
+const view = computed(() =>
   course.value
-    ? (s.category(course.value.category) as {
-        id: string
-        name: string
-        th: string
-        icon: string
-        palette?: number
-      })
+    ? courseView(course.value, { locale: locale.value, t, categories: categories.value })
     : null,
 )
-const view = computed<CourseView | null>(() => {
-  void tick.value
-  return course.value ? courseView(id.value) : null
-})
-const simulateError = computed(() => {
-  void tick.value
-  return Boolean(s.simulateError())
-})
-const isLoggedIn = computed(() => {
-  void tick.value
-  return Boolean(s.isLoggedIn())
-})
 
-const lessons = computed<Lesson[]>(() =>
-  course.value ? (s.lessons(course.value) as Lesson[]) : [],
-)
-const previewLesson = computed(() => lessons.value.find((l) => l.preview) ?? null)
 const instructors = computed(() =>
   (course.value?.instructors ?? []).map((i) => ({
-    role: i.role,
-    ...(s.instructor(i.id) as {
-      id: string
-      name: string
-      initials: string
-      color: number
-      photo?: string | null
-      bio: string
-    }),
+    ...personOf(i),
+    headline: i.headline,
+    bio: (i as { bio?: string | null }).bio ?? null,
+    credentials: (i as { credentials?: string | null }).credentials ?? null,
+    yearsExperience: (i as { yearsExperience?: number | null }).yearsExperience ?? null,
   })),
 )
+
+/** Lessons in the order someone would take them: each chapter's, then any
+ *  that sit on the course itself. */
+const lessons = computed<CurriculumLesson[]>(() => {
+  const c = curriculum.value
+  if (!c) return []
+  return [...c.modules.flatMap((m) => m.lessons), ...c.loose]
+})
+
+/**
+ * The curriculum as chapters, with any loose lessons gathered into one last
+ * chapter of their own.
+ *
+ * The admin allows a lesson to sit directly on a course, so the page has to
+ * show one: a lesson left off this list is a lesson the buyer did not know
+ * they were getting.
+ */
+const chapters = computed(() => {
+  const c = curriculum.value
+  if (!c) return []
+  const out = c.modules.map((m) => ({ id: `m${m.id}`, title: m.title, lessons: m.lessons }))
+  if (c.loose.length) out.push({ id: 'loose', title: t('course.looseModule'), lessons: c.loose })
+  return out
+})
+
+const previewLesson = computed(() => lessons.value.find((l) => l.isPreview) ?? null)
+
+/* ---------------- loading ---------------- */
+
+let seq = 0
+
+async function load(): Promise<void> {
+  const mine = ++seq
+  loading.value = true
+  missing.value = false
+  failed.value = false
+
+  try {
+    const [detail, cats] = await Promise.all([
+      api.course(courseRef.value) as Promise<{ data: PublicCourseDetail }>,
+      categories.value.length ? Promise.resolve({ data: categories.value }) : api.categories(),
+    ])
+    if (mine !== seq) return
+    course.value = detail.data
+    categories.value = cats.data
+
+    // Neither of these is worth failing the page over: a course whose
+    // curriculum did not load still has a price and a buy button.
+    const [cur, rail] = await Promise.all([
+      api.curriculum(detail.data.id).catch(() => null),
+      loadRelated(detail.data),
+    ])
+    if (mine !== seq) return
+    curriculum.value = cur?.data ?? null
+    related.value = rail
+    openFirstChapter()
+  } catch (err) {
+    if (mine !== seq) return
+    course.value = null
+    if (err instanceof ApiError && err.status === 404) missing.value = true
+    else failed.value = true
+  } finally {
+    if (mine === seq) loading.value = false
+  }
+}
+
+const RAIL_MIN = 4
+const RAIL_MAX = 8
+
+/**
+ * Courses to put beside this one.
+ *
+ * The nearest thing first — the same category — but a category can hold one
+ * course, and "คันจิ" does: a rail that only ever shows its own category is an
+ * empty rail on most pages. So it widens by a step at a time, from the
+ * category to its siblings under the same parent and then to the catalog at
+ * large, and stops as soon as it has enough. Someone reading about a kanji
+ * course is served by more Japanese courses; they are not served by a heading
+ * with nothing under it.
+ */
+async function loadRelated(
+  detail: PublicCourseDetail,
+): Promise<{ course: PublicCourseDetail; why: RelatedScope }[]> {
+  const found = new Map<number, { course: PublicCourseDetail; why: RelatedScope }>()
+
+  const add = async (ids: number[] | undefined, why: RelatedScope) => {
+    if (found.size >= RAIL_MIN) return
+    if (ids && !ids.length) return
+    const res = await api
+      .courses({ ...(ids ? { categoryIds: ids } : {}), perPage: 12, sort: 'popularity' })
+      .catch(() => null)
+    for (const c of (res?.data ?? []) as PublicCourseDetail[]) {
+      if (c.id !== detail.id && !found.has(c.id)) found.set(c.id, { course: c, why })
+    }
+  }
+
+  const own = detail.categoryId
+  if (own) await add([own], 'category')
+
+  // The siblings: everything under the same parent, the parent itself
+  // included, since a course can be filed on either.
+  const cat = categories.value.find((c) => c.id === own)
+  const parentId = cat?.parentId ?? (cat ? cat.id : null)
+  if (parentId) {
+    const family = categories.value
+      .filter((c) => c.id === parentId || c.parentId === parentId)
+      .map((c) => c.id)
+      .filter((id) => id !== own)
+    await add(family, 'family')
+  }
+
+  await add(undefined, 'popular')
+
+  return [...found.values()].slice(0, RAIL_MAX)
+}
+
+/** The rail on the "no such course" page: simply the most popular courses,
+ *  since there is no category to be near. */
+const fallbackRail = ref<PublicCourseDetail[]>([])
+
+async function loadFallbackRail(): Promise<void> {
+  try {
+    const [res, cats] = await Promise.all([
+      api.courses({ perPage: 8, sort: 'popularity' }),
+      categories.value.length ? Promise.resolve({ data: categories.value }) : api.categories(),
+    ])
+    fallbackRail.value = res.data as PublicCourseDetail[]
+    categories.value = cats.data
+  } catch {
+    // The page still says the course does not exist, which is its job.
+  }
+}
+
+watch(missing, (yes) => {
+  if (yes && !fallbackRail.value.length) void loadFallbackRail()
+})
+
+watch(courseRef, () => {
+  expanded.value = {}
+  void load()
+  window.scrollTo({ top: 0 })
+})
 
 /* ---------------- hero ---------------- */
 
 const heroMeta = computed(() => {
   const c = course.value
-  if (!c) return []
-  return [
-    ['calendar', t('course.updatedAt', { date: date(c.updatedAt) })],
-    ['signal', t('course.level', { level: levelShort(c.level) })],
-    ['clock', c.durationLabel],
-    ['mic', c.languageLabel],
-    ['book-open', t('course.lessonCount', lessons.value.length)],
-  ] as [string, string][]
+  const v = view.value
+  if (!c || !v) return []
+  const out: [string, string][] = []
+  if (c.updatedAt) out.push(['calendar', t('course.updatedAt', { date: dateLong(c.updatedAt) })])
+  if (v.levelLabel) out.push(['signal', t('course.level', { level: v.levelLabel })])
+  out.push(['clock', v.durationLabel])
+  out.push(['mic', v.spokenLabel])
+  out.push(['book-open', t('course.lessonCount', { count: c.lessonCount })])
+  return out
 })
 
 const instructorNames = computed(() => instructors.value.slice(0, 3).map((x) => x.name).join(', '))
@@ -181,256 +269,79 @@ const discount = computed(() => {
 const previewCaption = computed(() => {
   const l = previewLesson.value
   if (!l) return ''
-  return l.duration ? `${t('course.previewLesson')} · ${l.duration}` : t('course.previewLesson')
+  const label = t('course.previewLesson')
+  return l.durationSeconds ? `${label} · ${minutes(l.durationSeconds)}` : label
 })
 
-const isMuted = computed(() =>
-  ['ended', 'access-expired', 'pkg-expired'].includes(view.value?.state ?? ''),
+/** The free sample, if the school uploaded one. Played in place, because it is
+ *  marketing and sending somebody to another page for it loses them. */
+const sampleUrl = computed(() =>
+  course.value?.sampleVideoPath ? mediaUrl(course.value.sampleVideoPath) : null,
 )
-
-const progressLabel = computed(() => {
-  const pr = view.value?.progress
-  if (!pr) return ''
-  if (pr.pct >= 100) return t('course.progressDone')
-  return isMuted.value ? t('course.progressKept') : t('course.progressTitle')
-})
-
-const progressSub = computed(() => {
-  const pr = view.value?.progress
-  if (!pr) return []
-  const out: { text: string; strong?: string }[] = []
-  if (pr.pct < 100 && pr.started && pr.resume) {
-    out.push({
-      text: t('course.resumeAt'),
-      strong:
-        pr.resume.type === 'quiz' ? t('course.finalQuiz') : pr.resume.title,
-    })
-  }
-  if (pr.activityAt) out.push({ text: t('course.lastStudied', { when: relative(pr.activityAt) }) })
-  return out
-})
-
-/** The one line that says where access comes from: a package, a purchase with
- *  an end date, or a free enrolment. */
-const accessLine = computed(() => {
-  const v = view.value
-  if (!v?.access.has) return null
-  if (v.access.source === 'package') {
-    const pk = s.pkgInfo() as
-      | { plan: { name: string }; endAt?: string; status?: string; daysLeft?: number }
-      | null
-    let sub = ''
-    if (pk) {
-      sub = pk.plan.name
-      if (pk.endAt) sub += ` · ${t('course.accessPackageUntil', { date: date(pk.endAt) })}`
-      if (pk.status === 'expiring')
-        sub += ` · ${t('course.accessPackageExpiring', { days: pk.daysLeft ?? 0 })}`
-    }
-    return { kind: 'package', icon: 'package', title: t('course.accessInPackage'), sub }
-  }
-  const ent = v.access.ent as { endAt?: string } | undefined
-  if (v.access.source === 'purchase' && ent?.endAt) {
-    return {
-      kind: 'purchase',
-      icon: 'calendar',
-      title: t('course.accessUntil', { date: dateLong(ent.endAt) }),
-      sub: v.access.renewed ? t('course.accessRenewed') : t('course.accessPerCourse'),
-    }
-  }
-  if (v.access.source === 'free') {
-    return {
-      kind: 'free',
-      icon: 'gift',
-      title: t('course.accessFreeEnrolled'),
-      sub: t('course.accessFreeForMembers'),
-    }
-  }
-  return null
-})
-
-/** A "buy" lock repeats what the note already says, so the note stands down
- *  rather than printing it twice. */
-const lockText = computed(() => {
-  const v = view.value
-  if (!v?.lock) return ''
-  return v.lock.type === 'buy' && v.note ? v.note : v.lock.text
-})
-const footNote = computed(() => {
-  const v = view.value
-  if (!v?.note) return ''
-  return v.lock?.type === 'buy' ? '' : v.note
-})
+const samplePlaying = ref(false)
 
 const perks = computed(() => {
   const c = course.value
   if (!c) return []
-  return [
+  const out: [string, string][] = [
     [
       'calendar',
-      c.isFree ? t('course.perkFree') : t('course.perkAccessDays', { days: c.accessDays }),
+      c.price === 0
+        ? t('course.perkFree')
+        : c.accessType === 'limited' && c.accessDurationDays
+          ? t('course.perkAccessDays', { days: c.accessDurationDays })
+          : t('course.perkLifetime'),
     ],
     ['monitor', t('course.perkAnyDevice')],
-  ] as [string, string][]
+  ]
+  if (c.inPackage) out.push(['package', t('course.perkInPackage')])
+  return out
 })
 
-const moreCtas = computed(() =>
-  [view.value?.secondary, view.value?.tertiary].filter(Boolean),
+const moreCtas = computed(() => (view.value?.secondary ? [view.value.secondary] : []))
+
+/** A course that is no longer sold. The panel says so outright rather than
+ *  offering a button that cannot work. */
+const notForSale = computed(
+  () => Boolean(course.value) && !course.value!.sellable && course.value!.price > 0,
 )
 
 /* ---------------- curriculum ---------------- */
 
 const expanded = ref<Record<string, boolean>>({})
 
-/** On arrival the first chapter is open, unless there is a lesson to resume —
- *  then that chapter is, because it is the one you came back for. */
-function openCurrentModule(fallbackFirst: boolean): void {
-  const c = course.value
-  if (!c) return
-  const cur = currentLessonId.value
-  const target = cur
-    ? c.modules.find((m) => m.lessons.some((l) => l.id === cur))
-    : fallbackFirst
-      ? c.modules[0]
-      : undefined
-  if (target) expanded.value[target.id] = true
+/** The first chapter is open on arrival, so the section reads as a list of
+ *  lessons rather than a row of closed bars. */
+function openFirstChapter(): void {
+  const first = chapters.value[0]
+  if (first) expanded.value[first.id] = true
 }
 
-const currentLessonId = computed(() => {
-  const v = view.value
-  if (!v) return null
-  const pr = v.progress
-  const hasHistory = isLoggedIn.value && (v.access.has || v.showProgress)
-  return pr.started && pr.pct < 100 && pr.resume && hasHistory ? pr.resume.id : null
-})
-
 const allExpanded = computed(
-  () => Boolean(course.value?.modules.every((m) => expanded.value[m.id])),
+  () => chapters.value.length > 0 && chapters.value.every((m) => expanded.value[m.id]),
 )
 
 function toggleAll(): void {
   const open = !allExpanded.value
-  for (const m of course.value?.modules ?? []) expanded.value[m.id] = open
+  for (const m of chapters.value) expanded.value[m.id] = open
 }
 
-function moduleSeconds(m: Module): number {
-  return m.lessons.reduce((sum, l) => sum + (l.sec || 0), 0)
-}
-
-function moduleMeta(m: Module): string {
-  const sec = moduleSeconds(m)
-  const count = t('course.lessonCount', m.lessons.length)
+function chapterMeta(within: CurriculumLesson[]): string {
+  const sec = within.reduce((sum, l) => sum + (l.durationSeconds || 0), 0)
+  const count = t('course.lessonCount', { count: within.length })
   return sec ? `${count} · ${minutes(sec)}` : count
 }
 
-function lessonDone(l: Lesson): boolean {
-  const v = view.value
-  if (!v || !isLoggedIn.value) return false
-  if (l.type === 'quiz') return Boolean(v.quiz.completed)
-  return Boolean((s.lessonState(id.value, l.id) as { done: boolean }).done)
-}
-
-function moduleDone(m: Module): number {
-  return m.lessons.filter((l) => lessonDone(l)).length
-}
-
-const showHistory = computed(() => {
-  const v = view.value
-  return Boolean(v && isLoggedIn.value && (v.access.has || v.showProgress))
-})
-
-type LessonMode = 'ended' | 'learn' | 'preview' | 'auth' | 'expired' | 'buy'
-
-function lessonMode(l: Lesson): LessonMode {
-  const v = view.value
-  if (!v) return 'auth'
-  if (v.state === 'ended') return 'ended'
-  if (v.access.has) return 'learn'
-  if (l.preview) return 'preview'
-  if (!isLoggedIn.value) return 'auth'
-  if (v.state === 'access-expired') return 'expired'
-  return 'buy'
-}
-
-function lessonSmall(l: Lesson): string {
-  const type = LESSON_TYPE[l.type] ?? LESSON_TYPE.video
+function lessonSmall(l: CurriculumLesson): string {
+  const type = LESSON_TYPE[l.type] ?? LESSON_TYPE.video!
   let out = t(type.label)
   if (l.subtitle) out += ` · ${l.subtitle}`
-  if (l.hasPdf) out += ` · ${t('course.hasPdf')}`
   return out
 }
 
-function lessonDuration(l: Lesson): string {
-  if (l.duration) return l.duration
-  if (l.type === 'quiz')
-    return t('course.quizQuestions', course.value?.quiz.questions.length ?? 0)
-  return t('course.documentDuration')
+function lessonDuration(l: CurriculumLesson): string {
+  return l.durationSeconds ? minutes(l.durationSeconds) : ''
 }
-
-/** What the right-hand end of a row says: finished, where you are, a free
- *  preview, or locked. */
-function lessonState(
-  l: Lesson,
-): { kind: string; icon: string; label: string; withLock?: boolean } | null {
-  const mode = lessonMode(l)
-  const done = lessonDone(l)
-  if (mode === 'learn') {
-    if (done) return { kind: 'done', icon: 'check-circle', label: t('course.legendDone') }
-    if (currentLessonId.value === l.id)
-      return { kind: 'current', icon: 'play', label: t('course.stateCurrent') }
-    return null
-  }
-  if (mode === 'preview')
-    return { kind: 'preview', icon: 'play-circle', label: t('course.statePreview') }
-  if (done)
-    return {
-      kind: 'done',
-      icon: 'check-circle',
-      label: t('course.legendDone'),
-      withLock: true,
-    }
-  return { kind: 'locked', icon: 'lock', label: t('course.stateLocked') }
-}
-
-function lessonHref(l: Lesson): string {
-  return `${path('/learn')}?id=${id.value}&lesson=${l.id}`
-}
-
-/* ---------------- completion steps ---------------- */
-
-const stepStatuses = computed(() => {
-  const v = view.value
-  if (!v || !showHistory.value) return []
-  const nonQuiz = lessons.value.filter((l) => l.type !== 'quiz')
-  const done = nonQuiz.filter(
-    (l) => (s.lessonState(id.value, l.id) as { done: boolean }).done,
-  ).length
-  const essay = {
-    none: { kind: '', icon: '', label: t('course.essayNone') },
-    pending: { kind: 'pending', icon: 'hourglass', label: t('course.essayPending') },
-    resubmitted: { kind: 'resubmitted', icon: 'hourglass', label: t('course.essayResubmitted') },
-    revision: { kind: 'revision', icon: 'alert-circle', label: t('course.essayRevision') },
-    passed: { kind: 'done', icon: 'check-circle', label: t('course.essayPassed') },
-  }[v.quiz.essayStatus] ?? { kind: '', icon: '', label: t('course.essayNone') }
-
-  return [
-    v.progress.lessonsDone
-      ? { kind: 'done', icon: 'check-circle', label: t('course.stepLessonsDone') }
-      : {
-          kind: '',
-          icon: '',
-          label: t('course.stepLessonsPartial', { done, total: nonQuiz.length }),
-        },
-    v.quiz.choicePassed
-      ? { kind: 'done', icon: 'check-circle', label: t('course.stepQuizPassed') }
-      : v.quiz.attempts
-        ? { kind: 'revision', icon: 'alert-circle', label: t('course.stepQuizFailed') }
-        : { kind: '', icon: '', label: t('course.stepQuizNone') },
-    essay,
-    v.cert
-      ? { kind: 'done', icon: 'badge-check', label: t('course.stepCertIssued') }
-      : { kind: '', icon: '', label: t('course.stepNotYet') },
-  ]
-})
 
 /* ---------------- course info ---------------- */
 
@@ -443,41 +354,48 @@ interface InfoRow {
 
 const infoRows = computed<InfoRow[]>(() => {
   const c = course.value
-  const cat = category.value
-  if (!c || !cat) return []
-  const rows: InfoRow[] = [
-    {
+  const v = view.value
+  if (!c || !v) return []
+
+  const rows: InfoRow[] = []
+  if (categoryName.value) {
+    rows.push({
       dt: t('course.infoCategory'),
-      dd: cat.name,
-      sub: `(${cat.th})`,
-      href: `${path('/courses')}?category=${cat.id}`,
-    },
-    { dt: t('course.infoLevel'), dd: c.levelLabel },
-    { dt: t('course.infoDuration'), dd: c.durationLabel },
-    {
-      dt: t('course.infoLessons'),
-      dd: t('course.lessonCount', lessons.value.length),
-      sub: t('course.infoLessonsSub', { modules: c.modules.length }),
-    },
-    { dt: t('course.infoLanguage'), dd: String(c.languageLabel).split(': ').pop() ?? '' },
-    { dt: t('course.infoUpdated'), dd: dateLong(c.updatedAt) },
-    {
-      dt: t('course.infoAccess'),
-      dd: c.isFree ? t('course.infoAccessFree') : t('course.infoAccessDays', { days: c.accessDays }),
-      sub: !c.isFree && c.packageIncluded ? t('course.infoAccessPackageSub') : undefined,
-    },
-    {
-      dt: t('course.infoInPackage'),
-      dd: c.packageIncluded ? t('course.yes') : t('course.no'),
-      sub: c.packageIncluded
-        ? t('course.infoPackagePaid')
-        : c.isFree
-          ? t('course.infoPackageNoFree')
-          : t('course.infoPackageNoCourse'),
-    },
-  ]
-  if (c.status === 'ended')
-    rows.push({ dt: t('course.infoStatus'), dd: t('course.infoEnded', { date: dateLong(c.endedAt) }) })
+      dd: categoryName.value,
+      href: c.categoryId ? `${path('/courses')}?category=${c.categoryId}` : undefined,
+    })
+  }
+  if (v.levelLabel) rows.push({ dt: t('course.infoLevel'), dd: v.levelLabel })
+  rows.push({ dt: t('course.infoDuration'), dd: v.durationLabel })
+  rows.push({
+    dt: t('course.infoLessons'),
+    dd: t('course.lessonCount', { count: c.lessonCount }),
+    sub: curriculum.value?.modules.length
+      ? t('course.infoLessonsSub', { modules: curriculum.value.modules.length })
+      : undefined,
+  })
+  rows.push({ dt: t('course.infoLanguage'), dd: v.spokenLabel })
+  if (c.updatedAt) rows.push({ dt: t('course.infoUpdated'), dd: dateLong(c.updatedAt) })
+  rows.push({
+    dt: t('course.infoAccess'),
+    dd:
+      c.price === 0
+        ? t('course.infoAccessFree')
+        : c.accessType === 'limited' && c.accessDurationDays
+          ? t('course.infoAccessDays', { days: c.accessDurationDays })
+          : t('course.perkLifetime'),
+    sub: c.price > 0 && c.inPackage ? t('course.infoAccessPackageSub') : undefined,
+  })
+  rows.push({
+    dt: t('course.infoInPackage'),
+    dd: c.inPackage ? t('course.yes') : t('course.no'),
+    sub: c.inPackage
+      ? t('course.infoPackagePaid')
+      : c.price === 0
+        ? t('course.infoPackageNoFree')
+        : t('course.infoPackageNoCourse'),
+  })
+  if (c.status === 'ended') rows.push({ dt: t('course.infoStatus'), dd: t('course.infoEndedPlain') })
   return rows
 })
 
@@ -485,25 +403,34 @@ const infoHalf = computed(() => Math.ceil(infoRows.value.length / 2))
 
 /* ---------------- recommended ---------------- */
 
-const recommended = computed(() => {
-  void tick.value
-  const c = course.value
+/** The little line above a card's title says why it is being shown, which has
+ *  to be the truth for that card rather than for the first one. */
+const relatedCards = computed(() =>
+  related.value.map(({ course: c, why }) => ({
+    view: courseView(c, { locale: locale.value, t, categories: categories.value }),
+    reason:
+      why === 'category' && categoryName.value
+        ? t('course.sameCategoryReason', { name: categoryName.value })
+        : why === 'family' && parentName.value
+          ? t('course.sameFamilyReason', { name: parentName.value })
+          : t('course.popularReason'),
+  })),
+)
+
+/** The parent category's name — "ภาษาญี่ปุ่น" for a course filed under
+ *  "คันจิ" — used to say what a widened rail has in common. */
+const parentName = computed(() => {
   const cat = category.value
-  if (!c || !cat) return []
-  const same = (s.catalog() as { id: string; category: string }[])
-    .filter((x) => x.category === c.category && x.id !== c.id)
-    .map((x) => ({ id: x.id, reason: t('course.sameCategoryReason', { name: cat.name }) }))
-  const taken = same.map((x) => x.id)
-  const rest = (s.recommended() as { course: { id: string }; reason: string }[])
-    .filter((r) => r.course.id !== c.id && !taken.includes(r.course.id))
-    .map((r) => ({ id: r.course.id, reason: isLoggedIn.value ? r.reason : undefined }))
-  return [...same, ...rest].slice(0, 8)
+  if (!cat) return ''
+  const parent = cat.parentId ? categories.value.find((c) => c.id === cat.parentId) : cat
+  return parent?.name ?? ''
 })
 
-const notFoundRail = computed(() => {
-  void tick.value
-  return (s.recommended() as { course: { id: string } }[]).slice(0, 8).map((r) => r.course.id)
-})
+const fallbackCards = computed(() =>
+  fallbackRail.value.map((c) =>
+    courseView(c, { locale: locale.value, t, categories: categories.value }),
+  ),
+)
 
 /* ---------------- the mobile bottom bar ---------------- */
 
@@ -516,7 +443,7 @@ let io: IntersectionObserver | undefined
 /** The bar only earns its place once the real CTAs have scrolled away, and
  *  only on the layouts where the purchase panel is not pinned beside the
  *  content. */
-const showBar = computed(() => stacked.value && !ctaVisible.value)
+const showBar = computed(() => stacked.value && !ctaVisible.value && Boolean(view.value))
 
 function syncBodyClass(): void {
   document.body.classList.toggle('has-bottom-bar', showBar.value)
@@ -544,12 +471,12 @@ function onMqChange(event: MediaQueryListEvent | MediaQueryList): void {
   stacked.value = event.matches
 }
 
-onMounted(() => {
+onMounted(async () => {
   document.body.classList.add('page-course')
   mq = window.matchMedia('(max-width: 959px)')
   stacked.value = mq.matches
   mq.addEventListener('change', onMqChange)
-  openCurrentModule(true)
+  await load()
   observeCtas()
 })
 
@@ -560,31 +487,39 @@ onBeforeUnmount(() => {
 })
 
 watch(ctasEl, observeCtas)
-watch(id, () => {
-  expanded.value = {}
-  openCurrentModule(true)
-})
 
 /* ---------------- actions ---------------- */
 
-/** Store-changing CTAs run here; signing in is not wired up yet, so those
- *  buttons stay inert for now. */
+/**
+ * The cart and free enrolment both need an account and a student API that does
+ * not exist yet, so every one of them goes the single way that works today:
+ * straight to checkout with this course.
+ */
 function runAction(action: string, courseId?: string): void {
-  const cid = courseId ?? id.value
-  if (action === 'add-cart') s.addToCart(cid)
-  else if (action === 'enroll-free') s.enrollFree(cid)
-  else if (action === 'buy') {
+  const cid = courseId ?? course.value?.slug ?? courseRef.value
+  if (action === 'buy' || action === 'add-cart' || action === 'enroll-free') {
     void router.push({ path: path('/checkout'), query: { items: cid } })
-    return
   }
-  tick.value++
+}
+
+/** The hero's instructor row opens nothing: it takes you to the section that
+ *  already says everything a dialog would have. */
+function toInstructors(): void {
+  document.getElementById('cd-ins-h')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 </script>
 
 <template>
   <div class="cd-root" id="cd-root">
+    <!-- Loading -->
+    <section v-if="loading" class="page-hero" aria-busy="true">
+      <div class="container">
+        <p class="cd-loading">{{ t('course.loading') }}</p>
+      </div>
+    </section>
+
     <!-- No such course -->
-    <template v-if="!course">
+    <template v-else-if="missing">
       <section class="page-hero cd-nf" aria-labelledby="cd-nf-h">
         <div class="container">
           <nav :aria-label="t('common.breadcrumb')">
@@ -606,7 +541,9 @@ function runAction(action: string, courseId?: string): void {
             <div class="state-ico"><AppIcon name="search" /></div>
             <h1 id="cd-nf-h">{{ t('course.notFoundTitle') }}</h1>
             <p>
-              {{ id ? t('course.notFoundWithId', { id }) : t('course.notFoundNoId') }}
+              {{
+                courseRef ? t('course.notFoundWithId', { id: courseRef }) : t('course.notFoundNoId')
+              }}
             </p>
             <div class="state-actions">
               <RouterLink class="btn btn--primary" :to="path('/courses')">
@@ -619,7 +556,12 @@ function runAction(action: string, courseId?: string): void {
           </div>
         </div>
       </section>
-      <section class="container cd-nf-rec" id="cd-nf-rec" aria-labelledby="nf-rec-h">
+      <section
+        v-if="fallbackCards.length"
+        class="container cd-nf-rec"
+        id="cd-nf-rec"
+        aria-labelledby="nf-rec-h"
+      >
         <CourseRail
           id="nf-rec"
           :eyebrow="t('course.recommendedEyebrow')"
@@ -627,15 +569,19 @@ function runAction(action: string, courseId?: string): void {
           :sub="t('course.notFoundRailSub')"
           :more-href="path('/courses')"
           :more-label="t('course.viewAllCourses')"
-          :count="notFoundRail.length"
+          :count="fallbackCards.length"
         >
-          <CourseCard v-for="cid in notFoundRail" :key="cid" :course-id="cid" @run="runAction" />
+          <CourseCard v-for="c in fallbackCards" :key="c.id" :view="c" @run="runAction" />
         </CourseRail>
       </section>
     </template>
 
     <!-- Could not load -->
-    <section v-else-if="simulateError" class="page-hero cd-err" aria-labelledby="cd-err-h">
+    <section
+      v-else-if="failed || !course || !view"
+      class="page-hero cd-err"
+      aria-labelledby="cd-err-h"
+    >
       <div class="container">
         <nav :aria-label="t('common.breadcrumb')">
           <ol class="crumbs dc-crumbs">
@@ -646,19 +592,15 @@ function runAction(action: string, courseId?: string): void {
               <AppIcon name="chevron-right" />
               <RouterLink :to="path('/courses')">{{ t('common.courses') }}</RouterLink>
             </li>
-            <li>
-              <AppIcon name="chevron-right" />
-              <span aria-current="page">{{ course.title }}</span>
-            </li>
           </ol>
         </nav>
-        <h1 class="sr-only" id="cd-err-h">{{ course.title }}</h1>
+        <h1 class="sr-only" id="cd-err-h">{{ t('course.errorTitle') }}</h1>
         <div class="state-box state-box--error" role="alert">
           <div class="state-ico"><AppIcon name="wifi-off" /></div>
           <h3>{{ t('course.errorTitle') }}</h3>
           <p>{{ t('course.errorText') }}</p>
           <div class="state-actions">
-            <button type="button" class="btn btn--primary" data-retry="course" @click="tick++">
+            <button type="button" class="btn btn--primary" data-retry="course" @click="load()">
               <AppIcon name="refresh" />{{ t('course.retry') }}
             </button>
           </div>
@@ -666,7 +608,7 @@ function runAction(action: string, courseId?: string): void {
       </div>
     </section>
 
-    <template v-else-if="view && category">
+    <template v-else>
       <div class="cd-layout">
         <div class="cd-hero-bg" aria-hidden="true" />
 
@@ -680,10 +622,10 @@ function runAction(action: string, courseId?: string): void {
                 <AppIcon name="chevron-right" />
                 <RouterLink :to="path('/courses')">{{ t('common.courses') }}</RouterLink>
               </li>
-              <li>
+              <li v-if="categoryName">
                 <AppIcon name="chevron-right" />
-                <RouterLink :to="`${path('/courses')}?category=${category.id}`">{{
-                  category.name
+                <RouterLink :to="`${path('/courses')}?category=${course.categoryId}`">{{
+                  categoryName
                 }}</RouterLink>
               </li>
               <li>
@@ -694,13 +636,21 @@ function runAction(action: string, courseId?: string): void {
           </nav>
 
           <div class="cd-tags">
-            <RouterLink class="cd-cat" :to="`${path('/courses')}?category=${category.id}`">
-              <AppIcon :name="category.icon" />
-              <span>{{ category.name }}</span>
+            <RouterLink
+              v-if="categoryName"
+              class="cd-cat"
+              :to="`${path('/courses')}?category=${course.categoryId}`"
+            >
+              <AppIcon :name="categoryIcon" />
+              <span>{{ categoryName }}</span>
               <span class="sr-only">{{ ` ${t('course.catViewCourses')}` }}</span>
             </RouterLink>
             <span class="cd-badges" id="cd-badges">
               <AppBadge v-for="(b, i) in view.badges" :key="i" :badge="b" />
+              <AppBadge
+                v-if="course.inPackage"
+                :badge="{ kind: 'package', text: t('course.inPackageBadge'), icon: 'package' }"
+              />
             </span>
           </div>
 
@@ -708,11 +658,12 @@ function runAction(action: string, courseId?: string): void {
           <p class="cd-lead">{{ course.shortDesc }}</p>
 
           <button
+            v-if="instructors.length"
             type="button"
             class="cd-inst"
             data-act="instructors"
-            :data-cid="course.id"
-            aria-haspopup="dialog"
+            :data-cid="course.slug"
+            @click="toInstructors"
           >
             <span class="avatar-stack">
               <AppAvatar
@@ -727,7 +678,7 @@ function runAction(action: string, courseId?: string): void {
             </span>
             <span class="cd-inst-text">
               <span class="cd-inst-label">{{
-                t('course.instructorCount', instructors.length)
+                t('course.instructorCount', { count: instructors.length })
               }}</span>
               <span class="cd-inst-names"
                 >{{ instructorNames }}<span v-if="extraInstructors" class="more">{{
@@ -751,93 +702,62 @@ function runAction(action: string, courseId?: string): void {
             <h2 class="sr-only" id="cd-buy-h">{{ t('course.buyHeading') }}</h2>
 
             <div class="cd-media" :class="{ 'is-locked': course.status === 'ended' }">
-              <CourseImage
-                :image="course.image"
-                :width="768"
-                :height="432"
-                :art-icon="category.icon"
-                :art-palette="category.palette ?? 0"
-                sizes="(max-width: 959px) 92vw, 384px"
-                eager
-                priority
+              <video
+                v-if="samplePlaying && sampleUrl"
+                class="cd-sample"
+                :src="sampleUrl"
+                controls
+                autoplay
+                playsinline
               />
-              <div v-if="course.status === 'ended'" class="cd-media-lock">
-                <span class="cd-media-lockico"><AppIcon name="lock" /></span>
-                <b>{{ t('course.mediaLockTitle') }}</b>
-                <span>{{ t('course.mediaLockText') }}</span>
-              </div>
-              <button
-                v-else-if="previewLesson"
-                type="button"
-                class="cd-media-play"
-                :data-preview="previewLesson.id"
-                aria-haspopup="dialog"
-              >
-                <span class="cd-play-ico"><AppIcon name="play" /></span>
-                <span class="cd-play-cap">
+              <template v-else>
+                <CourseImage
+                  :image="view.image"
+                  :width="768"
+                  :height="432"
+                  :art-icon="categoryIcon"
+                  :art-palette="view.categoryPalette"
+                  sizes="(max-width: 959px) 92vw, 384px"
+                  eager
+                  priority
+                />
+                <div v-if="course.status === 'ended'" class="cd-media-lock">
+                  <span class="cd-media-lockico"><AppIcon name="lock" /></span>
+                  <b>{{ t('course.mediaLockTitle') }}</b>
+                  <span>{{ t('course.mediaLockText') }}</span>
+                </div>
+                <button
+                  v-else-if="sampleUrl"
+                  type="button"
+                  class="cd-media-play"
+                  data-preview="sample"
+                  @click="samplePlaying = true"
+                >
+                  <span class="cd-play-ico"><AppIcon name="play" /></span>
+                  <span class="cd-play-cap">
+                    <AppIcon name="play-circle" />
+                    <span>{{ t('course.sampleVideo') }}</span>
+                  </span>
+                </button>
+                <p v-else-if="previewLesson" class="cd-media-hint">
                   <AppIcon name="play-circle" />
                   <span>{{ previewCaption }}</span>
-                </span>
-                <span class="sr-only">: {{ previewLesson.title }}</span>
-              </button>
+                </p>
+              </template>
             </div>
 
             <div class="cd-buy">
               <div id="cd-buy-top" class="cd-buy-top">
-                <div v-if="view.showProgress" class="cd-prog">
-                  <div class="cd-prog-head">
-                    <span>{{ progressLabel }}</span>
-                    <span class="cd-prog-n">{{
-                      t('course.progressCount', {
-                        done: view.progress.done,
-                        total: view.progress.total,
-                      })
-                    }}</span>
-                  </div>
-                  <AppProgress
-                    :value="view.progress.pct"
-                    lg
-                    :muted="isMuted"
-                    :label="progressLabel"
-                  />
-                  <p v-if="progressSub.length" class="cd-prog-sub">
-                    <template v-for="(line, i) in progressSub" :key="i">
-                      <br v-if="i" />{{ line.text }}<b v-if="line.strong">{{ line.strong }}</b>
-                    </template>
-                  </p>
-                </div>
-
-                <div v-if="view.showPrice" class="cd-price">
+                <div class="cd-price">
                   <AppPrice
-                    :price="course.price"
-                    :normal-price="course.normalPrice"
-                    :is-free="course.isFree"
+                    :price="view.price"
+                    :normal-price="view.normalPrice"
+                    :is-free="view.isFree"
                     lg
                   />
                   <span v-if="discount" class="badge badge--bestseller cd-off">{{
                     t('course.discountOff', { percent: discount })
                   }}</span>
-                </div>
-
-                <div
-                  v-if="accessLine"
-                  class="cd-access"
-                  :class="`cd-access--${accessLine.kind}`"
-                >
-                  <AppIcon :name="accessLine.icon" />
-                  <div>
-                    <b>{{ accessLine.title }}</b>
-                    <span v-if="accessLine.sub">{{ accessLine.sub }}</span>
-                  </div>
-                </div>
-
-                <div v-if="view.lock" class="cd-lock">
-                  <AppNotice
-                    :tone="LOCK_TONE[view.lock.type] ?? 'info'"
-                    :icon="LOCK_ICON[view.lock.type]"
-                    :title="view.lock.title"
-                    :text="lockText"
-                  />
                 </div>
               </div>
 
@@ -847,43 +767,33 @@ function runAction(action: string, courseId?: string): void {
                     :action="view.primary"
                     size="lg"
                     block
-                    :course-id="course.id"
+                    :course-id="course.slug"
                     @run="runAction"
                   />
                 </div>
-                <div
-                  v-if="moreCtas.length"
-                  class="cd-cta-more"
-                  :class="{ 'is-pair': moreCtas.length > 1 }"
-                >
+                <div v-if="moreCtas.length" class="cd-cta-more">
                   <CtaButton
                     v-for="(a, i) in moreCtas"
                     :key="i"
                     :action="a"
                     block
-                    :course-id="course.id"
+                    :course-id="course.slug"
                     @run="runAction"
                   />
                 </div>
               </div>
 
               <div id="cd-buy-foot" class="cd-buy-foot">
-                <template v-if="view.state !== 'ended'">
-                  <p v-if="footNote" class="cd-note">
-                    <AppIcon name="info" />
-                    <span>{{ footNote }}</span>
-                  </p>
-                  <ul class="cd-perks" role="list">
-                    <li v-for="p in perks" :key="p[1]">
-                      <AppIcon :name="p[0]" />
-                      <span>{{ p[1] }}</span>
-                    </li>
-                  </ul>
-                </template>
-                <p v-else-if="footNote" class="cd-note">
+                <p v-if="notForSale" class="cd-note">
                   <AppIcon name="info" />
-                  <span>{{ footNote }}</span>
+                  <span>{{ t('course.notForSaleNote') }}</span>
                 </p>
+                <ul v-else class="cd-perks" role="list">
+                  <li v-for="p in perks" :key="p[1]">
+                    <AppIcon :name="p[0]" />
+                    <span>{{ p[1] }}</span>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
@@ -891,7 +801,12 @@ function runAction(action: string, courseId?: string): void {
 
         <div class="cd-main">
           <!-- What you will learn -->
-          <section class="cd-sec" id="cd-outcomes" aria-labelledby="cd-out-h">
+          <section
+            v-if="course.outcomes?.length"
+            class="cd-sec"
+            id="cd-outcomes"
+            aria-labelledby="cd-out-h"
+          >
             <div class="cd-sec-head">
               <div>
                 <h2 id="cd-out-h" tabindex="-1">{{ t('course.outcomesTitle') }}</h2>
@@ -906,7 +821,7 @@ function runAction(action: string, courseId?: string): void {
           </section>
 
           <!-- Who it is for -->
-          <section class="cd-sec" aria-labelledby="cd-aud-h">
+          <section v-if="course.audience?.length" class="cd-sec" aria-labelledby="cd-aud-h">
             <div class="cd-sec-head">
               <div>
                 <h2 id="cd-aud-h" tabindex="-1">{{ t('course.audienceTitle') }}</h2>
@@ -922,17 +837,29 @@ function runAction(action: string, courseId?: string): void {
             </ul>
           </section>
 
+          <!-- About the course. Written in the admin's own editor, so the
+               markup is the school's — the same trust as the rest of the site. -->
+          <section v-if="course.description" class="cd-sec" aria-labelledby="cd-desc-h">
+            <div class="cd-sec-head">
+              <div>
+                <h2 id="cd-desc-h" tabindex="-1">{{ t('course.descriptionTitle') }}</h2>
+              </div>
+            </div>
+            <!-- eslint-disable-next-line vue/no-v-html -->
+            <div class="cd-prose" v-html="course.description" />
+          </section>
+
           <!-- Curriculum -->
-          <section class="cd-sec" id="curriculum" aria-labelledby="cd-cur-h">
+          <section v-if="chapters.length" class="cd-sec" id="curriculum" aria-labelledby="cd-cur-h">
             <div class="cd-sec-head">
               <div>
                 <h2 id="cd-cur-h" tabindex="-1">{{ t('course.curriculumTitle') }}</h2>
                 <p class="cd-sec-sub">
                   {{
                     t('course.curriculumSub', {
-                      modules: course.modules.length,
+                      modules: chapters.length,
                       lessons: lessons.length,
-                      duration: course.durationLabel,
+                      duration: view.durationLabel,
                     })
                   }}
                 </p>
@@ -941,7 +868,7 @@ function runAction(action: string, courseId?: string): void {
                 type="button"
                 class="cat-textbtn cd-expand"
                 data-expand-all
-                :aria-controls="course.modules.map((m, i) => `cd-mod-${i + 1}`).join(' ')"
+                :aria-controls="chapters.map((m, i) => `cd-mod-${i + 1}`).join(' ')"
                 :aria-expanded="allExpanded ? 'true' : 'false'"
                 @click="toggleAll"
               >
@@ -958,13 +885,10 @@ function runAction(action: string, courseId?: string): void {
               <span class="lesson-state lesson-state--locked">
                 <AppIcon name="lock" />{{ t('course.legendLocked') }}
               </span>
-              <span class="lesson-state lesson-state--done">
-                <AppIcon name="check-circle" />{{ t('course.legendDone') }}
-              </span>
             </p>
 
             <div class="acc cd-acc">
-              <div v-for="(m, mi) in course.modules" :key="m.id" class="acc-item cd-mod">
+              <div v-for="(m, mi) in chapters" :key="m.id" class="acc-item cd-mod">
                 <h3 class="cd-mod-h">
                   <button
                     type="button"
@@ -979,22 +903,8 @@ function runAction(action: string, courseId?: string): void {
                     <span class="acc-title"
                       ><span class="sr-only">{{ t('course.moduleNumber', { n: mi + 1 }) }}</span
                       >{{ m.title
-                      }}<small class="cd-mod-meta">{{ moduleMeta(m) }}</small></span
+                      }}<small class="cd-mod-meta">{{ chapterMeta(m.lessons) }}</small></span
                     >
-                    <span class="cd-mod-status" :data-mod-status="m.id">
-                      <template v-if="showHistory && moduleDone(m)">
-                        <span
-                          v-if="moduleDone(m) === m.lessons.length"
-                          class="cd-mod-done"
-                        >
-                          <AppIcon name="check-circle" />{{ t('course.moduleAllDone') }}
-                        </span>
-                        <span v-else class="cd-mod-part"
-                          >{{ moduleDone(m) }}/{{ m.lessons.length
-                          }}<span class="sr-only">{{ ` ${t('course.moduleDoneSr')}` }}</span></span
-                        >
-                      </template>
-                    </span>
                     <AppIcon name="chevron-down" class="acc-chev" />
                   </button>
                 </h3>
@@ -1007,55 +917,32 @@ function runAction(action: string, courseId?: string): void {
                 >
                   <ul class="cd-lessons" role="list" :data-mod-list="m.id">
                     <li v-for="l in m.lessons" :key="l.id">
-                      <component
-                        :is="lessonMode(l) === 'learn' ? 'a' : 'button'"
+                      <div
                         class="lesson cd-lesson"
-                        :class="{
-                          'is-current': currentLessonId === l.id,
-                          'is-locked': !['learn', 'preview'].includes(lessonMode(l)),
-                        }"
-                        :type="lessonMode(l) === 'learn' ? undefined : 'button'"
-                        :href="lessonMode(l) === 'learn' ? lessonHref(l) : undefined"
+                        :class="{ 'is-locked': !l.isPreview }"
                         :data-lesson="l.id"
-                        :data-mode="lessonMode(l)"
-                        :aria-haspopup="
-                          lessonMode(l) === 'learn' || lessonMode(l) === 'ended'
-                            ? undefined
-                            : 'dialog'
-                        "
+                        :data-mode="l.isPreview ? 'preview' : 'locked'"
                       >
                         <span class="lesson-ico">
                           <AppIcon :name="(LESSON_TYPE[l.type] ?? LESSON_TYPE.video!).icon" />
                         </span>
                         <span class="lesson-title"
-                          >{{ l.title
-                          }}<small
-                            >{{ lessonSmall(l)
-                            }}<template v-if="currentLessonId === l.id"
-                              >{{ ' · ' }}<b class="cd-cur-tag">{{
-                                t('course.currentTag')
-                              }}</b></template
-                            ></small
-                          ></span
+                          >{{ l.title }}<small>{{ lessonSmall(l) }}</small></span
                         >
                         <span class="cd-ls-end">
-                          <span class="lesson-dur">{{ lessonDuration(l) }}</span>
-                          <template v-if="lessonState(l)">
-                            <span
-                              class="lesson-state"
-                              :class="`lesson-state--${lessonState(l)!.kind}`"
-                            >
-                              <AppIcon :name="lessonState(l)!.icon" />{{ lessonState(l)!.label }}
-                            </span>
-                            <template v-if="lessonState(l)!.withLock">
-                              <span class="cd-lockmini" aria-hidden="true"
-                                ><AppIcon name="lock"
-                              /></span>
-                              <span class="sr-only">{{ ` (${t('course.stateLocked')})` }}</span>
-                            </template>
-                          </template>
+                          <span v-if="lessonDuration(l)" class="lesson-dur">{{
+                            lessonDuration(l)
+                          }}</span>
+                          <span
+                            class="lesson-state"
+                            :class="`lesson-state--${l.isPreview ? 'preview' : 'locked'}`"
+                          >
+                            <AppIcon :name="l.isPreview ? 'play-circle' : 'lock'" />{{
+                              l.isPreview ? t('course.statePreview') : t('course.stateLocked')
+                            }}
+                          </span>
                         </span>
-                      </component>
+                      </div>
                     </li>
                   </ul>
                 </div>
@@ -1063,47 +950,13 @@ function runAction(action: string, courseId?: string): void {
             </div>
           </section>
 
-          <!-- How you finish -->
-          <section class="cd-sec" aria-labelledby="cd-done-h">
-            <div class="cd-sec-head">
-              <div>
-                <h2 id="cd-done-h" tabindex="-1">{{ t('course.completionTitle') }}</h2>
-                <p class="cd-sec-sub">{{ t('course.completionSub') }}</p>
-              </div>
-            </div>
-            <ol class="cd-steps" role="list">
-              <li v-for="(step, i) in course.completion" :key="step">
-                <span class="cd-step-ico">
-                  <AppIcon :name="STEP_ICONS[i % STEP_ICONS.length]!" />
-                  <span class="cd-step-n" aria-hidden="true">{{ i + 1 }}</span>
-                </span>
-                <div class="cd-step-body">
-                  <p>{{ step }}</p>
-                  <span class="cd-step-status" data-step-status>
-                    <template v-if="stepStatuses[i]">
-                      <span class="sr-only">{{ t('course.yourStatus') }}</span>
-                      <span
-                        class="badge"
-                        :class="stepStatuses[i]!.kind ? `badge--${stepStatuses[i]!.kind}` : ''"
-                      >
-                        <AppIcon v-if="stepStatuses[i]!.icon" :name="stepStatuses[i]!.icon" />{{
-                          stepStatuses[i]!.label
-                        }}
-                      </span>
-                    </template>
-                  </span>
-                </div>
-              </li>
-            </ol>
-          </section>
-
           <!-- Instructors -->
-          <section class="cd-sec" aria-labelledby="cd-ins-h">
+          <section v-if="instructors.length" class="cd-sec" aria-labelledby="cd-ins-h">
             <div class="cd-sec-head">
               <div>
                 <h2 id="cd-ins-h" tabindex="-1">{{ t('course.instructorsTitle') }}</h2>
                 <p class="cd-sec-sub">
-                  {{ t('course.instructorsSub', instructors.length) }}
+                  {{ t('course.instructorsSub', { count: instructors.length }) }}
                 </p>
               </div>
             </div>
@@ -1118,8 +971,18 @@ function runAction(action: string, courseId?: string): void {
                 />
                 <div class="cd-ins-body">
                   <h3 class="cd-ins-name">{{ p.name }}</h3>
-                  <span class="badge badge--info"><AppIcon name="briefcase" />{{ p.role }}</span>
-                  <p>{{ p.bio }}</p>
+                  <span v-if="p.headline" class="badge badge--info"
+                    ><AppIcon name="briefcase" />{{ p.headline }}</span
+                  >
+                  <span v-if="p.yearsExperience" class="badge badge--info"
+                    ><AppIcon name="clock" />{{
+                      t('course.yearsTeaching', { years: p.yearsExperience })
+                    }}</span
+                  >
+                  <p v-if="p.bio">{{ p.bio }}</p>
+                  <p v-if="p.credentials" class="cd-ins-cred">
+                    <AppIcon name="award" /><span>{{ p.credentials }}</span>
+                  </p>
                 </div>
               </li>
             </ul>
@@ -1162,7 +1025,7 @@ function runAction(action: string, courseId?: string): void {
         </div>
 
         <div class="cd-wide">
-          <section class="cd-rec" id="cd-rec" aria-labelledby="cd-rec-h">
+          <section v-if="relatedCards.length" class="cd-rec" id="cd-rec" aria-labelledby="cd-rec-h">
             <CourseRail
               id="cd-rec"
               :eyebrow="t('course.recommendedEyebrow')"
@@ -1170,12 +1033,12 @@ function runAction(action: string, courseId?: string): void {
               :sub="t('course.recommendedSub')"
               :more-href="path('/courses')"
               :more-label="t('course.viewAllCourses')"
-              :count="recommended.length"
+              :count="relatedCards.length"
             >
               <CourseCard
-                v-for="r in recommended"
-                :key="r.id"
-                :course-id="r.id"
+                v-for="r in relatedCards"
+                :key="r.view.id"
+                :view="r.view"
                 :reason="r.reason"
                 @run="runAction"
               />
@@ -1194,26 +1057,14 @@ function runAction(action: string, courseId?: string): void {
       >
         <div class="cd-bar-info">
           <AppPrice
-            v-if="view.showPrice"
-            :price="course.price"
-            :normal-price="course.normalPrice"
-            :is-free="course.isFree"
+            v-if="!notForSale"
+            :price="view.price"
+            :normal-price="view.normalPrice"
+            :is-free="view.isFree"
           />
-          <template v-else-if="view.showProgress">
-            <span class="cd-bar-label">{{
-              view.progress.pct >= 100 ? t('course.barDone') : t('course.barProgress')
-            }}</span>
-            <AppProgress
-              :value="view.progress.pct"
-              :muted="isMuted"
-              :label="t('course.progressTitle')"
-            />
-          </template>
-          <span v-else class="cd-bar-label">{{
-            view.state === 'ended' ? t('course.barNotForSale') : course.title
-          }}</span>
+          <span v-else class="cd-bar-label">{{ t('course.barNotForSale') }}</span>
         </div>
-        <CtaButton :action="view.primary" :course-id="course.id" @run="runAction" />
+        <CtaButton :action="view.primary" :course-id="course.slug" @run="runAction" />
       </div>
     </template>
   </div>
