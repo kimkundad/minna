@@ -10,6 +10,7 @@ import authRoutes from './modules/auth/auth.routes'
 import catalogRoutes from './modules/catalog/catalog.routes'
 import uploadRoutes from './modules/uploads/uploads.routes'
 import peopleRoutes from './modules/people/people.routes'
+import memberDetailRoutes from './modules/people/member-detail.routes'
 import essayRoutes from './modules/learning/essay.routes'
 import commerceRoutes from './modules/commerce/commerce.routes'
 import couponRoutes from './modules/commerce/coupons.routes'
@@ -55,6 +56,7 @@ export async function buildApp() {
   await app.register(catalogRoutes, { prefix: '/api/v1' })
   await app.register(uploadRoutes, { prefix: '/api/v1' })
   await app.register(peopleRoutes, { prefix: '/api/v1' })
+  await app.register(memberDetailRoutes, { prefix: '/api/v1' })
   await app.register(essayRoutes, { prefix: '/api/v1' })
   await app.register(couponRoutes, { prefix: '/api/v1' })
   await app.register(invoiceRoutes, { prefix: '/api/v1' })

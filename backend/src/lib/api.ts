@@ -952,3 +952,132 @@ export const settings = {
   vatPreview: (amount: number) =>
     send<{ data: VatPreview }>('/settings/vat-preview', { query: { amount } }),
 }
+
+/* ---------------- one member, behind tabs ---------------- */
+
+export interface MemberSummary {
+  activeCourses: number
+  paidOrders: number
+  /** Satang actually taken, refunds excluded. */
+  lifetimeSpend: number
+  essaysWaiting: number
+}
+
+export interface MemberCourseAccess {
+  id: number
+  courseId: number
+  title: string
+  slug: string
+  source: string
+  status: 'active' | 'revoked' | 'expired'
+  grantedAt: string
+  expiresAt: string | null
+  /** True when `expiresAt` is in the past, worked out by the API. */
+  expired: boolean
+  orderId: number | null
+  orderNo: string | null
+  lessonsDone: number
+  lessonsTotal: number
+  lastWatchedAt: string | null
+}
+
+export interface MemberQuizAttempt {
+  id: number
+  quizId: number
+  quizTitle: string
+  courseId: number | null
+  courseTitle: string | null
+  attemptNo: number
+  scorePct: number | null
+  passed: boolean | null
+  draft: boolean
+  startedAt: string
+  submittedAt: string | null
+}
+
+export interface MemberEssay {
+  id: number
+  quizId: number
+  quizTitle: string
+  courseId: number | null
+  courseTitle: string | null
+  questionId: number
+  prompt: string
+  status: string
+  currentVersion: number
+  submittedAt: string | null
+  resolvedAt: string | null
+}
+
+export interface MemberLearning {
+  attempts: MemberQuizAttempt[]
+  essays: MemberEssay[]
+  lastSeen: {
+    courseId: number
+    courseTitle: string
+    lessonTitle: string | null
+    lastWatchedAt: string | null
+  } | null
+}
+
+export interface MemberOrder {
+  id: number
+  orderNo: string
+  subtotal: number
+  courseDiscount: number
+  orderDiscount: number
+  vatAmount: number
+  total: number
+  currency: string
+  status: OrderStatus
+  paymentMethod: PaymentMethod | null
+  paidAt: string | null
+  createdAt: string
+  invoiceId: number | null
+  invoiceDocumentNo: string | null
+  itemSummary: string | null
+}
+
+export interface MemberPayments {
+  orders: MemberOrder[]
+  lifetimeSpend: number
+}
+
+/** The member's saved billing details — their current answer, not a document. */
+export interface MemberBilling {
+  userId: number
+  type: 'corporate' | 'individual'
+  name: string
+  taxId: string
+  branchType: 'head' | 'branch' | null
+  branchCode: string | null
+  address: string
+  createdAt: string
+  updatedAt: string
+}
+
+export const member = {
+  detail: (id: number) => send<{ data: Member & { birthdate: string | null; phoneCountryCode: string | null; phoneNational: string | null; privacyAcceptedAt: string | null; updatedAt: string } }>(`/members/${id}`),
+
+  summary: (id: number) => send<{ data: MemberSummary }>(`/members/${id}/summary`),
+
+  courses: (id: number) => send<{ data: MemberCourseAccess[] }>(`/members/${id}/courses`),
+
+  learning: (id: number) => send<{ data: MemberLearning }>(`/members/${id}/learning`),
+
+  payments: (id: number) => send<{ data: MemberPayments }>(`/members/${id}/payments`),
+
+  billing: (id: number) => send<{ data: MemberBilling | null }>(`/members/${id}/billing`),
+
+  saveBilling: (id: number, body: InvoiceInput) =>
+    send<{ data: MemberBilling }>(`/members/${id}/billing`, { method: 'PUT', body }),
+
+  clearBilling: (id: number) => send<void>(`/members/${id}/billing`, { method: 'DELETE' }),
+
+  /** Superadmin: ends or restores access to one course without a refund. */
+  toggleAccess: (id: number, entitlementId: number) =>
+    send<{ data: { courseTitle: string; was: string; now: string } }>(
+      `/members/${id}/entitlements/${entitlementId}/toggle`,
+      { method: 'POST' },
+    ),
+}

@@ -310,6 +310,38 @@ export const couponRedemptions = mysqlTable(
   ],
 )
 
+/**
+ * A member's saved billing details.
+ *
+ * Separate from `invoices`, which record what one particular document said and
+ * must never change afterwards. This is the customer's current answer, kept so
+ * they do not retype thirteen digits and a company address at every checkout,
+ * and so support can correct it once rather than per order.
+ *
+ * Same fields as an invoice carries, because the whole point is that checkout
+ * copies one into the other.
+ */
+export const memberBillingProfiles = mysqlTable(
+  'member_billing_profiles',
+  {
+    /** One per member, so the user id is the key. */
+    userId: bigint('user_id', { mode: 'number', unsigned: true })
+      .primaryKey()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: mysqlEnum('type', ['corporate', 'individual']).notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    /** Thai tax ID or national ID: 13 digits either way. */
+    taxId: varchar('tax_id', { length: 13 }).notNull(),
+    branchType: mysqlEnum('branch_type', ['head', 'branch']),
+    branchCode: varchar('branch_code', { length: 10 }),
+    address: text('address').notNull(),
+    createdAt: datetime('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
+    updatedAt: datetime('updated_at')
+      .default(sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+)
+
 export const invoices = mysqlTable(
   'invoices',
   {

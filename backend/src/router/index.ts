@@ -80,6 +80,14 @@ const router = createRouter({
       meta: { title: 'Students', roles: ['superadmin', 'admin'] },
     },
     {
+      // Everything about one student, behind tabs: who they are, what they can
+      // open, what they have done, what they paid, where their invoice goes.
+      path: '/students/:id',
+      name: 'StudentDetail',
+      component: () => import('@/views/People/StudentDetail.vue'),
+      meta: { title: 'Student', roles: ['superadmin', 'admin'] },
+    },
+    {
       path: '/teachers',
       name: 'Teachers',
       component: () => import('@/views/People/Teachers.vue'),

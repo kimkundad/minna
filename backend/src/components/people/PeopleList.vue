@@ -534,7 +534,18 @@ onMounted(load)
           </tr>
           <tr v-for="m in rows" :key="m.id" class="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
             <td class="px-5 py-3.5 sm:px-6">
-              <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ name(m) }}</p>
+              <!-- Students have a page of their own; the other two groups are
+                   managed from this list and have nothing more to show. -->
+              <router-link
+                v-if="group === 'students'"
+                :to="`/students/${m.id}`"
+                class="text-sm font-medium text-gray-800 hover:text-brand-500 dark:text-white/90"
+              >
+                {{ name(m) }}
+              </router-link>
+              <p v-else class="text-sm font-medium text-gray-800 dark:text-white/90">
+                {{ name(m) }}
+              </p>
               <p class="mt-0.5 text-xs text-gray-400">{{ m.email }}</p>
             </td>
             <td v-if="showRoles" class="px-5 py-3.5">
