@@ -613,7 +613,7 @@ onMounted(async () => {
                     {{ a.scorePct === null ? '—' : `${a.scorePct}%` }}
                   </td>
                   <td class="py-2.5 pr-4 text-sm">
-                    <span v-if="a.draft" class="text-gray-400">Not finished</span>
+                    <span v-if="!a.finished" class="text-gray-400">Not finished</span>
                     <span v-else-if="a.passed" class="text-success-600 dark:text-success-400">
                       Passed
                     </span>

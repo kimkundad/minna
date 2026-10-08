@@ -16,6 +16,7 @@ import { getVatRules, vatOf } from '../../lib/settings'
 // By name rather than as a namespace: invoices.service imports nothing from
 // here, so the one-way edge is visible at the import.
 import { issueForOrder as issueInvoiceForOrder } from './invoices.service'
+import { outer } from '../../lib/sql'
 
 /**
  * Buying things.
@@ -566,12 +567,12 @@ export async function listOrders(opts: {
       paidAt: orders.paidAt,
       createdAt: orders.createdAt,
       itemCount: sql<number>`(
-        SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = ${orders.id}
+        SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = ${outer(orders.id)}
       )`,
       // The titles as they were sold, so the row reads without opening it.
       itemSummary: sql<string | null>`(
         SELECT GROUP_CONCAT(oi.title_snapshot SEPARATOR ', ')
-        FROM order_items oi WHERE oi.order_id = ${orders.id}
+        FROM order_items oi WHERE oi.order_id = ${outer(orders.id)}
       )`,
     })
     .from(orders)

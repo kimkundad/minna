@@ -9,6 +9,7 @@ import {
   quizzes,
   users,
 } from '../../db/schema/index'
+import { outer } from '../../lib/sql'
 
 /**
  * The dashboard's figures.
@@ -194,7 +195,7 @@ export default async function dashboardRoutes(app: FastifyInstance) {
           sql`${essaySubmissions.status} IN ('pending', 'resubmitted')`,
           teacherId
             ? sql`EXISTS (SELECT 1 FROM course_instructors ci
-                          WHERE ci.course_id = ${quizzes.courseId} AND ci.user_id = ${teacherId})`
+                          WHERE ci.course_id = ${outer(quizzes.courseId)} AND ci.user_id = ${teacherId})`
             : undefined,
         ),
       )

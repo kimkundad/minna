@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { LOCALES } from '../../db/schema/auth'
 import { audit, diff } from '../../lib/audit'
 import * as service from './content.service'
+import { queryBool } from '../../lib/query'
 
 /**
  * The site's own content.
@@ -189,7 +190,7 @@ export default async function contentRoutes(app: FastifyInstance) {
   app.get('/contact-messages', adminOnly, async (req) => {
     const query = paging
       .extend({
-        unreadOnly: z.coerce.boolean().optional(),
+        unreadOnly: queryBool,
         q: z.string().max(100).optional(),
       })
       .parse(req.query)

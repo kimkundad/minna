@@ -252,7 +252,8 @@ const allGroups = [
         subItems: [
           { name: 'Quizzes', path: '/quizzes' },
           { name: 'Essay review', path: '/essay-review' },
-          { name: 'Lesson Q&A', path: '/lesson-questions', soon: true },
+          { name: 'Quiz results', path: '/quiz-results' },
+          { name: 'Lesson Q&A', path: '/lesson-questions' },
         ],
       },
     ],
@@ -269,7 +270,7 @@ const allGroups = [
         name: 'Students',
         subItems: [
           { name: 'All students', path: '/students' },
-          { name: 'Access rights', path: '/entitlements', soon: true },
+          { name: 'Access rights', path: '/entitlements' },
         ],
       },
       {

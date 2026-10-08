@@ -2,6 +2,7 @@ import { and, desc, eq, sql } from 'drizzle-orm'
 import { db } from '../../db/client'
 import { couponRedemptions, coupons, courses, orders, users } from '../../db/schema/index'
 import { conflict, notFound } from '../../lib/errors'
+import { outer } from '../../lib/sql'
 
 /**
  * Coupons, from the admin's side.
@@ -95,7 +96,7 @@ export async function list(opts: {
       // that turned out more popular than planned.
       discountGiven: sql<number>`(
         SELECT COALESCE(SUM(r.discount_amount), 0) FROM coupon_redemptions r
-        WHERE r.coupon_id = ${coupons.id}
+        WHERE r.coupon_id = ${outer(coupons.id)}
       )`,
     })
     .from(coupons)

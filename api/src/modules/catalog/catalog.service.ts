@@ -9,6 +9,7 @@ import {
   users,
 } from '../../db/schema/index'
 import { conflict, notFound } from '../../lib/errors'
+import { outer } from '../../lib/sql'
 
 /**
  * Catalog reads and writes.
@@ -199,7 +200,7 @@ export async function listCourses(opts: CourseListOptions): Promise<Paged<unknow
     opts.categoryId ? eq(courses.categoryId, opts.categoryId) : undefined,
     opts.q ? or(like(courses.title, `%${opts.q}%`), like(courses.slug, `%${opts.q}%`)) : undefined,
     opts.instructorId
-      ? sql`EXISTS (SELECT 1 FROM course_instructors ci WHERE ci.course_id = ${courses.id} AND ci.user_id = ${opts.instructorId})`
+      ? sql`EXISTS (SELECT 1 FROM course_instructors ci WHERE ci.course_id = ${outer(courses.id)} AND ci.user_id = ${opts.instructorId})`
       : undefined,
   ].filter(Boolean)
 

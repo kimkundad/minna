@@ -16,6 +16,7 @@ import {
 } from '../../db/schema/index'
 import { notFound } from '../../lib/errors'
 import { validateInvoice, type InvoiceInput } from '../commerce/invoices.service'
+import { outer } from '../../lib/sql'
 
 /**
  * Everything the admin's student page shows, behind its tabs.
@@ -51,18 +52,18 @@ export async function courseAccess(userId: number) {
       orderId: orders.id,
       lessonsDone: sql<number>`(
         SELECT COUNT(*) FROM lesson_progress lp
-        WHERE lp.user_id = ${entitlements.userId}
-          AND lp.course_id = ${entitlements.courseId}
+        WHERE lp.user_id = ${outer(entitlements.userId)}
+          AND lp.course_id = ${outer(entitlements.courseId)}
           AND lp.completed_at IS NOT NULL
       )`,
       lessonsTotal: sql<number>`(
         SELECT COUNT(*) FROM lessons l
         JOIN course_modules cm ON cm.id = l.module_id
-        WHERE cm.course_id = ${entitlements.courseId}
+        WHERE cm.course_id = ${outer(entitlements.courseId)}
       )`,
       lastWatchedAt: sql<string | null>`(
         SELECT MAX(lp.last_watched_at) FROM lesson_progress lp
-        WHERE lp.user_id = ${entitlements.userId} AND lp.course_id = ${entitlements.courseId}
+        WHERE lp.user_id = ${outer(entitlements.userId)} AND lp.course_id = ${outer(entitlements.courseId)}
       )`,
     })
     .from(entitlements)
@@ -96,7 +97,10 @@ export async function learning(userId: number) {
       attemptNo: quizAttempts.attemptNo,
       scorePct: quizAttempts.scorePct,
       passed: quizAttempts.passed,
-      draft: quizAttempts.draft,
+      // Whether they finished it, which is whether it was submitted. The
+      // `draft` column holds the autosaved answers of an attempt still in
+      // progress and can linger on a submitted one, so it is the wrong test.
+      finished: sql<boolean>`${quizAttempts.submittedAt} IS NOT NULL`,
       startedAt: quizAttempts.startedAt,
       submittedAt: quizAttempts.submittedAt,
     })

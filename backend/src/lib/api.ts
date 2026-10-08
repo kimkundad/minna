@@ -990,7 +990,8 @@ export interface MemberQuizAttempt {
   attemptNo: number
   scorePct: number | null
   passed: boolean | null
-  draft: boolean
+  /** Whether it was submitted. An unfinished attempt has no score. */
+  finished: boolean
   startedAt: string
   submittedAt: string | null
 }
@@ -1343,4 +1344,134 @@ export const content = {
     send<{ data: Subscriber }>(`/subscribers/${id}/unsubscribe`, { method: 'POST' }),
   /** The confirmed addresses as a file, for whoever sends the mail. */
   exportSubscribers: () => `${BASE}/subscribers/export`,
+}
+
+/* ---------------- quiz results ---------------- */
+
+export interface QuizResultRow {
+  quizId: number
+  title: string
+  courseId: number | null
+  courseTitle: string | null
+  passPct: number
+  /** Finished attempts only — an unfinished one has no score. */
+  attempts: number
+  people: number
+  passed: number
+  averageScore: number | null
+  lastAttemptAt: string | null
+}
+
+export interface QuizQuestionResult {
+  id: number
+  type: string
+  text: string
+  sortOrder: number
+  answered: number
+  wrong: number
+  /** Null when nobody reached it. A high number usually means the question is
+   *  badly worded rather than that the class cannot answer it. */
+  wrongPct: number | null
+}
+
+export interface QuizResultDetail {
+  quiz: {
+    id: number
+    title: string
+    courseId: number | null
+    courseTitle: string | null
+    passPct: number
+  }
+  summary: { attempts: number; people: number; averageScore: number | null; passed: number }
+  questions: QuizQuestionResult[]
+  attempts: {
+    id: number
+    userId: number
+    firstName: string
+    lastName: string
+    email: string
+    attemptNo: number
+    scorePct: number | null
+    passed: boolean
+    submittedAt: string | null
+  }[]
+}
+
+export const quizResults = {
+  list: () => send<{ data: QuizResultRow[] }>('/quiz-results'),
+  get: (id: number) => send<{ data: QuizResultDetail }>(`/quiz-results/${id}`),
+}
+
+/* ---------------- who can open what ---------------- */
+
+export interface AccessRow {
+  id: number
+  userId: number
+  firstName: string
+  lastName: string
+  email: string
+  courseId: number
+  courseTitle: string
+  source: string
+  status: 'active' | 'revoked' | 'expired'
+  grantedAt: string
+  expiresAt: string | null
+  expired: boolean
+  orderNo: string | null
+}
+
+export interface AccessByCourse {
+  courseId: number
+  title: string
+  active: number
+  expired: number
+  revoked: number
+}
+
+export const access = {
+  list: (query: Record<string, string | number | undefined> = {}) =>
+    send<Paged<AccessRow>>('/entitlements', { query }),
+  byCourse: () => send<{ data: AccessByCourse[] }>('/entitlements/by-course'),
+}
+
+/* ---------------- lesson questions ---------------- */
+
+export interface LessonQuestionReply {
+  id: number
+  parentId: number | null
+  body: string
+  createdAt: string
+  isInstructor: boolean
+  userId: number
+  firstName: string
+  lastName: string
+}
+
+export interface LessonQuestionRow {
+  id: number
+  body: string
+  createdAt: string
+  /** Stamped by the first reply, which is what drives the queue. */
+  answeredAt: string | null
+  userId: number
+  firstName: string
+  lastName: string
+  courseId: number | null
+  courseTitle: string | null
+  lessonId: number | null
+  lessonTitle: string | null
+  replies: LessonQuestionReply[]
+}
+
+export const lessonQuestions = {
+  list: (query: Record<string, string | number | boolean | undefined> = {}) =>
+    send<Paged<LessonQuestionRow> & { meta: { unanswered: number } }>('/lesson-questions', { query }),
+
+  answer: (id: number, body: string) =>
+    send<{ data: { replyId: number; courseId: number | null } }>(
+      `/lesson-questions/${id}/answer`,
+      { method: 'POST', body: { body } },
+    ),
+
+  remove: (id: number) => send<void>(`/lesson-questions/${id}`, { method: 'DELETE' }),
 }

@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, inArray, isNotNull, isNull, like, sql } from
 import { db } from '../../db/client'
 import { courses, lessons, quizChoices, quizQuestions, quizzes } from '../../db/schema/index'
 import { conflict, notFound } from '../../lib/errors'
+import { outer } from '../../lib/sql'
 
 /**
  * Quiz authoring.
@@ -299,11 +300,11 @@ export async function listQuizzes(opts: {
       lessonId: quizzes.lessonId,
       // Counted here rather than in a second round trip per row.
       questionCount: sql<number>`(
-        SELECT COUNT(*) FROM quiz_questions qq WHERE qq.quiz_id = ${quizzes.id}
+        SELECT COUNT(*) FROM quiz_questions qq WHERE qq.quiz_id = ${outer(quizzes.id)}
       )`,
       essayCount: sql<number>`(
         SELECT COUNT(*) FROM quiz_questions qq
-        WHERE qq.quiz_id = ${quizzes.id} AND qq.type = 'essay'
+        WHERE qq.quiz_id = ${outer(quizzes.id)} AND qq.type = 'essay'
       )`,
     })
     .from(courses)

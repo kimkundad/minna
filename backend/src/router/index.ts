@@ -145,6 +145,25 @@ const router = createRouter({
     },
 
     {
+      path: '/quiz-results',
+      name: 'QuizResults',
+      component: () => import('@/views/Learning/QuizResults.vue'),
+      meta: { title: 'Quiz results', roles: ['superadmin', 'admin', 'teacher'] },
+    },
+    {
+      path: '/lesson-questions',
+      name: 'LessonQuestions',
+      component: () => import('@/views/Learning/LessonQuestions.vue'),
+      meta: { title: 'Lesson Q&A', roles: ['superadmin', 'admin', 'teacher'] },
+    },
+    {
+      path: '/entitlements',
+      name: 'AccessRights',
+      component: () => import('@/views/People/AccessRights.vue'),
+      meta: { title: 'Access rights', roles: ['superadmin', 'admin'] },
+    },
+
+    {
       path: '/posts',
       name: 'Articles',
       component: () => import('@/views/Content/Articles.vue'),

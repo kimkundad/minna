@@ -16,6 +16,7 @@ import peopleRoutes from './modules/people/people.routes'
 import memberDetailRoutes from './modules/people/member-detail.routes'
 import meRoutes from './modules/people/me.routes'
 import essayRoutes from './modules/learning/essay.routes'
+import insightsRoutes from './modules/learning/insights.routes'
 import commerceRoutes from './modules/commerce/commerce.routes'
 import couponRoutes from './modules/commerce/coupons.routes'
 import invoiceRoutes from './modules/commerce/invoices.routes'
@@ -66,6 +67,7 @@ export async function buildApp() {
   await app.register(memberDetailRoutes, { prefix: '/api/v1' })
   await app.register(meRoutes, { prefix: '/api/v1' })
   await app.register(essayRoutes, { prefix: '/api/v1' })
+  await app.register(insightsRoutes, { prefix: '/api/v1' })
   await app.register(couponRoutes, { prefix: '/api/v1' })
   await app.register(invoiceRoutes, { prefix: '/api/v1' })
   await app.register(settingsRoutes, { prefix: '/api/v1' })
