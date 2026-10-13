@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { api, type PublicCategory } from '@/lib/api'
 import { categoryNameIn } from '@/lib/course'
@@ -122,12 +122,26 @@ export const useCategoriesStore = defineStore('categories', () => {
   }
 
   /** Safe to call from every menu on every mount; only the first one fetches. */
-  function load(): Promise<void> {
-    if (loaded.value) return Promise.resolve()
+  /**
+   * The language the list in hand was fetched for.
+   *
+   * It used to be fetched once and kept, which was right when the answer was
+   * the same in every language. It is not any more: the count beside a
+   * category is the courses a reader of *that* language can take, so a list
+   * fetched in Thai puts Thai counts on the Korean menu until the page is
+   * reloaded by hand.
+   */
+  let fetchedFor: string | null = null
+
+  function load(force = false): Promise<void> {
+    const want = String(i18n.global.locale.value)
+    if (!force && loaded.value && fetchedFor === want) return Promise.resolve()
+
     inFlight ??= api
       .categories()
       .then((r) => {
         all.value = r.data
+        fetchedFor = want
       })
       .catch(() => {
         // The menus drop their category list. Nothing else on the page cares.
@@ -138,6 +152,19 @@ export const useCategoriesStore = defineStore('categories', () => {
       })
     return inFlight
   }
+
+  /**
+   * Fetch again when the language changes, here rather than in each menu.
+   *
+   * The header, the drawer and the search box all ask this store to load, and
+   * all three would have to remember to ask again. One of them would forget,
+   * and the menus would disagree — which is the thing this store exists to
+   * prevent.
+   */
+  watch(
+    () => i18n.global.locale.value,
+    () => void load(true),
+  )
 
   return { all, loaded, tiles, roots, search, load }
 })

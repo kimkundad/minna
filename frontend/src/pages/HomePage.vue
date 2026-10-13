@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import HeroCarousel from '@/components/home/HeroCarousel.vue'
@@ -50,9 +50,17 @@ const articles = ref<PublicPost[]>([])
 
 const RAIL = 8
 
-/** A rail stays out of the page until it has something in it, rather than
- *  drawing a heading over an empty track while the request is in flight. */
-onMounted(async () => {
+/**
+ * Everything on this page that the language decides.
+ *
+ * Which is now most of it: the catalogue answers in the reader's language, the
+ * category counts count that language's courses, the articles are that
+ * language's articles, and the two bands at the foot are written per language.
+ *
+ * A rail stays out of the page until it has something in it, rather than
+ * drawing a heading over an empty track while the request is in flight.
+ */
+async function load() {
   const [cats, fresh, best, latest, band, closingBand] = await Promise.all([
     api.categories().catch(() => null),
     api.courses({ sort: 'newest', perPage: RAIL }).catch(() => null),
@@ -81,7 +89,20 @@ onMounted(async () => {
   // Unless taking the overlap out would leave the rail nearly empty, in which
   // case a repeated card beats a missing section.
   featured.value = (rest.length >= 4 ? rest : (best?.data ?? [])).slice(0, RAIL)
-})
+}
+
+onMounted(load)
+
+/**
+ * Fetch it all again when the language changes.
+ *
+ * Switching language is a route change — `/th` to `/ko` — and Vue answers it
+ * by keeping the component it already has, so `onMounted` does not run again.
+ * The translated labels changed on their own and everything that had come from
+ * the API did not: the journey band and the closing band kept the old
+ * language's sentences until somebody reloaded the page by hand.
+ */
+watch(uiLocale, load)
 
 const asCards = (list: PublicCourse[]) =>
   list.map((c) => courseView(c, { locale: locale.value, t, categories: allCategories.value }))
