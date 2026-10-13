@@ -177,17 +177,18 @@ onMounted(async () => {
               <th class="px-5 py-3 font-medium">Status</th>
               <th class="px-5 py-3 font-medium">Price</th>
               <th class="px-5 py-3 font-medium">Length</th>
+              <th class="px-5 py-3 font-medium">Students</th>
               <th class="px-5 py-3 font-medium sm:px-6"></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
             <tr v-if="loading">
-              <td colspan="6" class="px-5 py-8 text-center text-sm text-gray-500 sm:px-6">
+              <td colspan="7" class="px-5 py-8 text-center text-sm text-gray-500 sm:px-6">
                 Loading…
               </td>
             </tr>
             <tr v-else-if="!rows.length">
-              <td colspan="6" class="px-5 py-8 text-center text-sm text-gray-500 sm:px-6">
+              <td colspan="7" class="px-5 py-8 text-center text-sm text-gray-500 sm:px-6">
                 No courses match.
               </td>
             </tr>
@@ -225,6 +226,11 @@ onMounted(async () => {
               </td>
               <td class="px-5 py-3.5 text-sm text-gray-500 dark:text-gray-400">
                 {{ formatDuration(row.durationSeconds) }}
+              </td>
+              <!-- People who may study it today: a free enrolment counts like
+                   a sale, because both put somebody in the room. -->
+              <td class="px-5 py-3.5 text-sm tabular-nums text-gray-800 dark:text-white/90">
+                {{ row.enrolmentCount ? row.enrolmentCount.toLocaleString() : '—' }}
               </td>
               <td class="px-5 py-3.5 text-right text-sm sm:px-6">
                 <RouterLink :to="`/courses/${row.id}`" class="text-brand-500 hover:text-brand-600">

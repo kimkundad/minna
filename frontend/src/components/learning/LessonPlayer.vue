@@ -9,23 +9,21 @@ import { call } from './learning'
 import type { Course, Lesson, LessonState } from './types'
 
 /**
- * The simulated lesson video.
+ * The lesson video.
  *
- * There is no media file behind it: the clock is a real one — an interval plus
- * `performance.now()` deltas, so a second of playback is a second even in a
- * background tab — and everything else is the design's own chrome driven by it.
+ * A real `<video>` under the design's own chrome: the element is the clock, so
+ * the playhead cannot drift from the picture, and seeking is the browser's job
+ * rather than an arithmetic one.
  *
  * Two positions matter, and conflating them is the bug this is written to
  * avoid. `pos` is where the playhead is, which scrubbing moves in both
  * directions. `max` is the furthest point ever reached, which only ever grows,
  * and it alone decides completion: dragging back to the start must not undo
- * having watched the lesson. The store records `max / total`, and
- * `store.trackLesson` marks the lesson done at 0.9 — the 90% rule lives there,
- * not here.
+ * having watched the lesson. Which fraction counts as finished is the server's
+ * rule, not this component's — it reports, and is told.
  *
- * Writes are throttled to once every two seconds while playing, plus one on
- * pause, on seek-commit, and on unmount, because every write is a localStorage
- * round trip.
+ * Reports are throttled to once every five seconds while playing, plus one on
+ * pause, on seek-commit, and on unmount, because each is a request.
  */
 const props = defineProps<{
   course: Course
@@ -39,11 +37,22 @@ const props = defineProps<{
   preview: boolean
   /** Signed out, so the sample can offer registration at the end. */
   guest: boolean
+  /** The signed media URL. Null while it is being fetched, or when the lesson
+   *  has no file uploaded — the poster and its message stand in. */
+  src: string | null
+  /** Where the playhead starts, in seconds, as the server last recorded it. */
+  startAt?: number
+  /** How much has ever been watched, 0 to 1, for the seen-bar under the
+   *  playhead. */
+  watched?: number
 }>()
 
 const emit = defineEmits<{
   done: []
   tracked: [fraction: number]
+  /** Where the lesson has got to, for the page to save. Seconds, because that
+   *  is what the API stores; the fraction is this component's own arithmetic. */
+  report: [seconds: number]
   /** Whole seconds only: the notes tab's timestamp button reads this, and it
    *  has no use for a position four times a second. */
   move: [seconds: number]
@@ -51,16 +60,27 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-const total = computed(() => props.lesson.sec || 60)
+/**
+ * The lesson's length as the catalog recorded it, until the file itself says
+ * otherwise. The file is the authority — a lesson whose stated minutes drifted
+ * from the upload would otherwise finish early or never.
+ */
+const measured = ref(0)
+const total = computed(() => measured.value || props.lesson.sec || 60)
 
-const saved = call<LessonState>('lessonState', props.course.id, props.lesson.id)
-const start = saved.pos && saved.pos < total.value - 3 ? saved.pos : 0
+const start = (() => {
+  const at = props.startAt ?? 0
+  // Not within three seconds of the end: offering to resume there is offering
+  // to watch the credits.
+  return at > 0 && at < (props.lesson.sec || Infinity) - 3 ? at : 0
+})()
 
 const root = ref<HTMLElement | null>(null)
 const timeline = ref<HTMLElement | null>(null)
+const media = ref<HTMLVideoElement | null>(null)
 
 const pos = ref(start)
-const max = ref(Math.min(total.value, Math.max((saved.f || 0) * total.value, saved.pos || 0)))
+const max = ref(Math.max(start, (props.watched ?? 0) * (props.lesson.sec || 0)))
 const state = ref<'paused' | 'playing' | 'ended'>('paused')
 const idle = ref(false)
 const scrubbing = ref(false)
@@ -71,13 +91,8 @@ const fullscreen = ref(false)
 /** The resume chip is a one-shot hint; the first play or seek retires it. */
 const showResume = ref(start > 0)
 
-/** The fraction the store held at our last write. A lower one later means the
- *  prototype's data was reset underneath this page, so stop writing. */
-let savedFraction = saved.f || 0
 let dead = false
 
-let interval = 0
-let lastTick = 0
 let lastWrite = 0
 let idleTimer = 0
 let keyTimer = 0
@@ -97,43 +112,23 @@ function setPos(v: number) {
   }
 }
 
+/**
+ * Tells the page where the lesson has got to.
+ *
+ * The playhead, not the furthest point: this is where somebody comes back to,
+ * and a student who watched to the end, scrubbed back to re-hear a phrase and
+ * then closed the tab wants to land on the phrase.
+ *
+ * The furthest point is the server's to keep — it only ever grows there, and it
+ * is what decides whether the lesson is finished. Sending the playhead and
+ * letting the server hold both is what keeps "where I was" and "how much I have
+ * seen" from being the same number.
+ */
 function track() {
   if (!props.canTrack || dead) return
-  const now = call<LessonState>('lessonState', props.course.id, props.lesson.id)
-  if (now.f + 0.001 < savedFraction) {
-    dead = true
-    return
-  }
-  const r = call<{ justDone: boolean; rec?: { f: number } }>(
-    'trackLesson',
-    props.course.id,
-    props.lesson.id,
-    max.value / total.value,
-    Math.round(pos.value),
-  )
-  if (r?.rec) savedFraction = r.rec.f
+  lastWrite = performance.now()
   emit('tracked', max.value / total.value)
-  if (r?.justDone) emit('done')
-}
-
-function stopClock() {
-  clearInterval(interval)
-  interval = 0
-}
-
-function tick() {
-  if (state.value !== 'playing' || dead) return
-  const now = performance.now()
-  setPos(pos.value + Math.min(2, Math.max(0, (now - lastTick) / 1000)))
-  lastTick = now
-  if (pos.value >= total.value) {
-    finish()
-    return
-  }
-  if (now - lastWrite >= 2000) {
-    lastWrite = now
-    track()
-  }
+  emit('report', Math.round(pos.value))
 }
 
 function wake() {
@@ -156,34 +151,17 @@ function idleSoon() {
 }
 
 function play() {
-  if (dead) return
-  if (pos.value >= total.value - 0.25) setPos(0)
+  if (dead || !media.value) return
+  if (pos.value >= total.value - 0.25) seek(0, false)
   showResume.value = false
-  state.value = 'playing'
-  lastTick = performance.now()
-  lastWrite = lastTick
-  stopClock()
-  interval = window.setInterval(tick, 250)
   idleSoon()
-  track()
+  // Autoplay rules and a missing file both land here; neither is worth an
+  // error box, because the big play button is still there to press.
+  void media.value.play().catch(() => {})
 }
 
 function pause() {
-  if (state.value !== 'playing') return
-  tick()
-  if (state.value !== 'playing') return
-  state.value = 'paused'
-  stopClock()
-  wake()
-  track()
-}
-
-function finish() {
-  state.value = 'ended'
-  stopClock()
-  setPos(total.value)
-  wake()
-  track()
+  media.value?.pause()
 }
 
 function toggle() {
@@ -193,9 +171,58 @@ function toggle() {
 
 function seek(v: number, commit: boolean) {
   showResume.value = false
-  setPos(v)
+  const to = Math.max(0, Math.min(total.value, v))
+  if (media.value) media.value.currentTime = to
+  setPos(to)
   if (state.value === 'ended' && pos.value < total.value) state.value = 'paused'
   if (commit) track()
+}
+
+/* ---------------- what the element tells us ---------------- */
+
+function onLoaded() {
+  const el = media.value
+  if (!el) return
+  if (Number.isFinite(el.duration) && el.duration > 0) measured.value = el.duration
+  // Picking up where they left it. Done once the file knows its own length, or
+  // the browser refuses the seek.
+  if (start > 0 && el.currentTime < 0.5) el.currentTime = Math.min(start, total.value - 1)
+}
+
+function onTimeUpdate() {
+  const el = media.value
+  if (!el || dead) return
+  setPos(el.currentTime)
+  if (state.value === 'playing' && performance.now() - lastWrite >= 5000) track()
+}
+
+function onPlaying() {
+  state.value = 'playing'
+  showResume.value = false
+  idleSoon()
+  track()
+}
+
+function onPause() {
+  if (state.value === 'ended') return
+  state.value = 'paused'
+  wake()
+  track()
+}
+
+function onEnded() {
+  state.value = 'ended'
+  setPos(total.value)
+  wake()
+  track()
+}
+
+/** The signed link has expired, the network went, or the file is not there. */
+const failed = ref(false)
+function onError() {
+  failed.value = true
+  state.value = 'paused'
+  wake()
 }
 
 function keySeek(v: number) {
@@ -315,23 +342,35 @@ function onMediaClick() {
   else toggle()
 }
 
+/**
+ * Closing the laptop is not navigating away.
+ *
+ * The lid comes down, the tab is killed, the phone locks — none of those run
+ * `onBeforeUnmount`, and without this the last five seconds of writes are the
+ * last thing the server heard. Writing once on the way out costs nothing and is
+ * the difference between coming back to 25:00 and to 24:55.
+ */
+function onHidden() {
+  if (document.visibilityState === 'hidden') track()
+}
+
 onMounted(() => {
   document.addEventListener('fullscreenchange', onFullscreenChange)
+  document.addEventListener('visibilitychange', onHidden)
+  window.addEventListener('pagehide', track)
   emit('move', Math.floor(pos.value))
 })
 
 onBeforeUnmount(() => {
   if (dead) return
-  if (state.value === 'playing') {
-    tick()
-    state.value = 'paused'
-  }
-  stopClock()
+  media.value?.pause()
   track()
   dead = true
   clearTimeout(idleTimer)
   clearTimeout(keyTimer)
   document.removeEventListener('fullscreenchange', onFullscreenChange)
+  document.removeEventListener('visibilitychange', onHidden)
+  window.removeEventListener('pagehide', track)
   if (fsElement() === root.value) document.exitFullscreen?.()
 })
 
@@ -364,6 +403,8 @@ defineExpose({
     @dblclick="toggleFullscreen"
   >
     <div class="lp-media" data-lp-media @click="onMediaClick">
+      <!-- The cover stays underneath: it is what fills the frame before the
+           first frame arrives, and all there is for a lesson with no file. -->
       <CourseImage
         class="lp-poster"
         :image="props.course.image"
@@ -375,10 +416,29 @@ defineExpose({
         eager
         priority
       />
+      <!-- No native controls: the chrome around this is the control surface,
+           and two sets would fight. `controlsList` and the blocked context
+           menu do not stop a determined download — nothing in a browser can —
+           but they stop the accidental one. -->
+      <video
+        v-if="props.src"
+        ref="media"
+        class="lp-video"
+        :src="props.src"
+        playsinline
+        preload="metadata"
+        controlslist="nodownload noplaybackrate"
+        disablepictureinpicture
+        @loadedmetadata="onLoaded"
+        @timeupdate="onTimeUpdate"
+        @playing="onPlaying"
+        @pause="onPause"
+        @ended="onEnded"
+        @error="onError"
+        @contextmenu.prevent
+      />
       <div class="lp-scrim" />
     </div>
-
-    <span class="lp-tag"><AppIcon name="flask" />{{ t('learning.player.mock') }}</span>
     <span v-if="props.preview" class="lp-tag lp-tag--right">
       <AppIcon name="eye" />{{ t('learning.player.sample') }}
     </span>
@@ -401,6 +461,10 @@ defineExpose({
     >
       <AppIcon name="play" />
     </button>
+
+    <div v-if="failed" class="lp-fail" role="alert">
+      <AppIcon name="alert-circle" />{{ t('learning.player.loadFailed') }}
+    </div>
 
     <div class="lp-end" :hidden="state !== 'ended'">
       <span class="lp-end-ico"><AppIcon name="check-circle" /></span>

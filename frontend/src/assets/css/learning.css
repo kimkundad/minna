@@ -46,6 +46,16 @@
 .lp-focus-btn:hover { border-color: var(--brand-primary); color: var(--brand-primary-dark); }
 .lp-focus-btn[aria-pressed="true"] { background: var(--ink-primary); border-color: var(--ink-primary); color: #fff; }
 .lp-focus-btn[aria-pressed="true"] svg { color: #FFD68A; }
+/* Jump to the curriculum. Hidden here on purpose: from 960px up the lesson
+   list is a sidebar already on screen, and a button that scrolls to something
+   in view is noise. The breakpoint below turns it on with .lp-curr-btn. */
+.lp-jump-btn {
+  display: none; place-items: center; width: 44px; height: 44px; flex-shrink: 0;
+  border-radius: var(--r-pill); border: 1px solid var(--border-default); background: #fff; color: var(--ink-primary);
+  transition: background-color var(--dur-btn), border-color var(--dur-btn), color var(--dur-btn);
+}
+.lp-jump-btn svg { width: 19px; height: 19px; }
+.lp-jump-btn:hover { border-color: var(--brand-primary); color: var(--brand-primary-dark); }
 
 /* layout */
 .lp-root { padding: 20px var(--page-pad) 36px; }
@@ -68,10 +78,15 @@
 .lp-frame--center .spinner { color: #8FE3EE; }
 .lp-frame--center p { margin: 0; color: #CFE4E7; font-size: 15px; }
 
-/* ---------- mock video player ---------- */
+/* ---------- video player ---------- */
 .lp-media { position: absolute; inset: 0; z-index: 0; cursor: pointer; }
 .lp-poster { width: 100%; height: 100%; object-fit: cover; transform: scale(1.02); transform-origin: 62% 42%; }
-.lp-player[data-state="playing"] .lp-poster { animation: lp-drift 48s linear infinite alternate; }
+/* The file sits over its own cover: the cover fills the frame until the first
+   frame arrives, and is the whole of it for a lesson with nothing uploaded. */
+.lp-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #080E0F; }
+/* The slow drift is the still picture's only life. Once a real frame is
+   showing it would be the picture moving under the video. */
+.lp-player[data-state="playing"]:not(:has(.lp-video)) .lp-poster { animation: lp-drift 48s linear infinite alternate; }
 @keyframes lp-drift { from { transform: scale(1.02); } to { transform: scale(1.14) translate(-2%, -1.5%); } }
 .lp-scrim {
   position: absolute; inset: 0; pointer-events: none; transition: background-color .35s;
@@ -377,9 +392,12 @@
 .lp-qa { display: grid; gap: 22px; }
 .lp-qa-form { padding: 18px; border-radius: 16px; background: var(--lp-surface-2); border: 1px solid var(--lp-border); }
 .lp-qa-form .textarea { min-height: 96px; }
-.lp-qa-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+/* The captcha sits on the left of this row and the send button on the right;
+   below 560px they stack, box first, because ticking comes before sending. */
+.lp-qa-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.lp-qa-actions > :only-child { margin-left: auto; }
 .lp-qa-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
-.lp-qa-item { padding: 16px 18px; border-radius: 16px; border: 1px solid var(--lp-border); background: var(--lp-surface); }
+.lp-qa-item { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--lp-border); background: var(--lp-surface); }
 .lp-qa-item.is-mine { border-color: #F1D899; background: color-mix(in srgb, var(--c-warning-tint) 55%, var(--lp-surface)); }
 .lp-qa-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .lp-qa-who { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35; }
@@ -387,10 +405,10 @@
 .lp-qa-who span { font-size: 12.5px; color: var(--lp-muted); }
 .lp-qa-ref { display: inline-flex; align-items: center; gap: 6px; margin: 10px 0 0; font-size: 12.5px; font-weight: 600; color: var(--lp-muted); }
 .lp-qa-ref svg { width: 14px; height: 14px; }
-.lp-qa-q { margin: 8px 0 0; font-size: 15px; line-height: 1.59; color: var(--lp-text); overflow-wrap: anywhere; }
-.lp-qa-ans { display: flex; gap: 10px; margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: var(--lp-surface-2); border-left: 3px solid var(--lp-accent); }
-.lp-qa-ans p { margin: 0; font-size: 14px; line-height: 1.59; color: var(--lp-ink); }
-.lp-qa-by { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 4px !important; }
+.lp-qa-q { margin: 6px 0 0; font-size: 14.5px; line-height: 1.5; color: var(--lp-text); overflow-wrap: anywhere; }
+.lp-qa-ans { display: flex; gap: 10px; margin-top: 8px; padding: 9px 12px; border-radius: 12px; background: var(--lp-surface-2); border-left: 3px solid var(--lp-accent); }
+.lp-qa-ans p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--lp-ink); }
+.lp-qa-by { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 2px !important; }
 .lp-qa-by b { font-size: 13.5px; color: var(--lp-text); }
 .lp-qa-by .badge { height: 22px; font-size: 11.5px; }
 
@@ -466,6 +484,8 @@
   .lp-layout { grid-template-columns: minmax(0, 1fr); }
   .lp-side { display: none; }
   .lp-curr-btn { display: flex; }
+  /* On together with the button it points at, so neither can exist alone. */
+  .lp-jump-btn { display: grid; }
   .lp-course-line { display: block; }
   .lp-info { flex-direction: column; align-items: stretch; }
   .lp-ov { grid-template-columns: minmax(0, 1fr); gap: 24px; }
@@ -549,6 +569,8 @@ html.lp-dark { color-scheme: dark; background: #0D1618; }
 .focus-dark .lp-focus-btn { background: var(--fd-surface); border-color: var(--fd-border); color: var(--fd-text); }
 .focus-dark .lp-focus-btn:hover { border-color: var(--fd-accent); color: var(--fd-accent); }
 .focus-dark .lp-focus-btn[aria-pressed="true"] { background: var(--fd-surface-2); border-color: #3D5559; color: var(--fd-text); }
+.focus-dark .lp-jump-btn { background: var(--fd-surface); border-color: var(--fd-border); color: var(--fd-text); }
+.focus-dark .lp-jump-btn:hover { border-color: var(--fd-accent); color: var(--fd-accent); }
 .focus-dark .lp-frame, .focus-dark .lp-quizcard { box-shadow: 0 0 0 1px var(--fd-border), 0 30px 60px -30px rgba(0, 0, 0, .8); }
 .focus-dark .lp-les.is-current .lp-les-ico { color: var(--fd-bg); }
 .focus-dark .lp-les-tag { background: rgba(0, 194, 214, .14); color: var(--fd-accent); }
@@ -1165,4 +1187,92 @@ html.lp-dark { color-scheme: dark; background: #0D1618; }
   .page-cert .cert-layout { display: block; }
   .page-cert .cert-paper { padding: 0; border-radius: 0; background: none; box-shadow: none; }
   .page-cert .cert-paper .cert-sheet { page: cert; width: 297mm; height: 209.6mm; aspect-ratio: auto; border-radius: 0; box-shadow: none; break-inside: avoid; }
+}
+
+/* The browser's own PDF viewer, inside this design's reader chrome. */
+.lp-doc-file { flex: 1; width: 100%; min-height: 0; border: 0; background: var(--surface-subtle); }
+
+/* Said over the frame: a poster with a play button that does nothing reads as
+   a video waiting to be pressed. */
+.lp-fail { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3; display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; background: rgba(8, 14, 15, .82); color: #fff; font-size: 14px; }
+.lp-fail svg { width: 18px; height: 18px; }
+
+/* The thread's own small controls: reply, and withdraw your own. Text buttons,
+   because they sit inside a conversation and a row of pills would shout. */
+.lp-qa-foot { display: flex; gap: 14px; margin-top: 10px; }
+.lp-qa-link { display: inline-flex; align-items: center; gap: 5px; padding: 0; border: 0; background: none; color: var(--brand-primary-dark); font: inherit; font-size: 13.5px; cursor: pointer; }
+.lp-qa-link:hover { text-decoration: underline; }
+.lp-qa-link svg { width: 15px; height: 15px; }
+.lp-qa-when { margin-left: auto; color: var(--ink-secondary); font-size: 12.5px; font-weight: 400; }
+.lp-qa-replyform { margin-top: 12px; padding-left: 14px; border-left: 2px solid var(--border-default); }
+.lp-qa-empty { display: flex; align-items: center; gap: 8px; margin: 0; padding: 18px 0; color: var(--ink-secondary); font-size: 14.5px; }
+.lp-qa-empty svg { width: 18px; height: 18px; }
+
+/* The author's own controls sit at the right end of the line that already
+   names them, rather than on a row of their own under every post: a thread of
+   six posts was paying six lines for two words. */
+.lp-qa-own { margin-left: auto; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.lp-qa-by .lp-qa-own { margin-left: auto; }
+.lp-qa-link.is-danger { color: var(--c-danger, #D64545); }
+.lp-qa-editform { margin-top: 8px; }
+.lp-qa-editform .textarea { min-height: 72px; }
+.lp-qa-actions-btns { display: flex; align-items: center; gap: 8px; }
+/* One line for the reply link, and nothing under a post nobody is replying to. */
+.lp-qa-foot { margin-top: 8px; }
+
+/* ---------- asking about this lesson ---------- */
+/* Beside the lesson title, because that is where somebody is when they get
+   stuck. Tinted rather than outlined: it has to be findable at a glance
+   without competing with the player above it. */
+.lp-ask {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 10px 14px 10px 12px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  background: var(--lp-accent-tint);
+  color: var(--lp-text);
+  text-align: left;
+  transition: border-color var(--dur-btn), background-color var(--dur-btn);
+}
+.lp-ask:hover { border-color: var(--lp-accent); }
+.lp-ask-ico {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--lp-accent);
+  color: #fff;
+}
+.lp-ask-ico svg { width: 22px; height: 22px; }
+.lp-ask-txt { flex: 1; min-width: 0; }
+.lp-ask-txt b { display: block; font-size: 15px; }
+.lp-ask-txt small { display: block; font-size: 13px; color: var(--lp-muted); }
+.lp-ask-chev { width: 20px; height: 20px; flex-shrink: 0; color: var(--lp-muted); }
+/* The marks for this course. The same card, outlined rather than tinted: the
+   accent belongs to one action per area, and here that is asking. */
+.lp-result { background: var(--lp-surface); border-color: var(--lp-border); }
+.lp-result:hover { border-color: var(--lp-accent); }
+.lp-result .lp-ask-ico { background: var(--lp-accent-tint); color: var(--lp-accent-ink); }
+
+/* One column holding both, so the pair takes a single place in the row above
+   rather than two. */
+.lp-side-actions { display: flex; flex-direction: column; gap: 10px; }
+
+/* Wide enough for the label to stay on one line beside the lesson title; the
+   cards read as offers rather than as cramped afterthoughts. */
+@media (min-width: 960px) {
+  .lp-ask { min-width: 278px; }
+  .lp-side-actions { flex: 0 0 278px; }
+}
+
+/* Stacked under the title rather than beside it, where the curriculum button
+   also lives — full-width cards read better than half ones. */
+@media (max-width: 959px) {
+  .lp-ask { width: 100%; }
+  .lp-side-actions { width: 100%; }
 }

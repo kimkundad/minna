@@ -272,6 +272,42 @@ onMounted(load)
         </div>
       </section>
 
+      <!-- 3b. The same, for a teacher: their own classes rather than the school's. -->
+      <section v-if="data.teaching">
+        <h3 class="mb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Your classes</h3>
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
+          <div :class="cardClass">
+            <p class="text-xs uppercase tracking-wide text-gray-400">Students</p>
+            <p class="mt-1 text-2xl font-semibold text-gray-800 dark:text-white/90">
+              {{ data.teaching.learners }}
+            </p>
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+              {{ data.teaching.learnersThisMonth }} joined this month
+            </p>
+          </div>
+          <div :class="cardClass">
+            <p class="text-xs uppercase tracking-wide text-gray-400">Enrolments</p>
+            <p class="mt-1 text-2xl font-semibold text-gray-800 dark:text-white/90">
+              {{ data.teaching.enrolments }}
+            </p>
+            <!-- Said out loud, because the two numbers differ whenever somebody
+                 studies more than one of your courses. -->
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+              across all your courses
+            </p>
+          </div>
+          <div :class="cardClass">
+            <p class="text-xs uppercase tracking-wide text-gray-400">Your courses live</p>
+            <p class="mt-1 text-2xl font-semibold text-gray-800 dark:text-white/90">
+              {{ data.teaching.publishedCourses }}
+            </p>
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+              {{ data.teaching.draftCourses }} not published
+            </p>
+          </div>
+        </div>
+      </section>
+
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <!-- The queue, not just its size -->
         <section

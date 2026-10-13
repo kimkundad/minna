@@ -31,6 +31,25 @@ export async function getSetting(key: string, fallback = ''): Promise<string> {
   return (await all()).get(key) ?? fallback
 }
 
+/**
+ * What a new course starts its teacher's share at.
+ *
+ * Only a starting point: the share lives on the course, so a rate agreed with
+ * one teacher does not move anybody else's, and `teacher_earnings` copies the
+ * figure in per line so that changing either never rewrites what was already
+ * earned.
+ *
+ * Out of range or unreadable falls back to the column's own default rather
+ * than to zero — a typo in a settings box should not quietly stop paying
+ * teachers.
+ */
+export async function getDefaultRevenueSharePct(): Promise<number> {
+  const raw = Number((await all()).get('revenue_share_pct') ?? '')
+  if (!Number.isFinite(raw)) return 25
+  const whole = Math.round(raw)
+  return whole >= 0 && whole <= 100 ? whole : 25
+}
+
 export interface VatRules {
   /** Whole percent, e.g. 7. */
   percent: number

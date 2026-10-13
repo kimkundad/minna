@@ -1,3 +1,5 @@
+import { richTextField } from '../../lib/rich-text'
+import { TAUGHT_LANGUAGES } from '../../db/schema/auth'
 import { z } from 'zod'
 
 /**
@@ -119,8 +121,10 @@ export const teacherProfileBody = z.object({
     .max(150)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Use lowercase letters, numbers and hyphens.'),
   headline: z.string().max(180).nullable().optional(),
-  bio: z.string().max(5000).nullable().optional(),
-  languages: z.array(z.enum(['th', 'en', 'jp', 'vn'])).max(4).optional(),
+  bio: richTextField(5000),
+  /** The list the school teaches, not the list the site is translated into —
+   *  the two diverged when four more UI languages went in. */
+  languages: z.array(z.enum(TAUGHT_LANGUAGES)).max(TAUGHT_LANGUAGES.length).optional(),
   credentials: z.string().max(2000).nullable().optional(),
   yearsExperience: z.coerce.number().int().min(0).max(80).nullable().optional(),
   listed: z.boolean().default(true),

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { num } from '@/lib/format'
+import { num, money } from '@/lib/format'
 
 /**
  * The money breakdown: course prices, then each kind of discount.
@@ -13,6 +13,8 @@ import { num } from '@/lib/format'
  * settled and the combined-savings line has nothing left to decide.
  */
 const props = defineProps<{
+  /** What this basket is priced in. Every line shares it. */
+  currency?: string
   count: number
   subtotal: number
   courseDisc: number
@@ -25,9 +27,11 @@ const props = defineProps<{
   vatInclusive?: boolean
 }>()
 
-const { t } = useI18n()
-const baht = (n: number) => t('commerce.baht', { n: num(n) })
-const minus = (n: number) => (n ? `−${baht(n)}` : baht(0))
+const { t, locale } = useI18n()
+/** The basket's currency, which every line in it shares — a basket that
+ *  mixed two could not be charged at all, so the server refuses one. */
+const asMoney = (n: number) => money(n, props.currency ?? 'THB', String(locale.value))
+const minus = (n: number) => (n ? `−${asMoney(n)}` : asMoney(0))
 </script>
 
 <template>
@@ -37,7 +41,7 @@ const minus = (n: number) => (n ? `−${baht(n)}` : baht(0))
         >{{ t('commerce.totals.courses')
         }}<small>{{ t('commerce.courseCount', { n: props.count }) }}</small></dt
       >
-      <dd>{{ baht(props.subtotal) }}</dd>
+      <dd>{{ asMoney(props.subtotal) }}</dd>
     </div>
     <div :class="props.courseDisc ? 'is-disc' : 'is-zero'">
       <dt>{{ t('commerce.totals.courseCoupons') }}</dt>
@@ -55,7 +59,7 @@ const minus = (n: number) => (n ? `−${baht(n)}` : baht(0))
         >{{ t('commerce.totals.vat')
         }}<small v-if="props.vatInclusive">{{ t('commerce.totals.vatIncluded') }}</small></dt
       >
-      <dd>{{ props.vatInclusive ? baht(props.vat) : '+' + baht(props.vat) }}</dd>
+      <dd>{{ props.vatInclusive ? asMoney(props.vat) : '+' + asMoney(props.vat) }}</dd>
     </div>
     <div v-if="props.totalDisc !== undefined" class="is-sep" :class="props.totalDisc ? 'is-disc' : 'is-zero'">
       <dt>{{ t('commerce.totals.allDiscounts') }}</dt>

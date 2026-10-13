@@ -4,6 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import FileField from '@/components/forms/FileField.vue'
+import PayoutDetailsPanel from '@/components/people/PayoutDetailsPanel.vue'
 import {
   ApiError,
   people,
@@ -306,6 +307,21 @@ onMounted(load)
             Unticked while a profile is being written. Their courses still name them either way.
           </p>
         </div>
+      </div>
+
+      <!-- Outside the profile form on purpose: everything above is read by
+           strangers, and this is read by the person making a transfer. Its own
+           save, too, so a typo in a headline cannot carry a bank change with
+           it. -->
+      <div
+        class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6"
+      >
+        <h3 class="text-base font-medium text-gray-800 dark:text-white/90">Bank details</h3>
+        <p class="mt-1 mb-5 text-sm text-gray-500 dark:text-gray-400">
+          Where this teacher's earnings are sent. They fill this in themselves under My account;
+          correct it here only when they cannot.
+        </p>
+        <PayoutDetailsPanel :user-id="userId" />
       </div>
 
       <div class="flex items-center gap-3">

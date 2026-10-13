@@ -1,7 +1,7 @@
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, gt, inArray, ne } from 'drizzle-orm'
 import { db } from '../../db/client'
 import { cartItems, carts, courses } from '../../db/schema/index'
-import { conflict, notFound } from '../../lib/errors'
+import { AppError, conflict, notFound } from '../../lib/errors'
 import { alreadyOwned, quote, type Quote } from './commerce.service'
 
 /**
@@ -45,6 +45,7 @@ export interface CartRow {
 export async function getCart(userId: number): Promise<{
   items: CartRow[]
   quote: Quote | null
+  problem: string | null
   alreadyOwned: number[]
 }> {
   const cartId = await cartFor(userId)
@@ -64,13 +65,31 @@ export async function getCart(userId: number): Promise<{
   )
 
   const chosen = items.filter((i) => i.selected).map((i) => i.courseId)
-  const priced = chosen.length
-    ? await quote(chosen.map((id) => ({ kind: 'course' as const, id })))
-    : null
+
+  /**
+   * A basket that cannot be priced still has to open.
+   *
+   * Adding a course now refuses a currency the basket does not already use,
+   * but baskets filled before that rule existed may still mix two — and a
+   * throw here took the whole cart page down, leaving somebody with no way to
+   * reach the row they needed to remove. So the failure is reported as part of
+   * the basket rather than instead of it.
+   */
+  let priced: Quote | null = null
+  let problem: string | null = null
+  if (chosen.length) {
+    try {
+      priced = await quote(chosen.map((id) => ({ kind: 'course' as const, id })))
+    } catch (err) {
+      problem = err instanceof AppError ? err.message : 'This basket cannot be priced.'
+    }
+  }
 
   return {
     items,
     quote: priced,
+    /** Why there is no total, when there is none. Null when all is well. */
+    problem,
     alreadyOwned: await alreadyOwned(userId, items.map((i) => i.courseId)),
   }
 }
@@ -84,7 +103,14 @@ export async function getCart(userId: number): Promise<{
  */
 export async function addToCart(userId: number, courseId: number): Promise<void> {
   const [course] = await db
-    .select({ id: courses.id, status: courses.status, sellable: courses.sellable, price: courses.price })
+    .select({
+      id: courses.id,
+      title: courses.title,
+      status: courses.status,
+      sellable: courses.sellable,
+      price: courses.price,
+      currency: courses.currency,
+    })
     .from(courses)
     .where(eq(courses.id, courseId))
     .limit(1)
@@ -99,6 +125,39 @@ export async function addToCart(userId: number, courseId: number): Promise<void>
     .where(and(eq(cartItems.cartId, cartId), eq(cartItems.courseId, courseId)))
     .limit(1)
   if (exists) return
+
+  /**
+   * One basket, one currency — decided here, before anything is added.
+   *
+   * A Stripe session charges in a single currency, so a basket holding a $100
+   * course and a ฿1,590 one cannot be paid for. The checkout refuses it, which
+   * on its own was the wrong place: the course went into the basket, and then
+   * every attempt to price the basket failed, so the whole cart page stopped
+   * loading and the only way out was to guess what to remove.
+   *
+   * A free course has no currency worth defending, so it joins any basket.
+   */
+  if (course.price > 0) {
+    const [other] = await db
+      .select({ title: courses.title, currency: courses.currency })
+      .from(cartItems)
+      .innerJoin(courses, eq(courses.id, cartItems.courseId))
+      .where(
+        and(
+          eq(cartItems.cartId, cartId),
+          ne(courses.currency, course.currency),
+          gt(courses.price, 0),
+        ),
+      )
+      .limit(1)
+
+    if (other) {
+      throw conflict(
+        `Your basket is priced in ${other.currency} and “${course.title}” is priced in ${course.currency}. ` +
+          'A basket can only be paid for in one currency, so please buy them separately.',
+      )
+    }
+  }
 
   await db.insert(cartItems).values({ cartId, courseId, selected: true })
 }

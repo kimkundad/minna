@@ -48,21 +48,65 @@ const IMAGE = {
  * list opens on Thai rather than on 'all'.
  */
 const LOCALES = [
-  { value: 'all', label: 'ทุกภาษา · every language' },
+  // Not "every language" any more: that is what the picker above the list
+  // calls showing all the slides, and one phrase cannot mean both the view and
+  // the setting. This is the setting — where the slide appears.
+  { value: 'all', label: 'ขึ้นทุกภาษา · appears on every language' },
   { value: 'th', label: 'ไทย' },
   { value: 'en', label: 'English' },
   { value: 'jp', label: '日本語' },
   { value: 'vn', label: 'Tiếng Việt' },
+  { value: 'id', label: 'Bahasa Indonesia' },
+  { value: 'zh', label: '简体中文' },
+  { value: 'ko', label: '한국어' },
+  { value: 'tw', label: '繁體中文' },
 ] as const
 
-const locale = ref<HeroLocale>('th')
+/**
+ * Which slides the list is showing — a view, not a slide's own setting.
+ *
+ * The two were one control and meant different things by the same words.
+ * Picking "every language" listed the slides whose own setting is `all`, which
+ * is a handful of them, when what somebody looking at a page called "Home
+ * slideshow" expects is every slide there is.
+ *
+ * So the picker now starts with EVERY, which lists all of them with their
+ * language beside each, and `all` keeps its own meaning further down the list:
+ * a slide written to appear on every language's home page.
+ */
+const EVERY = '*' as const
+type View = typeof EVERY | HeroLocale
+
+const view = ref<View>('th')
+
+/** The language a new slide starts in, and the one `reorder` is about. Never
+ *  the catch-all view, which is not a language anything can be saved into. */
+const locale = computed<HeroLocale>(() => (view.value === EVERY ? 'th' : view.value))
+
+/** What to call a language in a sentence. */
+function localeLabel(value: HeroLocale): string {
+  return LOCALES.find((l) => l.value === value)?.label ?? value
+}
+
+/**
+ * An example link in the language the slide is for.
+ *
+ * It used to read `/th/courses` whatever language was open. A path is only
+ * half an answer here — every page on the site carries its language — and an
+ * example copied as-is would drop a Korean reader onto the Thai site. An
+ * every-language slide has no one language to point at, so it shows the shape
+ * rather than a path that would be wrong seven times out of eight.
+ */
+function hrefExample(path: string): string {
+  return form.value.locale === 'all' ? `/<language>${path}` : `/${form.value.locale}${path}`
+}
 
 /** How many every-language slides also show on whichever language is open, so
  *  the count on screen is not quietly short of what a visitor sees. */
 const alsoShown = ref(0)
 
 async function countEveryLanguage() {
-  if (locale.value === 'all') {
+  if (view.value === EVERY || view.value === 'all') {
     alsoShown.value = 0
     return
   }
@@ -108,7 +152,8 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    rows.value = (await hero.list(locale.value)).data
+    // No language is how the API says 'every slide'.
+    rows.value = (await hero.list(view.value === EVERY ? undefined : view.value)).data
     await countEveryLanguage()
   } catch (err) {
     error.value = err instanceof ApiError ? err.message : 'Could not load the slides.'
@@ -172,7 +217,19 @@ async function save() {
     if (editing.value === 'new') await hero.create(body)
     else if (editing.value != null) await hero.update(editing.value, body)
     editing.value = null
-    await load()
+
+    /**
+     * Follow the slide if its language was changed.
+     *
+     * The list shows one language at a time, so a slide saved into a different
+     * one would vanish from the screen with nothing to say where it went —
+     * which reads as a save that failed. `watch(locale)` reloads the list, so
+     * this is the whole of it.
+     */
+    // Not while the list is already showing every language — it has not lost
+    // anything, and switching would narrow a view nobody asked to narrow.
+    if (view.value !== EVERY && body.locale !== view.value) view.value = body.locale as HeroLocale
+    else await load()
   } catch (err) {
     if (err instanceof ApiError) {
       fieldErrors.value = err.fields
@@ -207,6 +264,16 @@ async function remove(row: HeroSlide) {
 /** Up and down rather than drag: it works with a keyboard, and a list this
  *  short never needs a long drag. */
 async function move(row: HeroSlide, by: -1 | 1) {
+  /**
+   * Order belongs to one language.
+   *
+   * Each language's home page runs its own slides in its own order, so there
+   * is no single sequence to move a slide up or down in while the list is
+   * showing all of them — the API takes a language and the whole order for it.
+   * The buttons are hidden in that view; this is the second lock.
+   */
+  if (view.value === EVERY) return
+
   const order = rows.value.map((r) => r.id)
   const at = order.indexOf(row.id)
   const to = at + by
@@ -277,7 +344,7 @@ const inputClass =
   'h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90'
 const labelClass = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400'
 
-watch(locale, () => {
+watch(view, () => {
   editing.value = null
   void load()
 })
@@ -298,7 +365,11 @@ onMounted(load)
             {{ rows.length }} slides
           </h3>
           <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-            <template v-if="locale === 'all'">
+            <template v-if="view === EVERY">
+              Every slide on the site, whatever language it is for. Each language runs its own
+              order, so the up and down arrows are per language.
+            </template>
+            <template v-else-if="view === 'all'">
               These appear on every language's home page, mixed into its own slides by the order
               below.
             </template>
@@ -310,11 +381,13 @@ onMounted(load)
           </p>
         </div>
         <div class="flex items-center gap-3">
-          <select v-model="locale" class="h-11 rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+          <select v-model="view" class="h-11 rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+            <option :value="EVERY">ทุกภาษา · every language</option>
             <option v-for="l in LOCALES" :key="l.value" :value="l.value">{{ l.label }}</option>
           </select>
           <button
             type="button"
+            data-action="hero-add"
             class="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600"
             @click="openNew"
           >
@@ -337,6 +410,30 @@ onMounted(load)
         class="border-y border-gray-100 bg-gray-50 px-5 py-5 dark:border-gray-800 dark:bg-white/[0.02] sm:px-6"
         @submit.prevent="save"
       >
+        <!-- Which language this slide is for.
+             It used to be taken silently from the picker above the list, which
+             is in the page header rather than in the form: somebody writing a
+             headline could not see which language they were writing it in, and
+             the only clue was a Thai placeholder under every language. -->
+        <div class="mb-5 flex flex-wrap items-center gap-3">
+          <label :class="labelClass" class="!mb-0" for="hs-locale">Language</label>
+          <select
+            id="hs-locale"
+            v-model="form.locale"
+            class="h-11 rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+          >
+            <option v-for="l in LOCALES" :key="l.value" :value="l.value">{{ l.label }}</option>
+          </select>
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            <template v-if="form.locale === 'all'">
+              Shown on every language's home page, mixed into its own slides by the order.
+            </template>
+            <template v-else>
+              Shown only on the {{ localeLabel(form.locale) }} home page.
+            </template>
+          </p>
+        </div>
+
         <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
           <!-- Words -->
           <div class="space-y-4 lg:col-span-2">
@@ -376,7 +473,7 @@ onMounted(load)
               </div>
               <div>
                 <label :class="labelClass">Where it goes</label>
-                <input v-model="form.ctaHref" maxlength="512" :class="inputClass" placeholder="/th/courses" />
+                <input v-model="form.ctaHref" maxlength="512" :class="inputClass" :placeholder="hrefExample('/courses')" />
               </div>
               <div>
                 <label :class="labelClass">Second button</label>
@@ -387,7 +484,7 @@ onMounted(load)
               </div>
               <div>
                 <label :class="labelClass">Where it goes</label>
-                <input v-model="form.cta2Href" maxlength="512" :class="inputClass" placeholder="/th/about" />
+                <input v-model="form.cta2Href" maxlength="512" :class="inputClass" :placeholder="hrefExample('/about')" />
               </div>
             </div>
           </div>
@@ -538,8 +635,12 @@ onMounted(load)
         </li>
 
         <li v-for="(row, i) in rows" :key="row.id" class="flex items-start gap-4 px-5 py-4 sm:px-6">
-          <!-- Order -->
-          <div class="flex shrink-0 flex-col items-center gap-1 pt-1">
+          <!-- Order. Per language, so there is nothing to move while the list
+               is showing all of them at once — the position is shown instead. -->
+          <div v-if="view === EVERY" class="flex w-6 shrink-0 justify-center pt-1">
+            <span class="text-xs text-gray-400">{{ row.sortOrder }}</span>
+          </div>
+          <div v-else class="flex shrink-0 flex-col items-center gap-1 pt-1">
             <button
               type="button"
               :disabled="i === 0"
@@ -567,7 +668,15 @@ onMounted(load)
           ></div>
 
           <div class="min-w-0 flex-1">
-            <p class="text-xs text-gray-400">{{ row.eyebrow || '—' }}</p>
+            <p class="text-xs text-gray-400">
+              <!-- Which language this one is for. Only while the list holds
+                   several, where it is the thing telling them apart. -->
+              <span
+                v-if="view === EVERY"
+                class="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 font-medium text-gray-600 dark:bg-white/10 dark:text-gray-300"
+                >{{ localeLabel(row.locale) }}</span
+              >{{ row.eyebrow || '—' }}
+            </p>
             <p class="text-sm font-medium text-gray-800 dark:text-white/90">
               {{ row.titleA }}
               <span v-if="row.titleB" class="font-normal text-gray-500 dark:text-gray-400">

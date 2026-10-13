@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull } from 'drizzle-orm'
+import { and, desc, eq, gt, isNull } from 'drizzle-orm'
 import { db } from '../../db/client'
 import type { Locale } from '../../db/schema/auth'
 import {
@@ -14,6 +14,7 @@ import { env } from '../../config/env'
 import { conflict, invalidCredentials, notFound, unauthorized } from '../../lib/errors'
 import { hashPassword, needsRehash, verifyPassword } from '../../lib/password'
 import { expiresAt, generateToken, hashToken } from '../../lib/tokens'
+import { notifyAdmins } from '../people/notify.service'
 import type { RoleName } from '../../plugins/auth'
 
 export interface PublicUser {
@@ -160,6 +161,24 @@ export async function register(input: {
       contactTime: input.teacher.contactTime ?? null,
       agreedAt: new Date(),
     })
+
+    // An application nobody is told about waits as long as it takes somebody
+    // to go looking, and the applicant is meanwhile waiting on us.
+    const [filed] = await db
+      .select({ id: teacherApplications.id })
+      .from(teacherApplications)
+      .where(eq(teacherApplications.email, email))
+      .orderBy(desc(teacherApplications.id))
+      .limit(1)
+    if (filed) {
+      await notifyAdmins({
+        type: 'teacher.applied',
+        title: 'มีใบสมัครเป็นผู้สอนใหม่',
+        body: `${input.firstName.trim()} ${input.lastName.trim()} · ${input.teacher.subject}`,
+        link: '/teacher-applications',
+        subject: { type: 'teacher_application', id: filed.id },
+      })
+    }
   }
 
   return toPublicUser(created, studentRole ? ['student'] : [])
@@ -199,6 +218,11 @@ export async function login(email: string, password: string): Promise<PublicUser
  * Reuse of an already-rotated token means the client was copied, so every
  * session for that user is revoked rather than just the one token.
  */
+/** How recently a rotation has to have happened for a second attempt with the
+ *  same token to be read as one browser renewing twice at once rather than as
+ *  a stolen token being replayed. */
+const CONCURRENT_RENEWAL_GRACE_MS = 10_000
+
 export async function rotateRefreshToken(
   token: string,
   device: DeviceInfo,
@@ -212,13 +236,56 @@ export async function rotateRefreshToken(
 
   if (!row) throw unauthorized('Please sign in again.')
 
+  /**
+   * A token that has already been rotated, used again.
+   *
+   * Usually that means a stolen one is being replayed, and the answer is to
+   * end every session the account has — the legitimate holder signs in again,
+   * the thief gets nothing.
+   *
+   * But one honest case looks identical. A browser that fires several requests
+   * at once gets several 401s at once, and each one tries to renew with the
+   * same cookie; the ones that lose arrive a moment after the winner has
+   * rotated the row. Treating that as theft would sign somebody out of
+   * everything for opening a page. So a rotation seconds old is read as the
+   * race it is: that one request is refused and nothing else is touched.
+   *
+   * The window is small enough that a replay would have to land inside the
+   * same breath as the real renewal to benefit from it, and the attacker would
+   * still only hold a token the account's own next renewal invalidates.
+   */
   if (row.revokedAt || row.replacedBy) {
-    await revokeAllSessions(row.userId)
+    const age = row.revokedAt ? Date.now() - row.revokedAt.getTime() : Infinity
+    if (age > CONCURRENT_RENEWAL_GRACE_MS) {
+      await revokeAllSessions(row.userId)
+    }
     throw unauthorized('This session was replaced. Please sign in again.')
   }
 
   if (row.expiresAt.getTime() <= Date.now()) {
     throw unauthorized('Your session has expired. Please sign in again.')
+  }
+
+  /**
+   * Claim the old row before minting the new one.
+   *
+   * The check above is a read, and two requests carrying the same cookie can
+   * both pass it before either writes — which is not hypothetical: a page that
+   * fires several requests at once gets several 401s at once, and each one
+   * tries to renew. Inserting first meant both inserted, so one browser came
+   * away holding two live sessions, listed twice on the settings screen, and
+   * the replay check this rotation exists for had quietly been lost.
+   *
+   * `revoked_at IS NULL` in the WHERE makes the claim the race: exactly one
+   * UPDATE can match, and whoever loses is told to sign in again rather than
+   * being handed a second session.
+   */
+  const claimed = await db
+    .update(refreshTokens)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(refreshTokens.id, row.id), isNull(refreshTokens.revokedAt)))
+  if (!affected(claimed)) {
+    throw unauthorized('This session was replaced. Please sign in again.')
   }
 
   const next = generateToken()
@@ -240,10 +307,16 @@ export async function rotateRefreshToken(
 
   await db
     .update(refreshTokens)
-    .set({ revokedAt: new Date(), replacedBy: created?.id ?? null })
+    .set({ replacedBy: created?.id ?? null })
     .where(eq(refreshTokens.id, row.id))
 
   return { user: await findUser(row.userId), refreshToken: next, remember: row.remember }
+}
+
+/** How many rows a mysql2 UPDATE actually changed. */
+function affected(result: unknown): boolean {
+  const header = Array.isArray(result) ? result[0] : result
+  return Number((header as { affectedRows?: number } | undefined)?.affectedRows ?? 0) > 0
 }
 
 export async function revokeRefreshToken(token: string): Promise<void> {

@@ -13,7 +13,7 @@ import {
   users,
 } from '../../db/schema/index'
 import { notFound } from '../../lib/errors'
-import { outer } from '../../lib/sql'
+import { instant, outer } from '../../lib/sql'
 
 /**
  * What the school can learn from what people did.
@@ -69,6 +69,7 @@ export async function quizResultsOverview(opts: { teacherId?: number | undefined
     people: Number(r.people),
     passed: Number(r.passed),
     averageScore: r.averageScore === null ? null : Number(r.averageScore),
+    lastAttemptAt: instant(r.lastAttemptAt),
   }))
 }
 
@@ -298,16 +299,30 @@ export async function lessonQuestionList(opts: {
   teacherId?: number | undefined
   q?: string | undefined
 }) {
-  const where = [
+  /**
+   * Who and what this reader may see at all — the course, the search, and
+   * whose courses they are.
+   *
+   * Kept apart from the answered/unanswered flag because the badge above the
+   * list counts within this scope while the list itself may be narrowed
+   * further. Counting outside it told a teacher that two questions were
+   * waiting for an answer while showing them an empty queue, because the two
+   * belonged to somebody else's course.
+   */
+  const scope = [
     // Only the questions; the replies come back attached to them.
     sql`${lessonQuestions.parentId} IS NULL`,
-    opts.unansweredOnly ? sql`${lessonQuestions.answeredAt} IS NULL` : undefined,
     opts.courseId ? eq(lessonQuestions.courseId, opts.courseId) : undefined,
     opts.q ? sql`${lessonQuestions.body} LIKE ${`%${opts.q}%`}` : undefined,
     opts.teacherId
       ? sql`EXISTS (SELECT 1 FROM course_instructors ci
                     WHERE ci.course_id = ${outer(lessonQuestions.courseId)} AND ci.user_id = ${opts.teacherId})`
       : undefined,
+  ].filter(Boolean) as never[]
+
+  const where = [
+    ...scope,
+    opts.unansweredOnly ? sql`${lessonQuestions.answeredAt} IS NULL` : undefined,
   ].filter(Boolean)
   const filter = and(...(where as never[]))
 
@@ -319,7 +334,7 @@ export async function lessonQuestionList(opts: {
   const [{ value: unanswered } = { value: 0 }] = await db
     .select({ value: sql<number>`COUNT(*)` })
     .from(lessonQuestions)
-    .where(and(sql`${lessonQuestions.parentId} IS NULL`, sql`${lessonQuestions.answeredAt} IS NULL`))
+    .where(and(...scope, sql`${lessonQuestions.answeredAt} IS NULL`))
 
   const rows = await db
     .select({
@@ -410,10 +425,16 @@ export async function answerLessonQuestion(
 
   // Stamped on the question, so the unanswered queue is an index lookup rather
   // than a count of children on every row.
-  await db
-    .update(lessonQuestions)
-    .set({ answeredAt: new Date() })
-    .where(eq(lessonQuestions.id, questionId))
+  //
+  // Only an instructor's reply closes it. Students answer each other in the
+  // room, and often well, but the queue is a list of what the school still owes
+  // an answer to — a classmate's guess does not settle that.
+  if (asInstructor) {
+    await db
+      .update(lessonQuestions)
+      .set({ answeredAt: new Date() })
+      .where(eq(lessonQuestions.id, questionId))
+  }
 
   return { replyId: Number(res.insertId), courseId: question.courseId }
 }

@@ -12,8 +12,20 @@ import {
   varchar,
 } from 'drizzle-orm/mysql-core'
 
-export const LOCALES = ['th', 'en', 'jp', 'vn'] as const
+export const LOCALES = ['th', 'en', 'jp', 'vn', 'id', 'zh', 'ko', 'tw'] as const
 export type Locale = (typeof LOCALES)[number]
+
+/**
+ * The languages the school teaches — a different question from the one above.
+ *
+ * `LOCALES` is what the website is translated into, and it grew to eight when
+ * the customer asked for four more. What a teacher may say they teach did not
+ * grow with it: the school is not opening Korean classes because the site
+ * learned to speak Korean. Keeping the two lists apart is the point — one is
+ * presentation, the other is what is on offer.
+ */
+export const TAUGHT_LANGUAGES = ['th', 'en', 'jp', 'vn'] as const
+export type TaughtLanguage = (typeof TAUGHT_LANGUAGES)[number]
 
 export const users = mysqlTable(
   'users',
@@ -148,6 +160,30 @@ export const emailVerifications = mysqlTable(
     index('email_verifications_user_idx').on(t.userId),
   ],
 )
+
+/**
+ * What a member has agreed to be sent.
+ *
+ * No row means nobody has touched a switch, which is read as "no" everywhere
+ * it is asked — silence is not consent, and the only safe reading of it is the
+ * lawful one. Its own table rather than columns on `users` so the agreement
+ * carries its own timestamp: `users.updated_at` moves whenever somebody fixes
+ * a typo in their surname, and "when did they agree" is the question that
+ * actually has to be answerable.
+ */
+export const memberConsents = mysqlTable('member_consents', {
+  userId: bigint('user_id', { mode: 'number', unsigned: true })
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  news: boolean('news').default(false).notNull(),
+  newCourses: boolean('new_courses').default(false).notNull(),
+  /** On by default: it is about access somebody paid for running out. */
+  expiryAlert: boolean('expiry_alert').default(true).notNull(),
+  createdAt: datetime('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: datetime('updated_at')
+    .default(sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`)
+    .notNull(),
+})
 
 export const usersRelations = relations(users, ({ many }) => ({
   roles: many(userRoles),

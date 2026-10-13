@@ -14,6 +14,10 @@ const props = defineProps<{
   modelValue: string | null | undefined
   purpose: UploadPurpose
   courseId?: number
+  /** Whose file this is, when it is not the person uploading it — an admin
+   *  setting somebody else photo, or an identity document sent by message.
+   *  The API decides whether that is allowed; this only asks. */
+  userId?: number
   label: string
   /** `accept` for the file input, e.g. 'image/*' or 'video/mp4,video/*'. */
   accept?: string
@@ -22,7 +26,12 @@ const props = defineProps<{
   preview?: boolean
 }>()
 
-const emit = defineEmits<{ 'update:modelValue': [string | null] }>()
+const emit = defineEmits<{
+  'update:modelValue': [string | null]
+  /** The whole result, for a caller that wants the name and the size as well
+   *  as the path — a course handout is listed by name, not by object key. */
+  uploaded: [{ path: string; size: number; name: string }]
+}>()
 
 const input = ref<HTMLInputElement | null>(null)
 const busy = ref(false)
@@ -47,10 +56,12 @@ async function choose(event: Event) {
     const result = await uploadFile(file, {
       purpose: props.purpose,
       ...(props.courseId ? { courseId: props.courseId } : {}),
+      ...(props.userId ? { userId: props.userId } : {}),
       onProgress: (f) => (progress.value = f),
       signal: abort.signal,
     })
     emit('update:modelValue', result.path)
+    emit('uploaded', { path: result.path, size: result.size, name: file.name })
     previewUrl.value = ''
     if (props.preview) await loadPreview(result.path)
   } catch (err) {

@@ -7,7 +7,17 @@ import FileField from '@/components/forms/FileField.vue'
 import RichTextField from '@/components/forms/RichTextField.vue'
 
 import { useConfirm } from '@/composables/useConfirm'
-import { ApiError, api, content, type Category, type Post, type PostInput, type PostLocale } from '@/lib/api'
+import {
+  ApiError,
+  api,
+  content,
+  teachers,
+  type Category,
+  type Post,
+  type PostInput,
+  type PostLocale,
+  type TeacherOption,
+} from '@/lib/api'
 
 /**
  * Articles.
@@ -49,6 +59,10 @@ const LOCALES = [
   { value: 'en', label: 'English' },
   { value: 'jp', label: '日本語' },
   { value: 'vn', label: 'Tiếng Việt' },
+  { value: 'id', label: 'Bahasa Indonesia' },
+  { value: 'zh', label: '简体中文' },
+  { value: 'ko', label: '한국어' },
+  { value: 'tw', label: '繁體中文' },
 ] as const
 
 /* ---------------- the form ---------------- */
@@ -65,6 +79,25 @@ const slugTouched = ref(false)
  * called "สนทนา" and the names alone would read as four identical options.
  */
 const categories = ref<Category[]>([])
+
+/**
+ * Who an article can be credited to.
+ *
+ * The same list the course form picks instructors from, because it answers
+ * the same question — who on this site has a public page with a name, a
+ * headline and a biography on it. That is exactly what the card at the end of
+ * an article shows, and an administrator has none of it.
+ */
+const authors = ref<TeacherOption[]>([])
+
+async function loadAuthors() {
+  try {
+    authors.value = (await teachers.options()).data
+  } catch {
+    // The select falls back to "whoever creates it", which is what used to
+    // happen always. Nothing else on the page depends on this.
+  }
+}
 
 const categoryOptions = computed(() =>
   categories.value
@@ -93,6 +126,10 @@ function blank(): PostInput {
     contentLocale: 'th',
     status: 'draft',
     categoryId: null,
+    authorId: null,
+    ogTitle: null,
+    ogDescription: null,
+    ogImagePath: null,
   }
 }
 
@@ -134,6 +171,10 @@ async function openEdit(row: Post) {
       contentLocale: full.contentLocale,
       status: full.status,
       categoryId: full.categoryId ?? null,
+      authorId: full.authorId ?? null,
+      ogTitle: full.ogTitle ?? null,
+      ogDescription: full.ogDescription ?? null,
+      ogImagePath: full.ogImagePath ?? null,
     }
     // A published slug is a URL other pages point at; never regenerate it.
     slugTouched.value = true
@@ -229,6 +270,7 @@ watch(page, load)
 onMounted(() => {
   void load()
   void loadCategories()
+  void loadAuthors()
 })
 </script>
 
@@ -321,6 +363,50 @@ onMounted(() => {
               The same list the courses use, so an article and a course on the same subject can
               point at each other.
             </p>
+          </div>
+
+          <div>
+            <label :class="labelClass">Author</label>
+            <select v-model="form.authorId" :class="inputClass">
+              <option :value="null">
+                {{ editing === 'new' ? 'Me' : 'Leave as it is' }}
+              </option>
+              <option v-for="a in authors" :key="a.id" :value="a.id">{{ a.name }}</option>
+            </select>
+            <p class="mt-1 text-xs text-gray-400">
+              Shown in the card at the end of the article, with their headline and biography.
+              Only teachers have those, so an article credited to an administrator shows a name
+              and nothing else.
+            </p>
+            <p v-if="fieldErrors.authorId" class="mt-1 text-sm text-error-500">
+              {{ fieldErrors.authorId }}
+            </p>
+          </div>
+
+          <!-- Only where the shared wording should differ from the article's
+               own. Empty is the normal state: it shares as the page reads. -->
+          <div class="sm:col-span-2 mt-2 border-t border-gray-100 pt-5 dark:border-gray-800">
+            <p class="text-sm font-medium text-gray-700 dark:text-gray-400">
+              Sharing
+              <span class="ml-1 font-normal text-gray-500 dark:text-gray-500">
+                — leave empty to share this article as it reads
+              </span>
+            </p>
+          </div>
+
+          <div>
+            <label :class="labelClass">Share title</label>
+            <input v-model="form.ogTitle" type="text" maxlength="255" :class="inputClass" />
+          </div>
+
+          <div>
+            <label :class="labelClass">Share picture</label>
+            <input v-model="form.ogImagePath" type="text" maxlength="512" placeholder="1200×630" :class="inputClass" />
+          </div>
+
+          <div class="sm:col-span-2">
+            <label :class="labelClass">Share description</label>
+            <input v-model="form.ogDescription" type="text" maxlength="500" :class="inputClass" />
           </div>
 
           <div>

@@ -735,7 +735,7 @@ const paginatedRows = computed(() => {
 
 const startEntry = computed(() => (rows.value.length === 0 ? 0 : (page.value - 1) * perPage + 1))
 const endEntry = computed(() => {
-  let end = page.value * perPage
+  const end = page.value * perPage
   return end > rows.value.length ? rows.value.length : end
 })
 

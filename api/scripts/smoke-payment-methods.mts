@@ -108,6 +108,26 @@ try {
       session.amount_total === body.data.order.total,
       `Stripe ${session.amount_total}, order ${body.data.order.total}`,
     )
+    // Where Stripe sends them afterwards. Every page on the site lives under a
+    // language, so an address without one matches no route and the buyer lands
+    // on the home page holding an order number nothing reads.
+    check(
+      `${method}: comes back to the success page, in a language`,
+      //(th|en|jp|vn)/checkout/success?order=/.test(String(session.success_url)),
+      String(session.success_url).replace(env.APP_URL, ''),
+    )
+    check(
+      `${method}: carrying the order number and the session`,
+      String(session.success_url).includes(body.data.order.orderNo) &&
+        String(session.success_url).includes('{CHECKOUT_SESSION_ID}'),
+      String(session.success_url).replace(env.APP_URL, ''),
+    )
+    check(
+      `${method}: and cancelling lands somewhere real too`,
+      //(th|en|jp|vn)/checkout?cancelled=/.test(String(session.cancel_url)),
+      String(session.cancel_url).replace(env.APP_URL, ''),
+    )
+
     // PromptPay is paid minutes later from a banking app, so the session has
     // to outlive the tab it was opened in.
     if (method === 'promptpay') {

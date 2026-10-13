@@ -2,7 +2,9 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { env } from '../../config/env'
 import { audit, record } from '../../lib/audit'
+import { minimumCharge } from '../../lib/currencies'
 import { conflict } from '../../lib/errors'
+import { signedUrl } from '../../lib/storage'
 import {
   createCheckoutSession,
   getCheckoutSession,
@@ -14,6 +16,8 @@ import * as authService from '../auth/auth.service'
 import * as cart from './cart.service'
 import * as service from './commerce.service'
 import * as invoices from './invoices.service'
+import * as earnings from './earnings.service'
+import { myOrders } from './myorders.service'
 
 /**
  * Checkout, and what happens after it.
@@ -145,20 +149,52 @@ export default async function commerceRoutes(app: FastifyInstance) {
       throw conflict('Card payments are not set up yet.')
     }
 
+    /**
+     * PromptPay is a Thai QR standard and settles in baht only.
+     *
+     * The checkout hides the button for a basket that is not in baht, so this
+     * is the server saying the same thing — reached by a stale page or a
+     * hand-made request, where otherwise Stripe would refuse with a message
+     * about payment method types that tells the buyer nothing.
+     */
+    if (body.method === 'promptpay' && q.currency !== 'THB') {
+      throw conflict(`PromptPay can only be used for a basket priced in baht, and this one is in ${q.currency}. Please pay by card.`)
+    }
+
+    /**
+     * Stripe will not take a charge under about ฿10.
+     *
+     * It says so in a sentence about converting to satang, which reads as
+     * something wrong with the account rather than with the price. Answered
+     * here, in terms of the thing the buyer is looking at.
+     */
+    const least = minimumCharge(q.currency)
+    if (q.total < least) {
+      throw conflict(
+        `This comes to less than the smallest payment we can take in ${q.currency}. Please contact us to buy it.`,
+      )
+    }
+
     const order = await service.createOrder(req.user.sub, q, body.method)
     if (body.invoice) await invoices.request(order.id, body.invoice)
 
     try {
       const session = await createCheckoutSession({
-        lines: q.lines.map((l) => ({
-          name: l.title,
-          amount: Math.max(0, l.unitPrice - l.discount),
-        })),
+        // Worked out by the service, beside the arithmetic it has to agree
+        // with. Built here it was only `unitPrice - discount` per line, which
+        // leaves out an order-wide coupon and VAT added on top — so the order
+        // said one figure and the card was charged another.
+        lines: service.payableLines(q),
         method: body.method,
         currency: q.currency,
         // The order number, not the id: it is what support asks for.
-        successUrl: `${env.APP_URL}/checkout/success?order=${order.orderNo}&session={CHECKOUT_SESSION_ID}`,
-        cancelUrl: `${env.APP_URL}/checkout?cancelled=${order.orderNo}`,
+        //
+        // The language goes in the path because every page on the site lives
+        // under one — `/checkout/success` with no locale matches no route, and
+        // the buyer came back from Stripe to the home page. The buyer's own
+        // language, not the server's: they are returning to read it.
+        successUrl: `${env.APP_URL}/${buyer.locale}/checkout/success?order=${order.orderNo}&session={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${env.APP_URL}/${buyer.locale}/checkout?cancelled=${order.orderNo}`,
         customerEmail: buyer.email,
         clientReferenceId: order.orderNo,
         metadata: { orderId: String(order.id), orderNo: order.orderNo, userId: String(req.user.sub) },
@@ -197,6 +233,11 @@ export default async function commerceRoutes(app: FastifyInstance) {
     }
   })
 
+  /** Somebody's own order history. Admin's `/orders` is a different list. */
+  app.get('/me/orders', signedIn, async (req) => {
+    return { data: await myOrders(req.user.sub) }
+  })
+
   /** The success page asks this, because a webhook may not have arrived yet. */
   app.get('/orders/by-no/:orderNo', signedIn, async (req) => {
     const { orderNo } = z.object({ orderNo: z.string().max(32) }).parse(req.params)
@@ -215,6 +256,67 @@ export default async function commerceRoutes(app: FastifyInstance) {
     }
 
     return { data: await service.getOrder(order.id) }
+  })
+
+
+  /* ---------------- what a teacher has earned ---------------- */
+
+  /**
+   * Their own earnings, and only ever their own.
+   *
+   * No `userId` parameter on purpose: the only account this can report on is
+   * the one asking. An admin's view of everybody is a different route with a
+   * different name, so neither can be mistaken for the other.
+   */
+  app.get('/me/earnings', { preHandler: app.requireRole('teacher') }, async (req) => {
+    return {
+      data: {
+        summary: await earnings.summaryFor(req.user.sub),
+        lines: await earnings.listFor(req.user.sub),
+      },
+    }
+  })
+
+  /** Who is owed what. The payout run reads this. */
+  app.get('/earnings/payouts', adminOnly, async () => ({
+    data: await earnings.payoutDue(),
+  }))
+
+
+  /**
+   * Settles one teacher's payable rows.
+   *
+   * The amount is sent back rather than taken on trust: between opening the
+   * screen and pressing the button a refund may have landed, and paying out a
+   * figure somebody read a minute ago is how a teacher ends up owed money
+   * nobody can account for. A mismatch is a 409 with what the ledger actually
+   * says.
+   */
+  app.post('/earnings/payouts/:userId', adminOnly, async (req) => {
+    const { userId } = z.object({ userId: z.coerce.number().int().positive() }).parse(req.params)
+    const body = z
+      .object({
+        amount: z.coerce.number().int(),
+        reference: z.string().trim().min(1).max(64),
+      })
+      .parse(req.body)
+
+    try {
+      const settled = await earnings.markPaid(userId, body.amount, body.reference)
+      audit(req, {
+        action: 'earnings.paid',
+        subjectType: 'user',
+        subjectId: userId,
+        summary: `${(settled.amount / 100).toFixed(2)} THB · ${body.reference}`,
+      })
+      return { data: settled }
+    } catch (err) {
+      const e = err as { statusCode?: number; actual?: number; message?: string }
+      if (e.statusCode === 409) {
+        throw conflict(`${e.message} The ledger now says ${(Number(e.actual) / 100).toFixed(2)} THB.`)
+      }
+      throw err
+    }
   })
 
   /* ---------------- admin ---------------- */
@@ -244,6 +346,71 @@ export default async function commerceRoutes(app: FastifyInstance) {
    * revoking access for a refund that never happened would be the worst of
    * both.
    */
+  /**
+   * Marks an order paid by hand, and grants the access that goes with it.
+   *
+   * For the money that arrived outside Stripe — a bank transfer, a payment
+   * somebody made at the desk, a webhook that never came. It does exactly what
+   * a real payment does, because a half-paid order is worse than either state.
+   *
+   * Superadmin only. An ordinary administrator can see orders and refund them,
+   * but saying "this was paid" when no payment is recorded is the one action
+   * here that creates revenue out of nothing, and it should take the person who
+   * answers for the books.
+   *
+   * A reason is required and audited. Without one the audit log says an order
+   * changed and not why, which is the only question anybody asks of it later.
+   */
+  app.post('/orders/:id/mark-paid', { preHandler: app.requireRole('superadmin') }, async (req) => {
+    const { id } = idParam.parse(req.params)
+    const { reason } = z
+      .object({ reason: z.string().trim().min(3, 'Say why this is being marked paid.').max(500) })
+      .parse(req.body)
+
+    const before = await service.getOrder(id)
+    if (before.status === 'paid') throw conflict('That order is already paid.')
+    if (before.status === 'refunded') throw conflict('That order was refunded.')
+
+    const changed = await service.markPaid(id, { providerRef: before.providerRef })
+
+    audit(req, {
+      action: 'order.marked_paid',
+      subjectType: 'order',
+      subjectId: id,
+      summary: `${before.orderNo} — by hand: ${reason}`,
+      changes: { status: [before.status, 'paid'] },
+    })
+
+    return { data: await service.getOrderDetail(id), changed }
+  })
+
+  /**
+   * Closes an order that was never paid.
+   *
+   * Admin rather than superadmin, unlike marking one paid or refunding it:
+   * nothing moves. No money was taken and no access was granted, so this only
+   * stops a dead row sitting in the list looking like work.
+   */
+  app.post('/orders/:id/cancel', adminOnly, async (req) => {
+    const { id } = idParam.parse(req.params)
+    const { reason } = z
+      .object({ reason: z.string().trim().min(3, 'Say why this is being cancelled.').max(500) })
+      .parse(req.body)
+
+    const before = await service.getOrder(id)
+    await service.cancelOrder(id)
+
+    audit(req, {
+      action: 'order.cancelled',
+      subjectType: 'order',
+      subjectId: id,
+      summary: `${before.orderNo} — ${reason}`,
+      changes: { status: [before.status, 'cancelled'] },
+    })
+    // The detail shape, which is what the screen that asked is showing.
+    return { data: await service.getOrderDetail(id) }
+  })
+
   app.post('/orders/:id/refund', adminOnly, async (req) => {
     const { id } = idParam.parse(req.params)
     const { reason } = z.object({ reason: z.string().max(255).optional() }).parse(req.body ?? {})

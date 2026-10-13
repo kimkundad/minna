@@ -46,14 +46,27 @@ const INITIAL_COUNTRY: Record<AppLocale, string> = {
   en: 'gb',
   jp: 'jp',
   vn: 'vn',
+  id: 'id',
+  zh: 'cn',
+  ko: 'kr',
+  tw: 'tw',
 }
 
-/** intl-tel-input names its translations by language, not by our locale key. */
+/**
+ * intl-tel-input names its translations by language, not by our locale key —
+ * it passes this straight to `Intl.DisplayNames`, so these are BCP-47 tags.
+ * Chinese needs its script rather than a country: `zh` writes 简体 and `tw`
+ * writes 繁體, which is the whole difference between the two.
+ */
 const NAME_LOCALE: Record<AppLocale, string> = {
   th: 'th',
   en: 'en',
   jp: 'ja',
   vn: 'vi',
+  id: 'id',
+  zh: 'zh-Hans',
+  ko: 'ko',
+  tw: 'zh-Hant',
 }
 
 const el = ref<HTMLInputElement | null>(null)

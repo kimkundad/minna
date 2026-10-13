@@ -11,6 +11,9 @@ import {
   type MyProfile,
   type MyProfileInput,
   type MyTeacherProfileInput,
+  type PayoutDetails,
+  type PayoutDetailsInput,
+  type TaughtLanguage,
   type TeacherProfile,
 } from '@/lib/api'
 
@@ -51,6 +54,24 @@ const LOCALES: { value: MyProfileInput['locale']; label: string }[] = [
   { value: 'en', label: 'English' },
   { value: 'jp', label: '日本語' },
   { value: 'vn', label: 'Tiếng Việt' },
+  { value: 'id', label: 'Bahasa Indonesia' },
+  { value: 'zh', label: '简体中文' },
+  { value: 'ko', label: '한국어' },
+  { value: 'tw', label: '繁體中文' },
+]
+
+/**
+ * What a teacher may say they teach — a different list from the one above.
+ *
+ * These checkboxes used to read `LOCALES`, which was the same four values at
+ * the time. It is not any more: the site speaks eight languages and the school
+ * still teaches four, and the API refuses the other four outright.
+ */
+const TAUGHT: { value: TaughtLanguage; label: string }[] = [
+  { value: 'jp', label: 'Japanese' },
+  { value: 'en', label: 'English' },
+  { value: 'th', label: 'Thai' },
+  { value: 'vn', label: 'Vietnamese' },
 ]
 
 async function loadProfile() {
@@ -95,6 +116,7 @@ async function saveProfile() {
 const isTeacher = computed(() => auth.roles.includes('teacher'))
 const teacher = ref<TeacherProfile | null>(null)
 const teacherForm = ref<MyTeacherProfileInput>({
+  slug: '',
   displayName: '',
   shortName: '',
   headline: null,
@@ -113,6 +135,7 @@ async function loadTeacher() {
   teacher.value = res.data
   if (res.data) {
     teacherForm.value = {
+      slug: res.data.slug,
       displayName: res.data.displayName,
       shortName: res.data.shortName,
       headline: res.data.headline,
@@ -124,7 +147,7 @@ async function loadTeacher() {
   }
 }
 
-function toggleLanguage(code: 'th' | 'en' | 'jp' | 'vn') {
+function toggleLanguage(code: TaughtLanguage) {
   const list = teacherForm.value.languages ?? []
   teacherForm.value.languages = list.includes(code)
     ? list.filter((l) => l !== code)
@@ -148,6 +171,86 @@ async function saveTeacher() {
     }
   } finally {
     savingTeacher.value = false
+  }
+}
+
+/* ---------------- identity and bank, for a teacher ---------------- */
+
+const payoutForm = ref<PayoutDetailsInput>({
+  idDocumentPath: null,
+  bankName: null,
+  accountName: null,
+  accountNumber: null,
+  branch: null,
+  swift: null,
+  payoutCurrency: null,
+  idDocumentUploadedAt: null,
+  bankCountry: null,
+  resumePath: null,
+})
+/** Sent with the record, so this list is whatever the server will accept. */
+const currencies = ref<PayoutDetails['currencies']>([])
+const countries = ref<PayoutDetails['countries']>([])
+const thaiBanks = ref<PayoutDetails['thaiBanks']>([])
+/**
+ * What this teacher keeps of a sale, and whether it was agreed with them or
+ * is simply the school's usual rate. Shown, never edited: only the school
+ * sets it, and the API has no field for it here.
+ */
+/** The CV they applied with, so they can see which one the school holds. */
+const myResumeUrl = ref<string | null>(null)
+/** Whether what is on file is their own upload or the application copy. */
+const resumeIsCurrent = ref(false)
+const myShare = ref<number | null>(null)
+const shareIsAgreed = ref(false)
+const inThailand = computed(() => payoutForm.value.bankCountry === 'TH')
+
+/** Picking a Thai bank fills in its SWIFT code — eight characters of
+ *  nothing-in-particular, and the most mistyped field on this card. */
+function pickThaiBank(name: string) {
+  payoutForm.value.bankName = name
+  const bank = thaiBanks.value.find((b) => b.name.en === name || b.name.th === name)
+  if (bank) payoutForm.value.swift = bank.swift
+}
+const savingPayout = ref(false)
+const payoutSaved = ref(false)
+const payoutError = ref('')
+
+async function loadPayout() {
+  const { data } = await meApi.payoutDetails()
+  const { currencies: list, countries: cs, thaiBanks: tb, revenueSharePct, houseSharePct, resumeUrl, resumeIsCurrent: cur, ...rest } = data
+  myResumeUrl.value = resumeUrl
+  resumeIsCurrent.value = cur
+  myShare.value = revenueSharePct ?? houseSharePct
+  shareIsAgreed.value = revenueSharePct !== null
+  currencies.value = list
+  countries.value = cs
+  thaiBanks.value = tb
+  payoutForm.value = rest
+}
+
+async function savePayout() {
+  savingPayout.value = true
+  payoutSaved.value = false
+  payoutError.value = ''
+  try {
+    const { currencies: list, countries: cs, thaiBanks: tb, revenueSharePct, houseSharePct, resumeUrl, resumeIsCurrent: cur, ...rest } = (
+      await meApi.savePayoutDetails(payoutForm.value)
+    ).data
+    myShare.value = revenueSharePct ?? houseSharePct
+    shareIsAgreed.value = revenueSharePct !== null
+    myResumeUrl.value = resumeUrl
+    resumeIsCurrent.value = cur
+    currencies.value = list
+    countries.value = cs
+    thaiBanks.value = tb
+    payoutForm.value = rest
+    payoutSaved.value = true
+  } catch (err) {
+    payoutError.value =
+      err instanceof ApiError ? err.message : 'Could not save. Try again.'
+  } finally {
+    savingPayout.value = false
   }
 }
 
@@ -258,7 +361,12 @@ const cardClass =
 
 onMounted(async () => {
   try {
-    await Promise.all([loadProfile(), loadSessions(), isTeacher.value ? loadTeacher() : null])
+    await Promise.all([
+      loadProfile(),
+      loadSessions(),
+      isTeacher.value ? loadTeacher() : null,
+      isTeacher.value ? loadPayout() : null,
+    ])
   } catch (err) {
     error.value = err instanceof ApiError ? err.message : 'Could not load your account.'
   } finally {
@@ -390,6 +498,26 @@ onMounted(async () => {
               <p class="mt-1 text-xs text-gray-400">For course cards, where there is less room.</p>
             </div>
             <div class="sm:col-span-2">
+              <label :class="labelClass">Profile URL<span class="text-error-500">*</span></label>
+              <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-400">/teachers/</span>
+                <input
+                  v-model="teacherForm.slug"
+                  required
+                  maxlength="150"
+                  :class="`${inputClass} flex-1`"
+                />
+              </div>
+              <!-- Changing it is allowed, and worth a word: the old address is
+                   what anybody who already shared the page is using. -->
+              <p class="mt-1 text-xs text-gray-400">
+                Letters, numbers and hyphens. Changing it stops old links to your page working.
+              </p>
+              <p v-if="teacherErrors.slug" class="mt-1 text-sm text-error-500">
+                {{ teacherErrors.slug }}
+              </p>
+            </div>
+            <div class="sm:col-span-2">
               <label :class="labelClass">One line about what you teach</label>
               <input
                 v-model="teacherForm.headline"
@@ -430,7 +558,7 @@ onMounted(async () => {
               <label :class="labelClass">Languages you teach in</label>
               <div class="flex flex-wrap gap-2 pt-1.5">
                 <button
-                  v-for="l in LOCALES"
+                  v-for="l in TAUGHT"
                   :key="l.value"
                   type="button"
                   class="rounded-full border px-3 py-1.5 text-sm transition"
@@ -460,6 +588,151 @@ onMounted(async () => {
               {{ savingTeacher ? 'Saving…' : 'Save' }}
             </button>
             <p v-if="teacherSaved" class="text-sm text-success-600 dark:text-success-400">Saved.</p>
+          </div>
+        </form>
+      </section>
+
+      <!-- Identity and bank, for a teacher who gets paid -->
+      <section v-if="isTeacher" :class="cardClass">
+        <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-800 sm:px-6">
+          <h3 class="text-base font-medium text-gray-800 dark:text-white/90">
+            Identity and payouts
+          </h3>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Only you and the school's administrators can see what is on this card.
+          </p>
+        </div>
+
+        <form class="px-5 py-5 sm:px-6" @submit.prevent="savePayout">
+          <!-- Shown, not edited. The share is the school's to agree, and the
+               route this form saves through has no field for it — so putting
+               a box here would only teach somebody to type into something
+               that does nothing. -->
+          <div
+            v-if="myShare !== null"
+            class="mb-5 rounded-lg bg-gray-50 px-4 py-3 dark:bg-white/[0.03]"
+          >
+            <p class="text-xs font-medium uppercase tracking-wide text-gray-400">
+              Your share of a sale
+            </p>
+            <p class="mt-1 text-lg font-semibold text-gray-800 dark:text-white/90">
+              {{ myShare }}%
+            </p>
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+              Of what the school receives for your courses, after any discount.
+              {{
+                shareIsAgreed
+                  ? 'Agreed with you by the school.'
+                  : "The school's usual rate."
+              }}
+              Set by the school — ask an administrator to change it.
+            </p>
+          </div>
+
+          <div class="mb-5">
+            <FileField
+              v-model="payoutForm.resumePath"
+              purpose="teacher-resume"
+              label="CV"
+              accept=".pdf,.doc,.docx,image/*"
+              hint="Keep it up to date — the school reads this one. The copy you applied with is kept separately and does not change."
+            />
+            <p v-if="myResumeUrl" class="mt-1 text-xs text-gray-400">
+              <a :href="myResumeUrl" target="_blank" rel="noopener" class="text-brand-500 hover:text-brand-600">
+                Open the CV on file
+              </a>
+              <span class="ml-2">{{ resumeIsCurrent ? 'Your upload' : 'The one you applied with' }}</span>
+            </p>
+          </div>
+
+          <div class="mb-5">
+            <FileField
+              v-model="payoutForm.idDocumentPath"
+              purpose="identity-document"
+              label="ID/Passport"
+              accept="image/*,application/pdf"
+              hint="Please upload a clear photo or copy of your National ID Card or Passport for identity verification."
+            />
+          </div>
+
+          <h4 class="mb-1.5 text-sm font-medium text-gray-800 dark:text-white/90">
+            Bank Account Details
+          </h4>
+          <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+            Enter your bank information for payouts. Account name must match the full name on your
+            submitted ID/Passport.
+          </p>
+
+          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div>
+              <label :class="labelClass">Country</label>
+              <select v-model="payoutForm.bankCountry" :class="inputClass">
+                <option :value="null">Choose a country</option>
+                <option v-for="c in countries" :key="c.code" :value="c.code">
+                  {{ c.name.en }}
+                </option>
+              </select>
+              <p class="mt-1 text-xs text-gray-400">Where the account is held.</p>
+            </div>
+            <div>
+              <label :class="labelClass">Bank</label>
+              <select
+                v-if="inThailand"
+                :value="payoutForm.bankName ?? ''"
+                :class="inputClass"
+                @change="pickThaiBank(($event.target as HTMLSelectElement).value)"
+              >
+                <option value="">Choose your bank</option>
+                <option v-for="b in thaiBanks" :key="b.swift" :value="b.name.en">
+                  {{ b.name.th }} · {{ b.name.en }}
+                </option>
+              </select>
+              <input v-else v-model="payoutForm.bankName" maxlength="120" :class="inputClass" />
+              <p v-if="inThailand" class="mt-1 text-xs text-gray-400">
+                Picking your bank fills in the SWIFT code below.
+              </p>
+            </div>
+            <div>
+              <label :class="labelClass">Account name</label>
+              <input v-model="payoutForm.accountName" maxlength="150" :class="inputClass" />
+            </div>
+            <div>
+              <label :class="labelClass">Account number</label>
+              <input v-model="payoutForm.accountNumber" maxlength="64" :class="inputClass" />
+            </div>
+            <div>
+              <label :class="labelClass">Branch</label>
+              <input v-model="payoutForm.branch" maxlength="120" :class="inputClass" />
+            </div>
+            <div>
+              <label :class="labelClass">SWIFT / BIC</label>
+              <input v-model="payoutForm.swift" maxlength="16" :class="inputClass" />
+              <p class="mt-1 text-xs text-gray-400">Only for a transfer from outside Thailand.</p>
+            </div>
+            <div>
+              <label :class="labelClass">Pay me in</label>
+              <select v-model="payoutForm.payoutCurrency" :class="inputClass">
+                <option :value="null">No preference</option>
+                <option v-for="c in currencies" :key="c.code" :value="c.code">
+                  {{ c.code }} — {{ c.name.en }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <p v-if="payoutError" role="alert" class="mt-3 text-sm text-error-500">
+            {{ payoutError }}
+          </p>
+
+          <div class="mt-4 flex items-center gap-3">
+            <button
+              type="submit"
+              :disabled="savingPayout"
+              class="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600 disabled:opacity-60"
+            >
+              {{ savingPayout ? 'Saving…' : 'Save' }}
+            </button>
+            <p v-if="payoutSaved" class="text-sm text-success-600 dark:text-success-400">Saved.</p>
           </div>
         </form>
       </section>

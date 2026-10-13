@@ -9,7 +9,9 @@ import {
   quizzes,
   users,
 } from '../../db/schema/index'
+import { teacherScope } from '../../lib/scope'
 import { outer } from '../../lib/sql'
+import { monthStart } from '../../lib/time'
 
 /**
  * The dashboard's figures.
@@ -27,7 +29,8 @@ export default async function dashboardRoutes(app: FastifyInstance) {
   app.get('/dashboard', signedIn, async (req) => {
     const roles = req.user.roles
     const isStaff = roles.includes('admin') || roles.includes('superadmin')
-    const teacherId = roles.includes('teacher') ? req.user.sub : null
+    // Admin is the wider view and wins when somebody holds both roles.
+    const teacherId = teacherScope(req.user)
 
     /* ---- what is waiting ---- */
 
@@ -120,7 +123,7 @@ export default async function dashboardRoutes(app: FastifyInstance) {
               SELECT COUNT(*) FROM users u
               JOIN user_roles ur ON ur.user_id = u.id
               JOIN roles r ON r.id = ur.role_id AND r.name = 'student'
-              WHERE u.created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')
+              WHERE u.created_at >= ${monthStart()}
             )`,
             teachers: sql<number>`(
               SELECT COUNT(*) FROM users u
@@ -131,16 +134,24 @@ export default async function dashboardRoutes(app: FastifyInstance) {
               SELECT COUNT(*) FROM courses WHERE status = 'approved'
             )`,
             draftCourses: sql<number>`(SELECT COUNT(*) FROM courses WHERE status <> 'approved')`,
-            /** Satang taken this month and in all, refunds excluded. */
+            /**
+             * Satang taken this month and in all, refunds excluded.
+             *
+             * `total_thb`, not `total`: a course may be priced in euros, and
+             * adding euro cents to satang gives a figure that is wrong in a
+             * way nobody would spot — it would simply look like a quiet month.
+             * Each order carries its own baht value, worked out at the rate on
+             * the day it was paid.
+             */
             revenueThisMonth: sql<number>`(
-              SELECT COALESCE(SUM(total), 0) FROM orders
-              WHERE status = 'paid' AND paid_at >= DATE_FORMAT(NOW(), '%Y-%m-01')
+              SELECT COALESCE(SUM(total_thb), 0) FROM orders
+              WHERE status = 'paid' AND paid_at >= ${monthStart()}
             )`,
             revenueAllTime: sql<number>`(
-              SELECT COALESCE(SUM(total), 0) FROM orders WHERE status = 'paid'
+              SELECT COALESCE(SUM(total_thb), 0) FROM orders WHERE status = 'paid'
             )`,
             refundedAllTime: sql<number>`(
-              SELECT COALESCE(SUM(total), 0) FROM orders WHERE status = 'refunded'
+              SELECT COALESCE(SUM(total_thb), 0) FROM orders WHERE status = 'refunded'
             )`,
             ordersAwaitingPayment: sql<number>`(
               SELECT COUNT(*) FROM orders WHERE status = 'pending'
@@ -148,6 +159,55 @@ export default async function dashboardRoutes(app: FastifyInstance) {
             activeEnrolments: sql<number>`(
               SELECT COUNT(*) FROM entitlements
               WHERE status = 'active' AND (expires_at IS NULL OR expires_at > NOW())
+            )`,
+          })
+          .from(sql`(SELECT 1) AS one`)
+      : [null]
+
+    /**
+     * The same question asked about one teacher's own classes.
+     *
+     * Kept apart from `counts` rather than folded into it, because the words
+     * would otherwise mean two different things in one field: an admin's
+     * "students" is the school's, a teacher's is the people in their room.
+     *
+     * Null for an admin, including an admin who also teaches — they get the
+     * school's view, and open a course when they want one class's numbers.
+     */
+    const [teaching] = teacherId
+      ? await db
+          .select({
+            /** People, not grants: somebody on two of your courses is one student. */
+            learners: sql<number>`(
+              SELECT COUNT(DISTINCT e.user_id) FROM entitlements e
+              JOIN course_instructors ci ON ci.course_id = e.course_id
+              WHERE ci.user_id = ${teacherId}
+                AND e.status = 'active'
+                AND (e.expires_at IS NULL OR e.expires_at > NOW())
+            )`,
+            learnersThisMonth: sql<number>`(
+              SELECT COUNT(DISTINCT e.user_id) FROM entitlements e
+              JOIN course_instructors ci ON ci.course_id = e.course_id
+              WHERE ci.user_id = ${teacherId}
+                AND e.granted_at >= ${monthStart()}
+            )`,
+            /** Every grant, so one person on two courses counts twice. */
+            enrolments: sql<number>`(
+              SELECT COUNT(*) FROM entitlements e
+              JOIN course_instructors ci ON ci.course_id = e.course_id
+              WHERE ci.user_id = ${teacherId}
+                AND e.status = 'active'
+                AND (e.expires_at IS NULL OR e.expires_at > NOW())
+            )`,
+            publishedCourses: sql<number>`(
+              SELECT COUNT(*) FROM courses c
+              JOIN course_instructors ci ON ci.course_id = c.id
+              WHERE ci.user_id = ${teacherId} AND c.status = 'approved'
+            )`,
+            draftCourses: sql<number>`(
+              SELECT COUNT(*) FROM courses c
+              JOIN course_instructors ci ON ci.course_id = c.id
+              WHERE ci.user_id = ${teacherId} AND c.status <> 'approved'
             )`,
           })
           .from(sql`(SELECT 1) AS one`)
@@ -234,6 +294,15 @@ export default async function dashboardRoutes(app: FastifyInstance) {
               refundedAllTime: num(counts.refundedAllTime),
               ordersAwaitingPayment: num(counts.ordersAwaitingPayment),
               activeEnrolments: num(counts.activeEnrolments),
+            }
+          : null,
+        teaching: teaching
+          ? {
+              learners: num(teaching.learners),
+              learnersThisMonth: num(teaching.learnersThisMonth),
+              enrolments: num(teaching.enrolments),
+              publishedCourses: num(teaching.publishedCourses),
+              draftCourses: num(teaching.draftCourses),
             }
           : null,
         recentOrders,

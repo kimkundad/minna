@@ -55,6 +55,20 @@ const router = createRouter({
       meta: { title: 'Quiz', roles: ['superadmin', 'admin', 'teacher'] },
     },
     {
+      path: '/earnings',
+      name: 'MyEarnings',
+      component: () => import('@/views/Earnings/MyEarnings.vue'),
+      // Teachers only: an admin has no earnings of their own, and the
+      // endpoint behind it reports on the signed-in account and nothing else.
+      meta: { title: 'My earnings', roles: ['teacher'] },
+    },
+    {
+      path: '/payouts',
+      name: 'Payouts',
+      component: () => import('@/views/Earnings/Payouts.vue'),
+      meta: { title: 'Teacher payouts', roles: ['superadmin', 'admin'] },
+    },
+    {
       path: '/quizzes',
       name: 'Quizzes',
       component: () => import('@/views/Learning/Quizzes.vue'),
@@ -123,6 +137,14 @@ const router = createRouter({
       meta: { title: 'Orders', roles: ['superadmin', 'admin'] },
     },
     {
+      // Outside the admin shell on purpose: a printed sheet with a sidebar
+      // down the side of it is not a document.
+      path: '/orders/:id/receipt',
+      name: 'OrderReceipt',
+      component: () => import('@/views/Sales/OrderReceipt.vue'),
+      meta: { title: 'Receipt', roles: ['superadmin', 'admin'] },
+    },
+    {
       path: '/invoices',
       name: 'Invoices',
       component: () => import('@/views/Sales/Invoices.vue'),
@@ -170,6 +192,20 @@ const router = createRouter({
       meta: { title: 'Home slideshow', roles: ['superadmin', 'admin'] },
     },
     {
+      path: '/journey',
+      name: 'Journey',
+      component: () => import('@/views/Content/Journey.vue'),
+      meta: { title: 'Home journey band', roles: ['superadmin', 'admin'] },
+    },
+    {
+      // The same screen: the two bands are the same shape, and the path says
+      // which one is being written.
+      path: '/journey/cta',
+      name: 'HomeClosingBand',
+      component: () => import('@/views/Content/Journey.vue'),
+      meta: { title: 'Home closing band', roles: ['superadmin', 'admin'] },
+    },
+    {
       path: '/posts',
       name: 'Articles',
       component: () => import('@/views/Content/Articles.vue'),
@@ -209,6 +245,22 @@ const router = createRouter({
       meta: { title: 'Audit log', roles: ['superadmin'] },
     },
 
+    {
+      path: '/chat',
+      name: 'StaffChat',
+      component: () => import('@/views/Chat/StaffChat.vue'),
+      // Teachers as well as admins: it is the one place they can reach the
+      // school. The API decides which conversations each of them has.
+      meta: { title: 'Messages', roles: ['superadmin', 'admin', 'teacher'] },
+    },
+    {
+      path: '/notifications',
+      name: 'Notifications',
+      component: () => import('@/views/Others/Notifications.vue'),
+      // No roles: whoever may use the admin may read their own notifications,
+      // and the endpoint behind it reports on the signed-in account alone.
+      meta: { title: 'Notifications' },
+    },
     {
       path: '/profile',
       name: 'Profile',

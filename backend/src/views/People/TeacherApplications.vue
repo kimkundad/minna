@@ -137,7 +137,9 @@ async function decide(decision: 'approved' | 'rejected') {
 }
 
 const pageLabel = computed(() => `Page ${page.value} of ${totalPages.value}`)
-const when = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString() : '—')
+/** Undefined as well as null: an older application has no `agreedAt` at all,
+ *  and a dash is the honest answer for both. */
+const when = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleDateString() : '—')
 
 onMounted(async () => {
   try {
@@ -217,6 +219,53 @@ onMounted(async () => {
             <dt class="text-xs uppercase tracking-wide text-gray-400">Best time to reach them</dt>
             <dd class="mt-1 text-sm text-gray-800 dark:text-white/90">
               {{ open.contactTime || '—' }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs uppercase tracking-wide text-gray-400">CV</dt>
+            <dd class="mt-1 text-sm">
+              <!-- Signed, and good for five minutes: a CV is the work history
+                   of somebody who does not work here and may never be asked
+                   to, so it is not left at an address anybody can keep. -->
+              <a
+                v-if="open.resumeUrl"
+                :href="open.resumeUrl"
+                target="_blank"
+                rel="noopener"
+                class="text-brand-500 hover:text-brand-600"
+              >
+                Open the file
+              </a>
+              <span v-else class="text-gray-800 dark:text-white/90">Not sent</span>
+            </dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt class="text-xs uppercase tracking-wide text-gray-400">Sample lesson</dt>
+            <dd class="mt-1 text-sm">
+              <!-- Played here rather than downloaded: it is watched once,
+                   while deciding, and then it is gone. -->
+              <video
+                v-if="open.sampleVideoUrl"
+                :src="open.sampleVideoUrl"
+                controls
+                preload="metadata"
+                class="w-full max-w-xl rounded-lg border border-gray-200 dark:border-gray-800"
+              />
+              <span v-else class="text-gray-800 dark:text-white/90">
+                {{ open.status === 'pending' ? 'Not sent' : 'Deleted when this was decided' }}
+              </span>
+              <p v-if="open.sampleVideoUrl" class="mt-1.5 text-xs text-warning-600">
+                Watch it before you decide — approving or rejecting deletes it.
+              </p>
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs uppercase tracking-wide text-gray-400">Agreed to the terms</dt>
+            <!-- Recorded at the moment they ticked the box. Worth showing
+                 rather than leaving in the table: it is the only answer to
+                 "when did they agree to this?". -->
+            <dd class="mt-1 text-sm text-gray-800 dark:text-white/90">
+              {{ when(open.agreedAt) }}
             </dd>
           </div>
           <div class="sm:col-span-2">

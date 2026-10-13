@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import { num } from '@/lib/format'
+import { num, money } from '@/lib/format'
 import type { Coupon } from './types'
 
 /**
@@ -17,6 +17,8 @@ import type { Coupon } from './types'
  * rather than just smaller than hoped.
  */
 const props = defineProps<{
+  /** What this basket is priced in. Every line shares it. */
+  currency?: string
   coupon: Coupon
   /** Which scope this is, which decides the labels and the focus key. */
   scope: 'course' | 'order'
@@ -31,15 +33,17 @@ const props = defineProps<{
 
 defineEmits<{ remove: [courseId?: string] }>()
 
-const { t } = useI18n()
-const baht = (n: number) => t('commerce.baht', { n: num(n) })
+const { t, locale } = useI18n()
+/** The basket's currency, which every line in it shares — a basket that
+ *  mixed two could not be charged at all, so the server refuses one. */
+const asMoney = (n: number) => money(n, props.currency ?? 'THB', String(locale.value))
 
 /** The full value, spelled out for the detail list. */
 const value = computed(() => {
   const c = props.coupon
-  if (c.type !== 'percent') return t('commerce.coupon.amount', { amount: baht(c.value) })
+  if (c.type !== 'percent') return t('commerce.coupon.amount', { amount: asMoney(c.value) })
   return c.max
-    ? t('commerce.coupon.percentMax', { pct: c.value, max: baht(c.max) })
+    ? t('commerce.coupon.percentMax', { pct: c.value, max: asMoney(c.max) })
     : t('commerce.coupon.percent', { pct: c.value })
 })
 
@@ -47,14 +51,14 @@ const ariaLabel = computed(() => {
   if (props.scope === 'course') {
     return t('commerce.coupon.appliedCourseAria', {
       code: props.coupon.code,
-      amount: baht(props.disc),
+      amount: asMoney(props.disc),
     })
   }
   return props.invalid
     ? t('commerce.coupon.appliedOrderInvalidAria', { code: props.coupon.code })
     : t('commerce.coupon.appliedOrderAria', {
         code: props.coupon.code,
-        amount: baht(props.disc),
+        amount: asMoney(props.disc),
       })
 })
 
@@ -117,8 +121,8 @@ const calc = computed(() =>
     <p v-if="invalid" class="co-cp-warn">
       <AppIcon name="alert-triangle" /><span>{{
         t('commerce.coupon.belowMinimum', {
-          current: baht(base),
-          minimum: baht(coupon.minSubtotal ?? 0),
+          current: asMoney(base),
+          minimum: asMoney(coupon.minSubtotal ?? 0),
         })
       }}</span>
     </p>
@@ -126,17 +130,17 @@ const calc = computed(() =>
     <div v-else class="co-cp-calc">
       <div>
         <small>{{ calc.before }}</small>
-        <b>{{ baht(base) }}</b>
+        <b>{{ asMoney(base) }}</b>
       </div>
       <AppIcon name="arrow-right" />
       <div class="is-disc">
         <small>{{ calc.off }}</small>
-        <b>{{ disc ? `−${baht(disc)}` : baht(0) }}</b>
+        <b>{{ disc ? `−${asMoney(disc)}` : asMoney(0) }}</b>
       </div>
       <AppIcon name="arrow-right" />
       <div class="is-net">
         <small>{{ calc.after }}</small>
-        <b>{{ baht(net) }}</b>
+        <b>{{ asMoney(net) }}</b>
       </div>
     </div>
   </div>

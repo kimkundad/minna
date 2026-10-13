@@ -17,6 +17,7 @@ import {
   type OrderStatus,
 } from '@/lib/api'
 import { formatBaht } from '@/lib/money'
+import flatPickr from 'vue-flatpickr-component'
 
 /**
  * One student, behind tabs.
@@ -126,6 +127,84 @@ function openTab(key: TabKey) {
 }
 
 /* ---------------- access ---------------- */
+
+/**
+ * Moving when a course runs out for somebody.
+ *
+ * Almost always to hand back a few days: they were ill, or a module went up
+ * late, and giving the time back costs the school nothing. The buttons add to
+ * whichever is later — today or the current expiry — because adding a week to
+ * a date that has already passed would give somebody a week that is already
+ * over.
+ */
+/**
+ * The calendar in the dialog.
+ *
+ * `dateFormat` is what the model holds and `altFormat` is what is shown: the
+ * stored value stays `YYYY-MM-DD` for the code that adds days to it, while the
+ * admin reads "8 November 2026" rather than a row of numbers that could be
+ * either way round.
+ *
+ * No `minDate`. Pulling an expiry back to a date already past is unusual, but
+ * it is a real thing to want — ending access at the point a refund covered,
+ * say — and the API handles it honestly rather than refusing.
+ */
+const EXPIRY_PICKER = {
+  dateFormat: 'Y-m-d',
+  altInput: true,
+  altFormat: 'j F Y',
+} as const
+
+const expiryFor = ref<MemberCourseAccess | null>(null)
+const expiryDate = ref('')
+const expiryLifetime = ref(false)
+const savingExpiry = ref(false)
+
+/** `YYYY-MM-DD` on the school's own clock, which is what a date input wants. */
+const YMD = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Bangkok',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+function editExpiry(row: MemberCourseAccess): void {
+  expiryFor.value = row
+  expiryLifetime.value = row.expiresAt === null
+  expiryDate.value = row.expiresAt ? YMD.format(new Date(row.expiresAt)) : ''
+  error.value = ''
+}
+
+function addDays(days: number): void {
+  const current = expiryDate.value ? new Date(`${expiryDate.value}T00:00:00+07:00`) : null
+  // From today if it has already run out: a week added to last month is a week
+  // nobody gets.
+  const from = current && current.getTime() > Date.now() ? current : new Date()
+  expiryDate.value = YMD.format(new Date(from.getTime() + days * 86_400_000))
+  expiryLifetime.value = false
+}
+
+async function saveExpiry(): Promise<void> {
+  const row = expiryFor.value
+  if (!row || savingExpiry.value) return
+  if (!expiryLifetime.value && !expiryDate.value) return
+
+  savingExpiry.value = true
+  error.value = ''
+  try {
+    // End of day in Bangkok: somebody told "until the 9th" expects the 9th to
+    // work, not to have ended at midnight as it began.
+    const at = expiryLifetime.value ? null : `${expiryDate.value}T23:59:59+07:00`
+    await memberApi.setAccessExpiry(id.value, row.id, at)
+    courses.value = (await memberApi.courses(id.value)).data
+    summary.value = (await memberApi.summary(id.value)).data
+    expiryFor.value = null
+  } catch (err) {
+    error.value = err instanceof ApiError ? err.message : 'Could not change that date.'
+  } finally {
+    savingExpiry.value = false
+  }
+}
 
 async function toggleAccess(row: MemberCourseAccess) {
   const revoking = row.status !== 'revoked'
@@ -557,6 +636,16 @@ onMounted(async () => {
                   </span>
                 </td>
                 <td v-if="canRevoke" class="whitespace-nowrap px-5 py-3.5 text-right text-sm sm:px-6">
+                  <!-- Handing back a few days is the ordinary support job and
+                       the common one, so it reads first. -->
+                  <button
+                    type="button"
+                    class="text-brand-500 hover:underline"
+                    @click="editExpiry(row)"
+                  >
+                    Change expiry
+                  </button>
+                  <span class="px-2 text-gray-300 dark:text-gray-700">·</span>
                   <button
                     type="button"
                     class="hover:underline"
@@ -910,6 +999,93 @@ onMounted(async () => {
           </form>
         </div>
       </template>
+    </div>
+
+    <!-- Changing when a course runs out. -->
+    <div v-if="expiryFor" class="fixed inset-0 z-50 grid place-items-center p-4">
+      <div class="absolute inset-0 bg-gray-900/50" @click="expiryFor = null"></div>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="expiry-title"
+        class="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900"
+      >
+        <h3 id="expiry-title" class="text-lg font-medium text-gray-800 dark:text-white/90">
+          Change expiry
+        </h3>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          {{ expiryFor.title }} — currently
+          {{ expiryFor.expiresAt ? day(expiryFor.expiresAt) : 'lifetime' }}.
+        </p>
+
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button
+            v-for="n in [7, 30, 90, 365]"
+            :key="n"
+            type="button"
+            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+            @click="addDays(n)"
+          >
+            +{{ n }} days
+          </button>
+        </div>
+
+        <label
+          class="mt-4 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          for="expiry-date"
+        >
+          Runs out at the end of
+        </label>
+        <!-- A calendar rather than the browser's own box, which shows
+             `mm/dd/yyyy` and reads as an American date to everyone here. The
+             value underneath is still `YYYY-MM-DD`; only the display differs. -->
+        <div class="relative mt-1">
+          <flat-pickr
+            id="expiry-date"
+            v-model="expiryDate"
+            :config="EXPIRY_PICKER"
+            :disabled="expiryLifetime"
+            placeholder="Pick a date"
+            class="h-11 w-full appearance-none rounded-lg border border-gray-200 bg-transparent px-3 pr-10 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden disabled:opacity-50 dark:border-gray-700 dark:text-white/90"
+          />
+          <span
+            class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+            aria-hidden="true"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="5" width="18" height="16" rx="2" />
+              <path d="M8 3v4M16 3v4M3 11h18" />
+            </svg>
+          </span>
+        </div>
+
+        <label class="mt-3 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <input v-model="expiryLifetime" type="checkbox" class="h-4 w-4 rounded" />
+          Never runs out
+        </label>
+
+        <p class="mt-3 text-xs text-gray-400">
+          Recorded in the audit log with the date it had before.
+        </p>
+
+        <div class="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.04]"
+            @click="expiryFor = null"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
+            :disabled="savingExpiry || (!expiryLifetime && !expiryDate)"
+            @click="saveExpiry"
+          >
+            {{ savingExpiry ? 'Saving…' : 'Save' }}
+          </button>
+        </div>
+      </div>
     </div>
   </admin-layout>
 </template>

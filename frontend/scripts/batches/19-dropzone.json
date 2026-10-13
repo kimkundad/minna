@@ -1,0 +1,74 @@
+{
+  "th": { "drop": {
+    "here": "ลากไฟล์มาวางที่นี่",
+    "orPick": "หรือคลิกเพื่อเลือกจากเครื่อง",
+    "replace": "คลิกเพื่อเปลี่ยนไฟล์",
+    "badType": "ไฟล์ชนิดนี้ใช้ไม่ได้ ดูชนิดที่รับได้ด้านล่าง",
+    "tooBig": "ไฟล์นี้ {size} เกิน {max} MB ที่รับได้",
+    "empty": "ไฟล์นี้ว่างเปล่า เลือกไฟล์อื่น",
+    "remove": "เอา {name} ออก"
+  } },
+  "en": { "drop": {
+    "here": "Drop a file here",
+    "orPick": "or click to choose one from your device",
+    "replace": "Click to change the file",
+    "badType": "That kind of file is not accepted — see what is below.",
+    "tooBig": "That file is {size}, over the {max} MB limit.",
+    "empty": "That file is empty. Please choose another.",
+    "remove": "Remove {name}"
+  } },
+  "jp": { "drop": {
+    "here": "ここにファイルをドロップ",
+    "orPick": "またはクリックして端末から選択",
+    "replace": "クリックしてファイルを変更",
+    "badType": "この種類のファイルは使えません。下の対応形式をご確認ください。",
+    "tooBig": "このファイルは {size} で、上限の {max} MB を超えています。",
+    "empty": "このファイルは空です。別のものを選んでください。",
+    "remove": "{name} を外す"
+  } },
+  "vn": { "drop": {
+    "here": "Kéo tệp vào đây",
+    "orPick": "hoặc bấm để chọn từ thiết bị của bạn",
+    "replace": "Bấm để đổi tệp",
+    "badType": "Không nhận loại tệp này — xem các định dạng bên dưới.",
+    "tooBig": "Tệp này {size}, vượt giới hạn {max} MB.",
+    "empty": "Tệp này rỗng. Vui lòng chọn tệp khác.",
+    "remove": "Bỏ {name}"
+  } },
+  "id": { "drop": {
+    "here": "Letakkan berkas di sini",
+    "orPick": "atau klik untuk memilih dari perangkat Anda",
+    "replace": "Klik untuk mengganti berkas",
+    "badType": "Jenis berkas itu tidak diterima — lihat yang di bawah.",
+    "tooBig": "Berkas itu {size}, melebihi batas {max} MB.",
+    "empty": "Berkas itu kosong. Mohon pilih yang lain.",
+    "remove": "Hapus {name}"
+  } },
+  "zh": { "drop": {
+    "here": "把文件拖到这里",
+    "orPick": "或点击从你的设备中选择",
+    "replace": "点击更换文件",
+    "badType": "不接受这种文件 — 可用格式见下方。",
+    "tooBig": "这个文件 {size}，超过 {max} MB 上限。",
+    "empty": "这个文件是空的，请换一个。",
+    "remove": "移除 {name}"
+  } },
+  "ko": { "drop": {
+    "here": "여기에 파일을 놓으세요",
+    "orPick": "또는 눌러서 기기에서 고르세요",
+    "replace": "눌러서 파일 바꾸기",
+    "badType": "그 형식은 받을 수 없습니다 — 아래 형식을 확인하세요.",
+    "tooBig": "그 파일은 {size}로, {max} MB 한도를 넘습니다.",
+    "empty": "그 파일은 비어 있습니다. 다른 파일을 골라 주세요.",
+    "remove": "{name} 삭제"
+  } },
+  "tw": { "drop": {
+    "here": "把檔案拖到這裡",
+    "orPick": "或點擊從你的裝置中選擇",
+    "replace": "點擊更換檔案",
+    "badType": "不接受這種檔案 — 可用格式見下方。",
+    "tooBig": "這個檔案 {size}，超過 {max} MB 上限。",
+    "empty": "這個檔案是空的，請換一個。",
+    "remove": "移除 {name}"
+  } }
+}

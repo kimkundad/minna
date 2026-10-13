@@ -11,7 +11,7 @@
  * The guard is the point: without it this is a script that deletes a customer
  * because somebody pasted the wrong address into it.
  */
-import { eq, like, or } from 'drizzle-orm'
+import { eq, like, or, sql } from 'drizzle-orm'
 import { db } from '../src/db/client'
 import { orders, users } from '../src/db/schema/index'
 
@@ -51,8 +51,31 @@ const [{ affectedRows: ordersGone } = { affectedRows: 0 }] = await db
   .where(eq(orders.userId, row.id))
 
 await db.delete(users).where(eq(users.id, row.id))
+
+/**
+ * Notifications this account caused on somebody else's.
+ *
+ * A test learner submitting an essay tells the real teacher who owns that
+ * course. Deleting the learner cascades their own rows away, but the teacher
+ * is left holding a notice about work that no longer exists — and those built
+ * up, one per run, on accounts nobody was cleaning.
+ *
+ * Matched by subject rather than by text: the essay versions are gone with the
+ * learner, so any notice still pointing at one is pointing at nothing.
+ */
+const [{ affectedRows: staleGone } = { affectedRows: 0 }] = await db.execute(sql`
+  DELETE n FROM notifications n
+  WHERE n.subject_type = 'essay_version'
+    AND NOT EXISTS (
+      SELECT 1 FROM essay_versions ev
+      WHERE ev.submission_id = FLOOR(n.subject_id / 1000)
+        AND ev.version = n.subject_id % 1000
+    )
+`) as unknown as { affectedRows: number }[]
 console.log(
-  `removed ${email} (#${row.id})` + (ordersGone ? ` and ${ordersGone} of its orders` : ''),
+  `removed ${email} (#${row.id})` +
+    (ordersGone ? ` and ${ordersGone} of its orders` : '') +
+    (staleGone ? ` and ${staleGone} notices about its work` : ''),
 )
 
 // While we are here: say how many older test accounts are still lying about,

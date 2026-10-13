@@ -1,0 +1,485 @@
+{
+  "id": {
+    "about": {
+      "hero": {
+        "eyebrow": "Tentang Minna",
+        "titleA": "Bahasa baru, ",
+        "titleB": "sedikit setiap hari",
+        "lead": "Minna adalah sekolah bahasa daring yang menyatukan kursus, pelajaran, latihan, dan catatan kemajuan Anda di satu tempat. Dibuat untuk orang yang punya pekerjaan dan jadwal: mudah dimulai, mudah ditengok lagi, dan diarahkan ke bahasa yang benar-benar bisa dipakai.",
+        "ctaPrimary": "Lihat kursus",
+        "ctaSecondary": "Kenali kami",
+        "imageAlt": "Sekelompok pelajar membahas satu pelajaran bersama"
+      },
+      "who": {
+        "eyebrow": "Siapa Kami",
+        "title": "Siapa kami",
+        "quote": "Minna adalah sekolah bahasa daring yang berdiri di atas satu gagasan: bahasa tidak dimulai dari buku teks, tetapi dari kalimat pertama yang Anda berani ucapkan. Karena itu pelajaran kami singkat, jelas, dan selalu berakhir dengan Anda memakai bahasanya.",
+        "body": "Bahasa Jepang, Inggris, dan Vietnam berjajar dalam satu akun, lengkap dengan latihan, catatan yang bisa diunduh, dan rekaman kemajuan yang selalu memberi tahu apa yang harus dipelajari berikutnya.",
+        "sign": "Minna · Sekolah bahasa daring",
+        "imageAlt": "Seorang pelajar mencatat kosakata baru saat pelajaran"
+      },
+      "beliefs": {
+        "eyebrow": "Keyakinan Kami",
+        "title": "Apa yang kami yakini",
+        "intro": "Setiap kursus dan setiap pelajaran di Minna berangkat dari tiga gagasan yang sama — bahasa harus mudah dijangkau, layak dipakai, dan bisa dipelajari setiap hari tanpa perjuangan berat.",
+        "items": [
+          {
+            "title": "Pelajaran yang mudah dijangkau",
+            "text": "Pelajaran singkat dalam urutan yang jelas, di laptop, tablet, atau ponsel, di mana pun Anda punya sepuluh menit."
+          },
+          {
+            "title": "Berbicara sejak pelajaran pertama",
+            "text": "Setiap pelajaran membawa kalimat yang sungguh-sungguh dipakai orang, dengan audio penutur asli dan latihan pelafalan untuk langsung dicoba."
+          },
+          {
+            "title": "Menjaga kesinambungan",
+            "text": "Kami mengingat tempat Anda berhenti, menghitung hari-hari Anda belajar, dan membawa Anda kembali ke pelajaran berikutnya dalam satu akun."
+          }
+        ]
+      },
+      "practice": {
+        "eyebrow": "Berorientasi praktik",
+        "title": "Bahasa yang bekerja di luar kelas",
+        "text": "Materinya dibangun dari situasi yang benar-benar Anda hadapi: memperkenalkan diri, memesan makanan, berbicara dengan rekan kerja, menulis email, menghadapi wawancara.",
+        "checks": [
+          "Dialog dari situasi nyata, dengan audio penutur asli",
+          "Ringkasan kosakata dan tata bahasa untuk diulang nanti",
+          "Semua tingkat, dari belum pernah belajar sampai memakainya di tempat kerja",
+          "Latihan dan tugas tulis yang dinilai pengajar Anda, dengan catatan"
+        ],
+        "link": "Lihat kursus menurut bahasa dan tingkat",
+        "imageAlt": "Buku catatan kosakata dan buku pelajaran bahasa di atas meja"
+      },
+      "platform": {
+        "eyebrow": "Dari Pelajaran ke Percakapan",
+        "title": "Dari satu pelajaran ke sebuah percakapan",
+        "lead": "Mulailah dengan pelajaran yang cukup singkat untuk diselesaikan sekali duduk, latih bunyinya, kerjakan latihannya, dan lihat kemajuan Anda bertumpuk — sampai kalimat yang dulu Anda hafal menjadi kalimat yang bisa Anda ucapkan.",
+        "steps": [
+          { "title": "Baca pelajaran dan kosakatanya" },
+          { "title": "Tonton videonya" },
+          { "title": "Kerjakan latihan dan tugas tulis" },
+          { "title": "Ikuti kemajuan Anda" }
+        ],
+        "floatTitle": "Kursus · latihan · kemajuan",
+        "floatText": "dalam satu akun",
+        "imageAlt": "Seorang pelajar belajar bahasa daring di laptop"
+      },
+      "community": {
+        "eyebrow": "Komunitas / Belajar Bersama",
+        "title": "Jadi lebih baik, bersama-sama",
+        "sub": "Tempat untuk pemula sama sekali, pelajar dan mahasiswa, serta orang bekerja yang ingin bahasa baru yang benar-benar bisa dipakai.",
+        "cards": [
+          {
+            "title": "Bertanya di dalam pelajaran",
+            "text": "Ajukan pertanyaan kepada pengajar Anda dan bandingkan catatan dengan pelajar lain, di pelajaran mana pun."
+          },
+          {
+            "title": "Titik mulai apa pun",
+            "text": "Paket dan akses dibentuk sesuai tujuan Anda, entah mulai dari nol atau memakai bahasanya di tempat kerja."
+          },
+          {
+            "title": "Beberapa bahasa, satu tempat",
+            "text": "Pelajari lebih dari satu bahasa, berpindah bebas di antaranya, dan simpan semua kemajuan di akun yang sama."
+          }
+        ]
+      },
+      "cta": {
+        "title": "Mulai bahasa berikutnya bersama Minna",
+        "text": "Pilih bahasa dan tingkat yang cocok, belajar di perangkat apa pun, dan selalu lanjut dari tempat Anda berhenti.",
+        "button": "Lihat kursus"
+      }
+    },
+    "blog": {
+      "title": "Artikel",
+      "lead": "Tips belajar, persiapan ujian, dan hal-hal yang ingin disampaikan para pengajar — bisa dipakai hari ini.",
+      "searchLabel": "Cari artikel",
+      "searchPlaceholder": "Cari artikel — kanji, JLPT, pelafalan…",
+      "filterLabel": "Saring menurut kategori",
+      "allCategories": "Semua",
+      "countFound": "{count} artikel",
+      "loadMore": "Tampilkan lagi (sisa {count})",
+      "readMore": "Baca artikelnya",
+      "readingTime": "{minutes} menit baca",
+      "contents": "Isi",
+      "share": "Bagikan ini",
+      "copyLink": "Salin tautan",
+      "copied": "Tersalin",
+      "moreTitle": "Bacaan lainnya",
+      "loading": "Memuat artikel…",
+      "emptyTitle": "Tidak ada yang cocok",
+      "emptyText": "Coba kata lain, pilih kategori berbeda, atau baca semuanya.",
+      "showAll": "Tampilkan semua artikel",
+      "errorTitle": "Tidak dapat memuat artikel",
+      "errorText": "Artikel tidak dapat dimuat saat ini. Silakan coba lagi.",
+      "notFoundTitle": "Artikel tidak ada",
+      "notFoundText": "Tidak ada artikel di “{slug}”. Mungkin sudah ditarik atau dipindahkan.",
+      "backToBlog": "Kembali ke artikel",
+      "homeTitle": "Artikel terbaru",
+      "homeSub": "Tips belajar, kabar terbaru, dan hal-hal yang ingin disampaikan para pengajar",
+      "homeMore": "Baca semua artikel"
+    }
+  },
+
+  "zh": {
+    "about": {
+      "hero": {
+        "eyebrow": "关于 Minna",
+        "titleA": "一门新语言，",
+        "titleB": "每天学一点",
+        "lead": "Minna 是一所在线语言学校，把课程、课节、练习与你的学习进度集中在一处。它为有工作、有时间表的人而建：容易开始，容易回来，目标是你真正用得上的语言。",
+        "ctaPrimary": "浏览课程",
+        "ctaSecondary": "认识我们",
+        "imageAlt": "一群学员一起复习一节课"
+      },
+      "who": {
+        "eyebrow": "我们是谁",
+        "title": "我们是谁",
+        "quote": "Minna 是一所在线语言学校，建立在一个想法上：语言不是从教科书开始的，而是从你敢开口说出的第一句话开始的。所以我们的课节简短、清楚，而且总是以你用出这门语言作结。",
+        "body": "日语、英语与越南语并列在同一个账户里，附带练习、可下载的笔记，以及一份总能告诉你下一步该学什么的进度记录。",
+        "sign": "Minna · 在线语言学校",
+        "imageAlt": "一位学员在课堂上写下新词汇"
+      },
+      "beliefs": {
+        "eyebrow": "我们的信念",
+        "title": "我们相信什么",
+        "intro": "Minna 的每一门课程、每一节课都从同样的三个想法出发 — 语言应该容易接触、值得使用，而且每天都能学而不必硬撑。",
+        "items": [
+          {
+            "title": "随手可及的课节",
+            "text": "顺序清楚的短课节，在笔记本电脑、平板或手机上，只要你哪里有十分钟就能学。"
+          },
+          {
+            "title": "第一课就开口",
+            "text": "每节课都带着你真的会说的句子，配母语发音与跟读练习，当下就能试。"
+          },
+          {
+            "title": "把习惯接下去",
+            "text": "我们记住你停下的地方，数着你学过的天数，并在同一个账户里把你带回下一节课。"
+          }
+        ]
+      },
+      "practice": {
+        "eyebrow": "重实用",
+        "title": "走出课堂也管用的语言",
+        "text": "教材围绕你真正会碰上的场合：自我介绍、点餐、和同事说话、写邮件、面试。",
+        "checks": [
+          "取自真实场合的对话，配母语发音",
+          "词汇与语法摘要，方便日后复习",
+          "各种程度，从毫无基础到在工作中使用",
+          "由你的老师批改的练习与写作，附评语"
+        ],
+        "link": "按语言与程度浏览课程",
+        "imageAlt": "桌上的单词笔记本与语言教科书"
+      },
+      "platform": {
+        "eyebrow": "从课节到对话",
+        "title": "从一节课到一段对话",
+        "lead": "先从一节短到能一口气学完的课开始，练发音，做练习，看着自己的进度一点点累积 — 直到你曾背下的那句话，变成你说得出口的话。",
+        "steps": [
+          { "title": "读课文与词汇" },
+          { "title": "看影片" },
+          { "title": "做练习与写作" },
+          { "title": "追踪你的进度" }
+        ],
+        "floatTitle": "课程 · 练习 · 进度",
+        "floatText": "都在一个账户里",
+        "imageAlt": "一位学员用笔记本电脑在线学语言"
+      },
+      "community": {
+        "eyebrow": "社群 / 一起学",
+        "title": "一起变得更好",
+        "sub": "这里适合完全的初学者、在校学生，以及想学一门真正用得上的新语言的上班族。",
+        "cards": [
+          {
+            "title": "在课节里提问",
+            "text": "任何一节课里，都可以向老师提问，并与其他学员交换心得。"
+          },
+          {
+            "title": "任何起点都行",
+            "text": "套餐与开通方式依你的目标而定，无论是从零开始，还是要在工作中使用这门语言。"
+          },
+          {
+            "title": "多种语言，同一处",
+            "text": "同时学不止一门语言，自由切换，所有进度都留在同一个账户里。"
+          }
+        ]
+      },
+      "cta": {
+        "title": "和 Minna 一起开始你的下一门语言",
+        "text": "挑合适的语言与程度，在任何设备上学，永远从你停下的地方接着来。",
+        "button": "浏览课程"
+      }
+    },
+    "blog": {
+      "title": "文章",
+      "lead": "学习方法、考试准备，以及老师们想让你知道的事 — 今天就用得上。",
+      "searchLabel": "搜索文章",
+      "searchPlaceholder": "搜索文章 — 汉字、JLPT、发音…",
+      "filterLabel": "按分类筛选",
+      "allCategories": "全部",
+      "countFound": "{count} 篇文章",
+      "loadMore": "显示更多（还有 {count} 篇）",
+      "readMore": "阅读文章",
+      "readingTime": "阅读 {minutes} 分钟",
+      "contents": "目录",
+      "share": "分享",
+      "copyLink": "复制链接",
+      "copied": "已复制",
+      "moreTitle": "更多阅读",
+      "loading": "正在载入文章…",
+      "emptyTitle": "没有符合的内容",
+      "emptyText": "换个关键词、选别的分类，或看全部文章。",
+      "showAll": "显示全部文章",
+      "errorTitle": "无法载入文章",
+      "errorText": "文章目前无法载入，请稍后再试。",
+      "notFoundTitle": "没有这篇文章",
+      "notFoundText": "“{slug}”上没有文章。它可能已被撤下或搬移。",
+      "backToBlog": "返回文章列表",
+      "homeTitle": "最新文章",
+      "homeSub": "学习方法、最新消息，以及老师们想让你知道的事",
+      "homeMore": "阅读全部文章"
+    }
+  },
+
+  "ko": {
+    "about": {
+      "hero": {
+        "eyebrow": "Minna 소개",
+        "titleA": "새로운 언어, ",
+        "titleB": "매일 조금씩",
+        "lead": "Minna는 강의와 수업, 연습, 학습 기록을 한곳에 모아 둔 온라인 어학원입니다. 직장과 일정이 있는 사람을 위해 만들었습니다. 시작하기 쉽고, 다시 돌아오기 쉽고, 실제로 쓸 수 있는 언어를 목표로 합니다.",
+        "ctaPrimary": "강의 둘러보기",
+        "ctaSecondary": "저희를 알아보기",
+        "imageAlt": "학습자들이 함께 수업 내용을 복습하는 모습"
+      },
+      "who": {
+        "eyebrow": "우리는 누구인가",
+        "title": "우리는 누구인가",
+        "quote": "Minna는 한 가지 생각 위에 세워진 온라인 어학원입니다. 언어는 교과서에서 시작되지 않고, 소리 내어 말해 볼 용기를 낸 첫 문장에서 시작됩니다. 그래서 저희 수업은 짧고 분명하며, 언제나 회원님이 그 언어를 써 보는 것으로 끝납니다.",
+        "body": "일본어, 영어, 베트남어가 하나의 계정 안에 나란히 있고, 연습 문제와 내려받을 수 있는 정리 자료, 그리고 다음에 무엇을 공부할지 늘 알려 주는 진도 기록이 함께 있습니다.",
+        "sign": "Minna · 온라인 어학원",
+        "imageAlt": "수업 중에 새 단어를 적는 학습자"
+      },
+      "beliefs": {
+        "eyebrow": "우리의 믿음",
+        "title": "우리가 믿는 것",
+        "intro": "Minna의 모든 강의와 모든 수업은 같은 세 가지 생각에서 출발합니다 — 언어는 손에 닿기 쉬워야 하고, 쓸 가치가 있어야 하고, 억지로 버티지 않아도 매일 할 수 있어야 합니다.",
+        "items": [
+          {
+            "title": "손에 닿는 수업",
+            "text": "분명한 순서로 짜인 짧은 수업을, 노트북이든 태블릿이든 휴대전화든 10분이 생긴 그곳에서."
+          },
+          {
+            "title": "첫 수업부터 말하기",
+            "text": "모든 수업이 실제로 쓰는 문장을 담고, 원어민 음성과 발음 연습으로 바로 입에 올려 볼 수 있습니다."
+          },
+          {
+            "title": "흐름을 잇기",
+            "text": "멈춘 지점을 기억하고, 공부한 날을 세고, 하나의 계정에서 다음 수업으로 데려다 줍니다."
+          }
+        ]
+      },
+      "practice": {
+        "eyebrow": "실전 중심",
+        "title": "수업 밖에서도 통하는 언어",
+        "text": "교재는 실제로 마주치는 상황을 중심으로 짰습니다. 자기소개, 음식 주문, 동료와의 대화, 이메일 쓰기, 면접 보기.",
+        "checks": [
+          "실제 상황에서 가져온 대화, 원어민 음성과 함께",
+          "나중에 복습할 수 있는 어휘·문법 정리",
+          "전혀 배운 적 없는 단계부터 업무에서 쓰는 단계까지 모든 수준",
+          "선생님이 평과 함께 채점해 주는 연습과 작문"
+        ],
+        "link": "언어와 수준별로 강의 둘러보기",
+        "imageAlt": "책상 위의 단어장과 어학 교재"
+      },
+      "platform": {
+        "eyebrow": "수업에서 대화까지",
+        "title": "한 수업에서 한 번의 대화로",
+        "lead": "한 번에 끝낼 만큼 짧은 수업으로 시작해 소리를 익히고 문제를 풀며 쌓이는 진도를 지켜보세요 — 한때 외웠던 문장이 그저 말할 수 있는 문장이 될 때까지.",
+        "steps": [
+          { "title": "수업과 어휘 읽기" },
+          { "title": "영상 보기" },
+          { "title": "연습과 작문 하기" },
+          { "title": "진도 따라가기" }
+        ],
+        "floatTitle": "강의 · 연습 · 진도",
+        "floatText": "하나의 계정에",
+        "imageAlt": "노트북으로 온라인 어학 공부를 하는 학습자"
+      },
+      "community": {
+        "eyebrow": "커뮤니티 / 함께 배우기",
+        "title": "함께 더 나아지기",
+        "sub": "완전한 초보자, 학생, 그리고 정말 쓸 수 있는 새 언어를 원하는 직장인을 위한 자리입니다.",
+        "cards": [
+          {
+            "title": "수업 안에서 질문하기",
+            "text": "어느 수업에서든 선생님께 질문하고 다른 학습자와 생각을 나눠 보세요."
+          },
+          {
+            "title": "어디서 시작해도 좋습니다",
+            "text": "패키지와 수강 방식은 회원님의 목표에 맞춰 짭니다. 맨 처음부터든, 업무에서 쓰기 위해서든."
+          },
+          {
+            "title": "여러 언어를 한곳에서",
+            "text": "한 가지 이상의 언어를 공부하고 자유롭게 넘나들며, 모든 진도를 같은 계정에 남기세요."
+          }
+        ]
+      },
+      "cta": {
+        "title": "다음 언어를 Minna와 함께 시작하세요",
+        "text": "맞는 언어와 수준을 고르고, 어떤 기기에서든 공부하고, 언제나 멈춘 자리에서 이어 가세요.",
+        "button": "강의 둘러보기"
+      }
+    },
+    "blog": {
+      "title": "글",
+      "lead": "공부 요령, 시험 준비, 그리고 선생님들이 알려 주고 싶은 이야기 — 오늘 바로 써 볼 수 있습니다.",
+      "searchLabel": "글 검색",
+      "searchPlaceholder": "글 검색 — 한자, JLPT, 발음…",
+      "filterLabel": "분류로 걸러 보기",
+      "allCategories": "전체",
+      "countFound": "{count}개 글",
+      "loadMore": "더 보기 ({count}개 남음)",
+      "readMore": "글 읽기",
+      "readingTime": "{minutes}분 분량",
+      "contents": "목차",
+      "share": "공유하기",
+      "copyLink": "링크 복사",
+      "copied": "복사했습니다",
+      "moreTitle": "더 읽을 거리",
+      "loading": "글을 불러오는 중…",
+      "emptyTitle": "맞는 글이 없습니다",
+      "emptyText": "다른 낱말로 찾아보거나 분류를 바꾸거나, 전체를 읽어 보세요.",
+      "showAll": "모든 글 보기",
+      "errorTitle": "글을 불러오지 못했습니다",
+      "errorText": "지금은 글을 불러올 수 없습니다. 다시 시도해 주세요.",
+      "notFoundTitle": "그런 글이 없습니다",
+      "notFoundText": "“{slug}”에는 글이 없습니다. 내려갔거나 옮겨졌을 수 있습니다.",
+      "backToBlog": "글 목록으로 돌아가기",
+      "homeTitle": "최신 글",
+      "homeSub": "공부 요령, 소식, 그리고 선생님들이 알려 주고 싶은 이야기",
+      "homeMore": "모든 글 읽기"
+    }
+  },
+
+  "tw": {
+    "about": {
+      "hero": {
+        "eyebrow": "關於 Minna",
+        "titleA": "一門新語言，",
+        "titleB": "每天學一點",
+        "lead": "Minna 是一所線上語言學校，把課程、課節、練習與你的學習進度集中在一處。它為有工作、有時間表的人而建：容易開始，容易回來，目標是你真正用得上的語言。",
+        "ctaPrimary": "瀏覽課程",
+        "ctaSecondary": "認識我們",
+        "imageAlt": "一群學員一起複習一堂課"
+      },
+      "who": {
+        "eyebrow": "我們是誰",
+        "title": "我們是誰",
+        "quote": "Minna 是一所線上語言學校，建立在一個想法上：語言不是從教科書開始的，而是從你敢開口說出的第一句話開始的。所以我們的課節簡短、清楚，而且總是以你用出這門語言作結。",
+        "body": "日語、英語與越南語並列在同一個帳戶裡，附帶練習、可下載的筆記，以及一份總能告訴你下一步該學什麼的進度紀錄。",
+        "sign": "Minna · 線上語言學校",
+        "imageAlt": "一位學員在課堂上寫下新詞彙"
+      },
+      "beliefs": {
+        "eyebrow": "我們的信念",
+        "title": "我們相信什麼",
+        "intro": "Minna 的每一門課程、每一堂課都從同樣的三個想法出發 — 語言應該容易接觸、值得使用，而且每天都能學而不必硬撐。",
+        "items": [
+          {
+            "title": "隨手可及的課節",
+            "text": "順序清楚的短課節，在筆電、平板或手機上，只要你哪裡有十分鐘就能學。"
+          },
+          {
+            "title": "第一堂就開口",
+            "text": "每堂課都帶著你真的會說的句子，配母語發音與跟讀練習，當下就能試。"
+          },
+          {
+            "title": "把習慣接下去",
+            "text": "我們記住你停下的地方，數著你學過的天數，並在同一個帳戶裡把你帶回下一堂課。"
+          }
+        ]
+      },
+      "practice": {
+        "eyebrow": "重實用",
+        "title": "走出課堂也管用的語言",
+        "text": "教材圍繞你真正會碰上的場合：自我介紹、點餐、和同事說話、寫信、面試。",
+        "checks": [
+          "取自真實場合的對話，配母語發音",
+          "詞彙與文法摘要，方便日後複習",
+          "各種程度，從毫無基礎到在工作中使用",
+          "由你的老師批改的練習與寫作，附評語"
+        ],
+        "link": "依語言與程度瀏覽課程",
+        "imageAlt": "桌上的單字筆記本與語言教科書"
+      },
+      "platform": {
+        "eyebrow": "從課節到對話",
+        "title": "從一堂課到一段對話",
+        "lead": "先從一堂短到能一口氣學完的課開始，練發音，做練習，看著自己的進度一點點累積 — 直到你曾背下的那句話，變成你說得出口的話。",
+        "steps": [
+          { "title": "讀課文與詞彙" },
+          { "title": "看影片" },
+          { "title": "做練習與寫作" },
+          { "title": "追蹤你的進度" }
+        ],
+        "floatTitle": "課程 · 練習 · 進度",
+        "floatText": "都在一個帳戶裡",
+        "imageAlt": "一位學員用筆電線上學語言"
+      },
+      "community": {
+        "eyebrow": "社群 / 一起學",
+        "title": "一起變得更好",
+        "sub": "這裡適合完全的初學者、在校學生，以及想學一門真正用得上的新語言的上班族。",
+        "cards": [
+          {
+            "title": "在課節裡提問",
+            "text": "任何一堂課裡，都可以向老師提問，並與其他學員交換心得。"
+          },
+          {
+            "title": "任何起點都行",
+            "text": "套裝與開通方式依你的目標而定，無論是從零開始，還是要在工作中使用這門語言。"
+          },
+          {
+            "title": "多種語言，同一處",
+            "text": "同時學不止一門語言，自由切換，所有進度都留在同一個帳戶裡。"
+          }
+        ]
+      },
+      "cta": {
+        "title": "和 Minna 一起開始你的下一門語言",
+        "text": "挑合適的語言與程度，在任何裝置上學，永遠從你停下的地方接著來。",
+        "button": "瀏覽課程"
+      }
+    },
+    "blog": {
+      "title": "文章",
+      "lead": "學習方法、考試準備，以及老師們想讓你知道的事 — 今天就用得上。",
+      "searchLabel": "搜尋文章",
+      "searchPlaceholder": "搜尋文章 — 漢字、JLPT、發音…",
+      "filterLabel": "依分類篩選",
+      "allCategories": "全部",
+      "countFound": "{count} 篇文章",
+      "loadMore": "顯示更多（還有 {count} 篇）",
+      "readMore": "閱讀文章",
+      "readingTime": "閱讀 {minutes} 分鐘",
+      "contents": "目錄",
+      "share": "分享",
+      "copyLink": "複製連結",
+      "copied": "已複製",
+      "moreTitle": "更多閱讀",
+      "loading": "正在載入文章…",
+      "emptyTitle": "沒有符合的內容",
+      "emptyText": "換個關鍵字、選別的分類，或看全部文章。",
+      "showAll": "顯示全部文章",
+      "errorTitle": "無法載入文章",
+      "errorText": "文章目前無法載入，請稍後再試。",
+      "notFoundTitle": "沒有這篇文章",
+      "notFoundText": "「{slug}」上沒有文章。它可能已被撤下或搬移。",
+      "backToBlog": "回到文章列表",
+      "homeTitle": "最新文章",
+      "homeSub": "學習方法、最新消息，以及老師們想讓你知道的事",
+      "homeMore": "閱讀全部文章"
+    }
+  }
+}

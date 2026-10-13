@@ -113,6 +113,11 @@
 .cat-chip .chip-x svg { width: 12px; height: 12px; }
 @media (pointer: coarse) { .cat-chip { min-height: 44px; } }
 
+/* The catalogue follows the site language; this says so while it does not. */
+.cat-anylang { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 10px; color: var(--ink-soft); font-size: 13.5px; }
+.cat-anylang svg { width: 16px; height: 16px; flex: none; }
+.cat-anylang .link { background: none; border: 0; padding: 0; color: var(--brand-primary-deep); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; }
+
 /* ---------- results grid / list ---------- */
 .cat-list { min-height: 320px; }
 .cat-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--gutter); grid-template-columns: repeat(auto-fill, minmax(288px, 1fr)); }
@@ -357,9 +362,35 @@ ul.cd-meta { display: flex; flex-wrap: wrap; gap: 10px 22px; margin: 24px 0 0; p
 .cd-lock .notice b { font-size: 14.5px; margin-bottom: 2px; }
 .cd-ctas { display: grid; gap: 10px; }
 .cd-cta-primary:focus { outline: none; }
-.cd-cta-more { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-.cd-cta-more .btn { min-width: 0; padding: 0 12px; gap: 6px; font-size: 14.5px; }
-.cd-cta-more .btn svg { width: 17px; height: 17px; }
+/* Two short labels on one row, and the long one on a row of its own.
+   `auto-fit` used to decide this by counting, which put "ask about this
+   course" in a half-width box: the label is the longest of the three in every
+   language, and with `nowrap` it simply ran out past the edge. */
+.cd-cta-more { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* All three wrap rather than overflow. Thai fits on one line in a half-width
+   box and Vietnamese does not — "Tới khoá học của tôi" ran past the edge —
+   so the height is a minimum and the text is allowed a second line. The grid
+   stretches both halves of a row to match, so a wrapped label does not leave
+   its neighbour looking short. */
+.cd-cta-more .btn {
+  min-width: 0;
+  padding: 8px 10px;
+  gap: 6px;
+  font-size: 14.5px;
+  white-space: normal;
+  line-height: 1.3;
+  min-height: 44px;
+  height: auto;
+  text-align: center;
+}
+.cd-cta-more .btn svg { width: 17px; height: 17px; flex-shrink: 0; }
+/* The longest label of the three in every language, so it gets the full row
+   to itself rather than half of one. */
+.cd-cta-more .cd-cta-ask { grid-column: 1 / -1; }
+/* A single-column panel: nothing fits beside anything, so stop pretending. */
+@media (max-width: 479px) {
+  .cd-cta-more { grid-template-columns: minmax(0, 1fr); }
+}
 .cd-note { display: flex; gap: 8px; margin: 0; font-size: 13px; line-height: 1.53; color: var(--ink-secondary); }
 .cd-note svg { width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0; }
 ul.cd-perks { display: grid; gap: 10px; margin: 0; padding: 16px 0 0; list-style: none; border-top: 1px solid var(--border-default); }
@@ -436,6 +467,17 @@ ul.cd-outcomes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr))
 .cd-ins-name { margin: 2px 0 8px; font-size: 16.5px; line-height: 1.47; }
 .cd-ins-body .badge { height: auto; min-height: 26px; padding: 4px 10px; white-space: normal; line-height: 1.35; }
 .cd-ins-body p { margin: 10px 0 0; font-size: 14px; line-height: 1.59; color: var(--ink-secondary); }
+/* The biography arrives as HTML from the editor, so it can hold more than
+   paragraphs. Its <p> are already covered by the rule above; these are the
+   rest of what the toolbar can produce, kept deliberately plain — this is a
+   card beside a photograph, not an article. */
+.cd-ins-bio ul, .cd-ins-bio ol { margin: 8px 0 0; padding-left: 20px; font-size: 14px; line-height: 1.59; color: var(--ink-secondary); }
+.cd-ins-bio li + li { margin-top: 4px; }
+.cd-ins-bio a { color: var(--brand-primary-dark); text-decoration: underline; }
+.cd-ins-bio h2, .cd-ins-bio h3, .cd-ins-bio h4 { margin: 10px 0 0; font-size: 15px; font-weight: var(--fw-bold); color: var(--ink-primary); }
+/* A picture inside a biography is somebody pasting from a document. It is
+   kept rather than hidden, but held to the card's width. */
+.cd-ins-bio img { max-width: 100%; height: auto; border-radius: 10px; }
 
 /* course info */
 .cd-info { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 36px; padding: 10px 28px; border: 1px solid var(--border-default); border-radius: var(--r-card); background: #fff; }
@@ -758,3 +800,12 @@ ul.ab-checks { display: grid; gap: 12px; margin: 0 0 28px; padding: 0; list-styl
 @media (max-width: 479px) {
   .ab-pf-steps { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ---------- sharing this course ---------- */
+/* The buttons themselves are styled in blog.css, where the component's
+   markup came from — one set of rules for one component, wherever it is
+   used. This only places it on a course page: its own band under the
+   sections. The spacing and the rule above it come with .bl-share; the
+   only thing a course page has to add is the gutter its other sections get
+   on a phone. */
+@media (max-width: 767px) { .cd-share { margin-inline: var(--page-pad); } }

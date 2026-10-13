@@ -46,7 +46,12 @@ const failed = ref(false)
 /** Only the categories that actually have articles, in the order the most
  *  written-about comes first. Built from what came back, so a category nobody
  *  has written about never appears as a chip that returns nothing. */
-const chipCategories = ref<{ id: number; label: string; count: number }[]>([])
+/**
+ * How many articles each category holds. Counted once; the labels are not
+ * stored with them but worked out below, so that switching language relabels
+ * the chips instead of leaving the previous language's words under the new one.
+ */
+const chipCounts = ref<{ id: number; count: number }[]>([])
 
 function readUrl(): void {
   const one = (k: string) => {
@@ -142,21 +147,22 @@ async function loadChips(): Promise<void> {
     for (const p of all.data) {
       if (p.categoryId) counted.set(p.categoryId, (counted.get(p.categoryId) ?? 0) + 1)
     }
-    chipCategories.value = [...counted.entries()]
-      .map(([id, count]) => ({
-        id,
-        label: (() => {
-          const c = cats.data.find((x) => x.id === id)
-          return c ? categoryLabel(c, cats.data) : ''
-        })(),
-        count,
-      }))
-      .filter((c) => c.label)
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    chipCounts.value = [...counted.entries()].map(([id, count]) => ({ id, count }))
   } catch {
     // The list still works without chips.
   }
 }
+
+/** The chips as drawn: biggest first, and named in the language on screen. */
+const chipCategories = computed(() =>
+  chipCounts.value
+    .map(({ id, count }) => {
+      const c = categories.value.find((x) => x.id === id)
+      return { id, count, label: c ? categoryLabel(c, categories.value, locale.value) : '' }
+    })
+    .filter((c) => c.label)
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label)),
+)
 
 onMounted(async () => {
   readUrl()

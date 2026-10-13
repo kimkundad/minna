@@ -179,6 +179,13 @@
 .bl-author-body { min-width: 0; }
 .bl-author-name { margin: 2px 0 6px; font-size: 16.5px; line-height: 1.47; }
 .bl-author-body p { margin: 10px 0 0; font-size: 14.5px; line-height: 1.73; color: var(--ink-secondary); }
+/* Same card as the course page's, same reasoning: the biography is HTML, and
+   its paragraphs are covered above. See .cd-ins-bio in discovery.css. */
+.bl-author-bio ul, .bl-author-bio ol { margin: 8px 0 0; padding-left: 20px; font-size: 14.5px; line-height: 1.73; color: var(--ink-secondary); }
+.bl-author-bio li + li { margin-top: 4px; }
+.bl-author-bio a { color: var(--brand-primary-dark); text-decoration: underline; }
+.bl-author-bio h2, .bl-author-bio h3, .bl-author-bio h4 { margin: 10px 0 0; font-size: 15.5px; font-weight: var(--fw-bold); color: var(--ink-primary); }
+.bl-author-bio img { max-width: 100%; height: auto; border-radius: 10px; }
 
 /* ---------- more articles ---------- */
 

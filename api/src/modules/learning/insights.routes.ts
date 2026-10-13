@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify'
+import { teacherScope } from '../../lib/scope'
 import { z } from 'zod'
 import { audit } from '../../lib/audit'
 import * as service from './insights.service'
@@ -21,16 +22,12 @@ export default async function insightsRoutes(app: FastifyInstance) {
   const staffOnly = { preHandler: app.requireRole('admin', 'teacher') }
   const adminOnly = { preHandler: app.requireRole('admin') }
 
-  /** A teacher sees their own courses; an admin sees all of them. */
-  const teacherScope = (req: { user: { roles: string[]; sub: number } }) =>
-    req.user.roles.includes('admin') || req.user.roles.includes('superadmin')
-      ? undefined
-      : req.user.sub
+
 
   /* ---------------- quiz results ---------------- */
 
   app.get('/quiz-results', staffOnly, async (req) => {
-    return { data: await service.quizResultsOverview({ teacherId: teacherScope(req) }) }
+    return { data: await service.quizResultsOverview({ teacherId: teacherScope(req.user) ?? undefined }) }
   })
 
   app.get('/quiz-results/:id', staffOnly, async (req) => {
@@ -65,7 +62,7 @@ export default async function insightsRoutes(app: FastifyInstance) {
         q: z.string().max(100).optional(),
       })
       .parse(req.query)
-    return service.lessonQuestionList({ ...query, teacherId: teacherScope(req) })
+    return service.lessonQuestionList({ ...query, teacherId: teacherScope(req.user) ?? undefined })
   })
 
   app.post('/lesson-questions/:id/answer', staffOnly, async (req, reply) => {

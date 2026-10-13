@@ -6,7 +6,7 @@ import { useI18n } from 'vue-i18n'
 import AppAvatar from '@/components/ui/AppAvatar.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { data, store } from '@/vendor'
-import logoUrl from '@/assets/img/logo.png'
+import BrandLogo from '@/components/layout/BrandLogo.vue'
 import { useHeaderHeight } from './learning'
 
 /**
@@ -63,7 +63,7 @@ useHeaderHeight(props.heightVar, root)
           :to="`/${locale}`"
           :aria-label="t('header.brandHome')"
         >
-          <img class="brand-logo" :src="logoUrl" width="85" height="35" alt="" decoding="async" />
+          <BrandLogo class="brand-logo" />
         </RouterLink>
 
         <div class="hdr-title">

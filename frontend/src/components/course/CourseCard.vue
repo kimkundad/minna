@@ -11,6 +11,7 @@ import CourseImage from './CourseImage.vue'
 import InstructorLine from './InstructorLine.vue'
 import { openAuth } from '@/components/auth/authChannel'
 import { useCartStore } from '@/stores/cart'
+import { useLearningStore } from '@/stores/learning'
 import type { CourseView } from '@/lib/course'
 
 /**
@@ -59,6 +60,48 @@ const { t: translate } = useI18n()
 
 /** Already in the basket, so the button says so instead of adding it twice. */
 const inCart = computed(() => cart.has(props.view.id))
+
+/** Already theirs. Nothing on a card should offer to sell it again. */
+const learning = useLearningStore()
+const owned = computed(() => learning.has(props.view.id))
+
+/**
+ * The card's one button is the basket, not the till.
+ *
+ * A card is a glance: the price, the teacher, how long it is. Buying outright
+ * from there asks somebody to commit before they have seen the lessons, the
+ * access period or the refund terms — all of which are on the course's own
+ * page, which is where "ซื้อคอร์สนี้" belongs. From a card the honest offer is
+ * the one that is easy to undo.
+ *
+ * `courseView` already works out the pair; this takes the second of them and
+ * promotes it, so a free course still says "เรียนฟรี" and one that is not on
+ * sale still says "ดูรายละเอียดคอร์ส".
+ *
+ * Not on a card that is showing somebody's own progress — that course is
+ * already theirs, and the basket is the wrong thing to offer.
+ */
+const cta = computed(() => {
+  // Theirs already — bought, taken free, or opened by the school. The only
+  // thing to offer is the way in, and it outranks everything below: a course
+  // somebody owns is never for sale again on a card.
+  if (owned.value) {
+    // Into the room, not onto the sales page: they have already read that one.
+    const locale = props.view.href.split('/')[1] || 'th'
+    const started = (props.view.progressPct ?? 0) > 0
+    return {
+      label: started ? t('cta.continue') : t('cta.start'),
+      href: `/${locale}/learn/${props.view.slug || props.view.id}`,
+      variant: 'primary' as const,
+      icon: 'play',
+    }
+  }
+  if (props.view.showProgress) return props.view.primary
+  if (props.view.secondary?.action !== 'add-cart') return props.view.primary
+  return inCart.value
+    ? { label: t('cta.inCart'), action: 'add-cart', variant: 'secondary' as const, icon: 'check' }
+    : { ...props.view.secondary, variant: 'primary' as const }
+})
 
 async function onRun(action: string, courseId?: string): Promise<void> {
   emit('run', action, courseId)
@@ -164,9 +207,10 @@ const showPrice = computed(() => props.view.showPrice !== false)
           :price="view.price"
           :normal-price="view.normalPrice"
           :is-free="view.isFree"
+          :currency="view.currency"
         />
         <CtaButton
-          :action="view.primary"
+          :action="cta"
           size="sm"
           :course-id="cid"
           @run="onRun"

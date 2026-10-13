@@ -18,8 +18,8 @@
  * uploaded through the admin like any other advertisement, and nothing on the
  * site reads them from `public/`.
  */
-import { existsSync, mkdirSync } from 'node:fs'
-import puppeteer from 'puppeteer-core'
+import { mkdirSync } from 'node:fs'
+import { launchBrowser } from './browser.mjs'
 
 const BASE = process.env.BASE ?? 'http://localhost:5174'
 const OUT = 'public/ads/out'
@@ -38,6 +38,9 @@ const SRC = {
   classroom: '/ads/475018637_1597399387648313_9178396331260508012_n.jpg', // 1440×1440
   lesson: '/ads/481988724_1378806233350907_8294891528704807889_n.jpg', // 640×360
   studying: '/ads/487716282_1396430628255134_4386220945687846685_n.jpg', // 1080×1080
+  // Portrait, which suits the one placement whose reader is already studying:
+  // it is the only creative that has to sit quietly beside a lesson.
+  tutor: '/ads/486252563_1392859171945613_3990354534417993764_n.jpg', // 1536×2048
 }
 
 /**
@@ -306,14 +309,55 @@ const ADS = [
         </div>
       </div>`,
   },
+
+  /**
+   * The one that runs inside the learning room, under a lesson somebody is in
+   * the middle of. So it is the quietest of the five: no countdown, no exam
+   * date, no second call to action competing with the lesson. It offers the
+   * next thing to a person already studying, which is the only honest pitch to
+   * make to somebody mid-sentence.
+   */
+  {
+    key: 'learn-next',
+    name: 'เรียนต่อระดับถัดไป',
+    desktop: `
+      <div class="in" style="display:grid;grid-template-columns:1fr 560px;align-items:center;padding:0 0 0 56px">
+        <div style="display:flex;flex-direction:column;gap:16px;max-width:700px">
+          <img class="logo" src="${SRC.logo}" alt="Learnsbuy">
+          <span class="kicker"><span class="dot"></span>เรียนจบบทนี้แล้วไปต่อ</span>
+          <h2 style="font-size:36px">อ่านคันจิออกแล้ว <span class="hl">ขั้นต่อไปคือพูดให้ได้</span></h2>
+          <p class="sub" style="font-size:17px;max-width:620px">คอร์สสนทนาและติวสอบของครูพี่โฮม ต่อจากพื้นฐานที่คุณกำลังเรียนอยู่ ดูย้อนหลังได้ไม่จำกัด</p>
+          <div style="display:flex;align-items:center;gap:20px;margin-top:4px">
+            <span class="cta" style="height:46px;font-size:16px">ดูคอร์สระดับถัดไป</span>
+            <span class="site" style="font-size:15px">learnsbuy.com</span>
+          </div>
+        </div>
+        <div class="photo feather" style="inset:0 0 0 auto;width:560px;background-image:url('${SRC.tutor}');background-position:76% 62%"></div>
+      </div>`,
+    mobile: `
+      <div class="in" style="display:grid;grid-template-rows:540px 1fr">
+        <div style="position:relative">
+          <div class="photo" style="inset:0;background-image:url('${SRC.tutor}');background-position:76% 58%"></div>
+          <div style="position:absolute;inset:auto 0 0 0;height:170px;background:linear-gradient(180deg,rgba(11,18,32,0) 0%,${INK} 88%)"></div>
+          <img class="logo" src="${SRC.logo}" alt="Learnsbuy" style="position:absolute;left:36px;top:34px;height:40px">
+        </div>
+        <div style="display:flex;flex-direction:column;justify-content:center;gap:16px;padding:8px 40px 40px">
+          <span class="kicker" style="font-size:16px"><span class="dot"></span>เรียนจบบทนี้แล้วไปต่อ</span>
+          <h2 style="font-size:35px">อ่านคันจิออกแล้ว<br><span class="hl">ขั้นต่อไปคือพูดให้ได้</span></h2>
+          <p class="sub" style="font-size:19px">คอร์สสนทนาและติวสอบของครูพี่โฮม ดูย้อนหลังได้ไม่จำกัด</p>
+          <span class="cta" style="height:56px;font-size:20px;align-self:stretch;justify-content:center">ดูคอร์สระดับถัดไป</span>
+          <span class="site" style="font-size:15px;text-align:center">learnsbuy.com</span>
+        </div>
+      </div>`,
+  },
+
 ]
 
 /* ---------------- rendering ---------------- */
 
 mkdirSync(OUT, { recursive: true })
 
-const browser = await puppeteer.launch({
-  executablePath: BROWSERS.find((p) => existsSync(p)),
+const browser = await launchBrowser({
   headless: true,
   args: ['--no-sandbox', '--disable-gpu', '--font-render-hinting=none'],
 })

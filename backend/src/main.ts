@@ -18,6 +18,7 @@ import router from './router'
 import VueApexCharts from 'vue3-apexcharts'
 import FloatingVue from 'floating-vue'
 import { useAuthStore } from '@/stores/auth'
+import { useBrandingStore } from '@/stores/branding'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -38,4 +39,9 @@ app.use(FloatingVue, {
 // admin to sign-in on every reload.
 useAuthStore(pinia)
   .bootstrap()
-  .finally(() => app.mount('#app'))
+  .finally(() => {
+    app.mount('#app')
+    // After mounting: the bundled logo is already on screen, so nobody waits
+    // for this, and it needs no session — the sign-in page shows it too.
+    void useBrandingStore(pinia).load()
+  })

@@ -113,8 +113,15 @@ onMounted(async () => {
     </p>
 
     <!-- How many people each course reaches, which is the thing most often
-         wanted before anything is filtered. -->
-    <div v-if="courses.length" class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+         wanted before anything is filtered.
+
+         Four across on a wide screen: there are a few dozen courses, and at
+         three the block pushed the list of records off the bottom of the
+         window, which is the thing the cards are meant to be filtering. -->
+    <div
+      v-if="courses.length"
+      class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+    >
       <button
         v-for="c in courses"
         :key="c.courseId"
@@ -127,7 +134,15 @@ onMounted(async () => {
         "
         @click="courseId = courseId === c.courseId ? '' : c.courseId"
       >
-        <p class="line-clamp-1 text-sm text-gray-600 dark:text-gray-300">{{ c.title }}</p>
+        <!-- Two lines, and the room for two kept whether or not the second is
+             used: a card is narrow at four across, and one-line titles would
+             leave the numbers sitting at different heights along a row. -->
+        <p
+          class="line-clamp-2 min-h-[2.5em] text-sm leading-snug text-gray-600 dark:text-gray-300"
+          :title="c.title"
+        >
+          {{ c.title }}
+        </p>
         <p class="mt-1 text-2xl font-semibold text-gray-800 dark:text-white/90">{{ c.active }}</p>
         <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
           can open it now<template v-if="c.expired"> · {{ c.expired }} expired</template>

@@ -1,3 +1,4 @@
+import { richTextField } from '../../lib/rich-text'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { LOCALES } from '../../db/schema/auth'
@@ -31,12 +32,32 @@ const postBody = z.object({
     .regex(/^[a-z0-9฀-๿-]+$/, 'Lower-case letters, numbers and dashes only.'),
   excerpt: z.string().trim().max(500).nullish(),
   coverPath: z.string().trim().max(512).nullish(),
-  contentHtml: z.string().max(200000).nullish(),
+  contentHtml: richTextField(200000),
   contentLocale: z.enum(POST_LOCALES).default('th'),
   status: z.enum(['draft', 'published']).default('draft'),
   /** One of the course categories. An article about kanji files where the
    *  kanji course does, so each can point at the other. */
+  /**
+   * How this one looks when shared, where that should differ from the
+   * page itself — a title that reads well on a page and badly in a chat
+   * window, or a cover that is beautiful at 16:9 and cropped to nonsense
+   * at 1200×630. Empty is the normal state: it shares as the page reads.
+   */
+  ogTitle: z.string().trim().max(255).nullable().optional(),
+  ogDescription: z.string().trim().max(500).nullable().optional(),
+  ogImagePath: z.string().trim().max(512).nullable().optional(),
   categoryId: z.coerce.number().int().positive().nullish(),
+  /**
+   * Who the article is by, shown in the card at the end of it.
+   *
+   * It used to be whoever pressed Create, and nothing could change it
+   * afterwards — so an article written by a teacher and published by an
+   * administrator was credited to the administrator, whose name comes with no
+   * headline and no biography because those live on a teacher's profile.
+   *
+   * Absent means "leave it alone" on an edit, and "me" on a create.
+   */
+  authorId: z.coerce.number().int().positive().nullish(),
 })
 
 const testimonialBody = z.object({

@@ -15,12 +15,6 @@ import { existsSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import puppeteer from 'puppeteer-core'
 
-const BROWSERS = [
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
-]
 
 const BASE = process.env.ADMIN_URL ?? 'http://localhost:5173'
 const EMAIL = process.env.SMOKE_ADMIN_EMAIL

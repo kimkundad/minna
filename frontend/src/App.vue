@@ -5,6 +5,9 @@ import { useI18n } from 'vue-i18n'
 import SiteHeader from '@/components/layout/SiteHeader.vue'
 import SiteFooter from '@/components/layout/SiteFooter.vue'
 import AuthModal from '@/components/auth/AuthModal.vue'
+import CommerceToasts from '@/components/commerce/CommerceToasts.vue'
+import ChatDock from '@/components/chat/ChatDock.vue'
+import LocaleGate from '@/components/layout/LocaleGate.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -53,5 +56,16 @@ onBeforeUnmount(() => document.body.classList.remove(...applied))
     <!-- Mounted once, opened from anywhere through the auth channel, so a
          locked lesson and the header raise the same dialog. -->
     <AuthModal />
+    <!-- Likewise mounted once: the basket raises a toast from a card, a course
+         page or the cart itself, and all three are shown here. -->
+    <CommerceToasts />
+    <!-- And once more: a lesson, a course page or the header can raise the
+         conversation without any of them owning it, and it floats over
+         whatever was on screen rather than taking the page away. -->
+    <ChatDock />
+    <!-- Over everything, on a first visit only. Which language the site is in
+         decides whether the page behind it can be read at all, so it is asked
+         before anything else and cannot be dismissed. -->
+    <LocaleGate />
   </div>
 </template>

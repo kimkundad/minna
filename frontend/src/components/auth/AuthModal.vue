@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import AppNotice from '@/components/ui/AppNotice.vue'
+import FileDropZone from '@/components/ui/FileDropZone.vue'
 import PhoneField from '@/components/ui/PhoneField.vue'
 import { api } from '@/lib/api'
+import { uploadApplicationResume, uploadApplicationVideo } from '@/lib/upload'
 import type { AppLocale } from '@/locales'
 import { useAuthStore, ApiError } from '@/stores/auth'
 import { authRequest, closeAuth, type AuthStep } from './authChannel'
@@ -22,6 +24,7 @@ import { authRequest, closeAuth, type AuthStep } from './authChannel'
  * at ≤767px comes out of that nesting.
  */
 const { t, locale } = useI18n()
+const router = useRouter()
 
 /** `jp` and `vn` are our own URL spellings; Intl wants real language tags. */
 const localeTag = computed(
@@ -79,6 +82,23 @@ const teachSubject = ref('')
 const teachExperience = ref('')
 const teachReason = ref('')
 const teachContactTime = ref('')
+/**
+ * The two files, held until there is an account to attach them to.
+ *
+ * Kept as `File` objects from the dropzones rather than read off a file input
+ * at submit time: a retry has to be able to send the same file again, and a
+ * file input that has been through a failed submit is the browser's to own.
+ */
+const resumeFile = ref<File | null>(null)
+const resumeProblem = ref('')
+const clipFile = ref<File | null>(null)
+/** Percent, so a hundred-megabyte upload does not read as a frozen dialog. */
+const clipProgress = ref(0)
+/** Registered, but the two required files have not gone up. The form becomes a
+ *  send-your-files until they do. */
+const filesOutstanding = ref(false)
+/** True from the moment the first byte leaves until the server has the lot. */
+const uploading = ref(false)
 
 /** Shown after a password-reset request, in place of the form. */
 const resetSent = ref(false)
@@ -132,11 +152,16 @@ const submitIcon = computed(() =>
 )
 
 const submitLabel = computed(() =>
-  step.value === 'login'
-    ? t('common.login')
-    : step.value === 'register'
-      ? t('common.register')
-      : t('auth.sendResetLink'),
+  // Registered already, with the files still to go: the button is no longer
+  // offering to sign anybody up, and saying so is the only way the person
+  // knows pressing it again will not be refused as a duplicate address.
+  filesOutstanding.value
+    ? t('auth.teachFilesRetry')
+    : step.value === 'login'
+      ? t('common.login')
+      : step.value === 'register'
+        ? t('common.register')
+        : t('auth.sendResetLink'),
 )
 
 /** Server-side messages, keyed by field, shown under the input that caused them. */
@@ -163,6 +188,16 @@ watch(authRequest, async (next) => {
 })
 
 function dismiss() {
+  /**
+   * Not while a file is going up.
+   *
+   * The clip can be a hundred megabytes and takes minutes. Closing the dialog
+   * mid-upload leaves somebody registered with an application missing the
+   * files it was told it must have — and the backdrop, the X and the Escape
+   * key all lead here, so this is the one place to stop it.
+   */
+  if (uploading.value) return
+
   closeAuth()
   // Hand focus back to whatever opened the dialog, so a keyboard user is not
   // dropped at the top of the document.
@@ -176,10 +211,74 @@ function switchTo(next: Step) {
   nextTick(() => dialog.value?.querySelector<HTMLInputElement>('input')?.focus())
 }
 
+/**
+ * Puts the two required files up and ties them to the application.
+ *
+ * Called straight after registering, and again on its own if that failed —
+ * which is why it keeps nothing from the registration: the files are read from
+ * the dropzones each time, so somebody can pick a smaller clip and try again.
+ */
+async function sendApplicationFiles() {
+  resumeProblem.value = ''
+  const cv = resumeFile.value
+  const clip = clipFile.value
+
+  if (!cv || !clip) {
+    filesOutstanding.value = true
+    resumeProblem.value = t('auth.teachFilesRequired')
+    return
+  }
+
+  uploading.value = true
+  try {
+    const attach: { resumePath?: string; sampleVideoPath?: string } = {}
+    attach.resumePath = (await uploadApplicationResume(cv)).path
+    // A hundred megabytes over a phone connection takes long enough that a
+    // still dialog reads as a hung one.
+    attach.sampleVideoPath = (
+      await uploadApplicationVideo(clip, {
+        onProgress: (f) => (clipProgress.value = Math.round(f * 100)),
+      })
+    ).path
+    await api.attachApplicationFiles(attach)
+    filesOutstanding.value = false
+  } catch {
+    // Registered, but the application is not complete. Say so plainly and
+    // leave the form in the one state from which it can be finished.
+    filesOutstanding.value = true
+    resumeProblem.value = t('auth.teachFilesFailed')
+  } finally {
+    uploading.value = false
+    clipProgress.value = 0
+  }
+}
+
 async function submit() {
   fieldErrors.value = {}
   formError.value = ''
   const done = authRequest.value?.onDone
+
+  /**
+   * Registration already succeeded; only the files are outstanding.
+   *
+   * The two files are required, but they cannot go up until the account
+   * exists, because an upload needs a token and registering is what returns
+   * one. So a failure here leaves somebody registered with an application
+   * missing the things it was told it must have — and pressing the button
+   * again would try to register an address that now exists and fail on that
+   * instead, which explains nothing.
+   *
+   * This is the way back: the form stops being a sign-up and becomes a
+   * send-your-files, until they are sent.
+   */
+  if (filesOutstanding.value) {
+    await sendApplicationFiles()
+    if (resumeProblem.value) return
+    closeAuth()
+    returnTo = null
+    done?.()
+    return
+  }
 
   try {
     if (step.value === 'forgot') {
@@ -234,6 +333,23 @@ async function submit() {
             }
           : {}),
       })
+
+      /**
+       * The CV, once there is an account to hang it on.
+       *
+       * Registering is what creates the key: the applicant is nobody until it
+       * returns, and an upload needs a token. So this happens after, in the
+       * same click — the person picked a file and pressed one button.
+       *
+       * A failure here is reported beside the field and nothing else. They are
+       * registered, the application is filed, and the file is the one part
+       * that can be sent on by other means; turning a successful signup into
+       * an error because an attachment did not go up would be the wrong trade.
+       */
+      if (memberType.value === 'teacher') {
+        await sendApplicationFiles()
+        if (resumeProblem.value) return
+      }
     }
     closeAuth()
     returnTo = null
@@ -282,9 +398,40 @@ watch(open, (isOpen) => {
   document.body.classList.toggle('has-modal', isOpen)
 })
 
-onMounted(() => document.addEventListener('keydown', onKeydown))
+/**
+ * Leaving while the clip is uploading.
+ *
+ * Two ways out, and each needs its own answer. Closing the tab or typing a new
+ * address is the browser's to warn about, and it only will if something asks —
+ * `preventDefault` on `beforeunload` is that asking, and the browser writes
+ * its own wording. Clicking a link inside the site never reaches that event at
+ * all, because the router swaps the page without unloading anything, so the
+ * guard below catches it and says so in our own words.
+ *
+ * Both are only armed while bytes are actually moving. A dialog that argues
+ * about leaving when nothing is happening teaches people to click through the
+ * warning that matters.
+ */
+function warnIfLeaving(e: BeforeUnloadEvent) {
+  if (!uploading.value) return
+  e.preventDefault()
+  e.returnValue = ''
+}
+
+const stopRouteGuard = router.beforeEach(() => {
+  if (!uploading.value) return true
+  // eslint-disable-next-line no-alert
+  return window.confirm(t('auth.teachClipLeaveWarning'))
+})
+
+onMounted(() => {
+  document.addEventListener('keydown', onKeydown)
+  window.addEventListener('beforeunload', warnIfLeaving)
+})
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('beforeunload', warnIfLeaving)
+  stopRouteGuard()
   document.body.classList.remove('has-modal')
 })
 </script>
@@ -553,6 +700,57 @@ onBeforeUnmount(() => {
                     :placeholder="t('auth.teachContactTimePlaceholder')"
                   />
                 </div>
+
+                <!-- The file goes up after the account exists, so a failure
+                     there must not read as a failed registration — they are
+                     signed up either way, and can send it on afterwards. That
+                     is why these hold the file rather than sending it. -->
+                <FileDropZone
+                  id="auth-teach-cv"
+                  :label="t('auth.teachResume')"
+                  :hint="t('auth.teachResumeHint')"
+                  accept=".pdf,.doc,.docx,image/*"
+                  :max-mb="10"
+                  required
+                  :busy="uploading"
+                  :error="resumeProblem"
+                  @update:file="resumeFile = $event"
+                />
+
+                <FileDropZone
+                  id="auth-teach-clip"
+                  :label="t('auth.teachClip')"
+                  :hint="t('auth.teachClipHint')"
+                  accept="video/*"
+                  :max-mb="100"
+                  required
+                  :busy="uploading"
+                  @update:file="clipFile = $event"
+                >
+                  <!-- A hundred megabytes over a phone connection runs for
+                       minutes. Without something moving, the dialog reads as
+                       hung and people close it — which is exactly the thing
+                       that must not happen while bytes are in flight. -->
+                  <template #progress>
+                    <div v-if="uploading" class="upl">
+                      <div
+                        class="upl-bar"
+                        role="progressbar"
+                        :aria-valuenow="clipProgress"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                        :aria-label="t('auth.teachClipSending', { pct: clipProgress })"
+                      >
+                        <span class="upl-fill" :style="{ width: clipProgress + '%' }" />
+                      </div>
+                      <p class="hint upl-note">
+                        {{ t('auth.teachClipSending', { pct: clipProgress }) }}
+                        <br />
+                        <strong>{{ t('auth.teachClipStay') }}</strong>
+                      </p>
+                    </div>
+                  </template>
+                </FileDropZone>
               </template>
 
               <div class="field">
@@ -593,10 +791,21 @@ onBeforeUnmount(() => {
               v-if="!resetSent"
               type="submit"
               class="btn btn--primary btn--block btn--lg"
-              :disabled="auth.busy"
+              :disabled="auth.busy || uploading"
             >
               <AppIcon :name="submitIcon" />
-              {{ auth.busy ? t('auth.working') : submitLabel }}
+              <!-- The percentage goes on the button as well as beside the
+                   field. The bar sits where the file was chosen, which on a
+                   short screen is above the fold by the time somebody has
+                   scrolled down to press this — and the button they just
+                   pressed is the one thing they are certainly looking at. -->
+              {{
+                uploading
+                  ? t('auth.teachClipSending', { pct: clipProgress })
+                  : auth.busy
+                    ? t('auth.working')
+                    : submitLabel
+              }}
             </button>
 
             <p class="auth-switch text-center text-sm">
@@ -658,5 +867,27 @@ onBeforeUnmount(() => {
   .auth-phone {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* The clip's upload, while it runs. Deliberately plain: the only job is to
+   move, so that minutes of silence do not read as a frozen dialog. */
+.upl {
+  margin-top: 0.6rem;
+}
+.upl-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--c-border, #e2e8f0);
+  overflow: hidden;
+}
+.upl-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--c-brand, #0ea5b7);
+  transition: width 0.25s ease;
+}
+.upl-note {
+  margin-top: 0.4rem;
 }
 </style>

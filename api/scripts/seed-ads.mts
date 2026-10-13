@@ -63,6 +63,15 @@ const SEEDS: Seed[] = [
     alt: 'Learnsbuy — รอบติวเข้มก่อนสอบ A-Level และ PAT ภาษาญี่ปุ่น',
     sortOrder: 0,
   },
+  {
+    key: 'learn-next',
+    name: 'Learnsbuy · เรียนต่อระดับถัดไป',
+    // The slot inside the learning room, under a lesson somebody is partway
+    // through. The quietest of the five, for the same reason.
+    placement: 'learn',
+    alt: 'Learnsbuy — คอร์สสนทนาและติวสอบภาษาญี่ปุ่นของครูพี่โฮม ต่อจากระดับพื้นฐาน',
+    sortOrder: 0,
+  },
 ]
 
 const down = process.argv[2] === 'down'

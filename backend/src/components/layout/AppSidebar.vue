@@ -17,23 +17,12 @@
       :class="['pt-8 pb-7 flex', !isExpanded && !isHovered ? 'xl:justify-center' : 'justify-start']"
     >
       <router-link to="/">
-        <img
+        <AppLogo
           v-if="isExpanded || isHovered || isMobileOpen"
-          class="dark:hidden"
-          src="/images/logo/logo.svg"
-          alt="Logo"
-          width="150"
-          height="40"
+          :width="150"
+          :height="40"
         />
-        <img
-          v-if="isExpanded || isHovered || isMobileOpen"
-          class="hidden dark:block"
-          src="/images/logo/logo-dark.svg"
-          alt="Logo"
-          width="150"
-          height="40"
-        />
-        <img v-else src="/images/logo/logo-icon.svg" alt="Logo" width="32" height="32" />
+        <AppLogo v-else variant="icon" />
       </router-link>
     </div>
     <div class="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
@@ -135,7 +124,7 @@
                   </span>
                   <span
                     v-if="isExpanded || isHovered || isMobileOpen"
-                    class="menu-item-text flex items-center gap-2"
+                    class="menu-item-text flex w-full items-center gap-2"
                   >
                     {{ item.name }}
                     <span
@@ -143,7 +132,23 @@
                       class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-brand-500 text-white"
                       >new</span
                     >
+                    <span
+                      v-if="item.badge === 'chat' && chatUnread.count"
+                      class="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1.5 text-xs font-medium text-white"
+                      >{{ chatUnread.label }}</span
+                    >
                   </span>
+                  <!-- Collapsed, there is no room for the number — but there is
+                       room to say that something is waiting. -->
+                  <span
+                    v-if="
+                      item.badge === 'chat' &&
+                      chatUnread.count &&
+                      !(isExpanded || isHovered || isMobileOpen)
+                    "
+                    class="absolute top-2 right-3 h-2 w-2 rounded-full bg-brand-500"
+                    aria-hidden="true"
+                  />
                 </router-link>
                 <transition
                   @enter="startTransition"
@@ -192,7 +197,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 import {
@@ -206,12 +211,28 @@ import {
   SettingsIcon,
   ChevronDownIcon,
   MoreDots,
+  ChatIcon,
 } from '../../icons'
 import { useSidebar } from '@/composables/useSidebar'
 import { useAuthStore } from '@/stores/auth'
+import { useChatUnreadStore } from '@/stores/chatUnread'
+import AppLogo from './AppLogo.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
+const chatUnread = useChatUnreadStore()
+
+// Only while somebody is signed in: the poller is a request a minute, and on
+// the sign-in page there is nobody to count for.
+watch(
+  () => auth.canUseAdmin,
+  (allowed) => {
+    if (allowed) chatUnread.start()
+    else chatUnread.stop()
+  },
+  { immediate: true },
+)
+onBeforeUnmount(() => chatUnread.stop())
 
 const { isExpanded, isMobileOpen, isHovered, openSubmenu } = useSidebar()
 
@@ -228,7 +249,18 @@ const { isExpanded, isMobileOpen, isHovered, openSubmenu } = useSidebar()
 const allGroups = [
   {
     title: 'Overview',
-    items: [{ icon: GridIcon, name: 'Dashboard', path: '/' }],
+    items: [
+      { icon: GridIcon, name: 'Dashboard', path: '/' },
+      // Above the catalog on purpose: somebody waiting for an answer should
+      // not be below the week's admin.
+      {
+        icon: ChatIcon,
+        name: 'Messages',
+        path: '/chat',
+        badge: 'chat',
+        roles: ['superadmin', 'admin', 'teacher'],
+      },
+    ],
   },
   {
     title: 'Catalog',
@@ -256,6 +288,9 @@ const allGroups = [
           { name: 'Lesson Q&A', path: '/lesson-questions' },
         ],
       },
+      // Only a teacher has earnings of their own; an admin settles them from
+      // Sales instead.
+      { icon: CartIcon, name: 'My earnings', path: '/earnings', roles: ['teacher'] },
     ],
   },
   {
@@ -295,6 +330,7 @@ const allGroups = [
           { name: 'Orders', path: '/orders' },
           { name: 'Invoices', path: '/invoices' },
           { name: 'Coupons', path: '/coupons' },
+          { name: 'Teacher payouts', path: '/payouts' },
         ],
       },
     ],
@@ -308,6 +344,8 @@ const allGroups = [
         name: 'Site',
         subItems: [
           { name: 'Home slideshow', path: '/hero-slides' },
+          { name: 'Home journey band', path: '/journey' },
+          { name: 'Home closing band', path: '/journey/cta' },
           { name: 'Articles', path: '/posts' },
           { name: 'Advertising', path: '/ads' },
           { name: 'Testimonials', path: '/testimonials' },

@@ -9,7 +9,7 @@
  * end, pass or fail.
  */
 import { existsSync } from 'node:fs'
-import puppeteer from 'puppeteer-core'
+import { launchBrowser } from './browser.mjs'
 
 const BASE = process.argv[2] ?? 'http://localhost:5174'
 const API = process.env.API ?? 'http://127.0.0.1:3000/api/v1'
@@ -50,8 +50,7 @@ if (!register.ok) {
 }
 console.log(`  buyer: ${buyer.email}\n`)
 
-const browser = await puppeteer.launch({
-  executablePath: BROWSERS.find((p) => existsSync(p)),
+const browser = await launchBrowser({
   headless: true,
   args: ['--no-sandbox', '--disable-gpu'],
 })
@@ -89,7 +88,22 @@ try {
   /* ---------------- 1. a guest is asked to sign in ---------------- */
 
   const onSale = await (await fetch(`${API}/courses?perPage=50`)).json()
-  const [first, second] = onSale.data.filter((c) => c.price > 0 && c.sellable)
+  const forSale = onSale.data.filter((c) => c.price > 0 && c.sellable)
+
+  /**
+   * Two courses priced in the same currency.
+   *
+   * A basket can only be paid for in one currency — the server refuses the
+   * second course outright otherwise — so picking the first two on offer
+   * started failing the moment a course was priced in dollars. That is the
+   * rule working, not the basket breaking, and this test is about the basket.
+   */
+  const currency = (c) => c.currency ?? 'THB'
+  const together = forSale.find(
+    (c) => forSale.filter((o) => currency(o) === currency(c)).length >= 2,
+  )
+  const [first, second] = forSale.filter((c) => currency(c) === currency(together))
+  if (!second) throw new Error('needs two sellable courses in one currency')
 
   await page.goto(`${BASE}/th/courses/${first.slug}`, { waitUntil: 'networkidle2' })
   await page.waitForSelector('[data-action="add-cart"]', { timeout: 10000 })
@@ -111,17 +125,52 @@ try {
   ).catch(() => {})
   check('the click that was interrupted is not thrown away', (await badge()) === 1, `badge ${await badge()}`)
 
-  /* ---------------- 3. a second course ---------------- */
+  /* ---------------- 3. a second course, straight off a card ---------------- */
 
-  await page.goto(`${BASE}/th/courses/${second.slug}`, { waitUntil: 'networkidle2' })
-  await page.waitForSelector('[data-action="add-cart"]', { timeout: 10000 })
-  await page.click('[data-action="add-cart"]')
+  // From the catalog this time. A card's one button is the basket, and most
+  // people meet a course on a card rather than on its own page — so this is the
+  // path that has to work, not just the one on the detail page.
+  await page.goto(`${BASE}/th/courses`, { waitUntil: 'networkidle2' })
+  await page.waitForSelector(`.cc[data-cid="${second.slug}"] [data-action]`, { timeout: 10000 })
+  const cardButton = await page.$(`.cc[data-cid="${second.slug}"] [data-action]`)
+  check(
+    "a paid card's button is the basket, not the till",
+    (await cardButton.evaluate((el) => el.dataset.action)) === 'add-cart',
+    await cardButton.evaluate((el) => `${el.dataset.action}: ${el.textContent.trim()}`),
+  )
+
+  await cardButton.click()
   await page
     .waitForFunction(() => Number(document.querySelector('[data-cart-count]')?.textContent ?? 0) === 2, {
       timeout: 8000,
     })
     .catch(() => {})
   check('a second course joins it', (await badge()) === 2, `badge ${await badge()}`)
+  check('without leaving the catalog', !page.url().includes('/checkout'), page.url())
+  check(
+    'and the card now says it is in there',
+    (
+      await page.$eval(`.cc[data-cid="${second.slug}"] [data-action]`, (el) => el.textContent.trim())
+    ).includes('ตะกร้า'),
+    await page.$eval(`.cc[data-cid="${second.slug}"] [data-action]`, (el) => el.textContent.trim()),
+  )
+
+  // The click has to say something, and then stop saying it. A confirmation
+  // that stays on screen is the next thing in the way of the next course.
+  const toastText = await page
+    .waitForSelector('#toast-region .toast-msg', { timeout: 4000 })
+    .then((el) => el.evaluate((e) => e.textContent.trim()))
+    .catch(() => null)
+  check(
+    'adding it says so, naming the course',
+    toastText !== null && toastText.includes(second.title),
+    toastText ?? '(no toast)',
+  )
+  const wentAway = await page
+    .waitForFunction(() => !document.querySelector('#toast-region .toast'), { timeout: 4500 })
+    .then(() => true)
+    .catch(() => false)
+  check('and takes itself away a few seconds later', wentAway)
 
   /* ---------------- 4. the cart page agrees ---------------- */
 

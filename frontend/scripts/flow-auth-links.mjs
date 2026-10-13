@@ -8,14 +8,8 @@
  * changes a password and the verification actually marks an address verified,
  * which is the only way to know the links work.
  */
-import { existsSync } from 'node:fs'
-import puppeteer from 'puppeteer-core'
+import { launchBrowser } from './browser.mjs'
 
-const BROWSERS = [
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-]
 const SITE = process.env.SITE_URL ?? 'http://localhost:5174'
 const SHOTS = 'C:/Users/brack/AppData/Local/Temp/shots'
 
@@ -37,8 +31,7 @@ function check(label, ok, detail = '') {
   }
 }
 
-const browser = await puppeteer.launch({
-  executablePath: BROWSERS.find((p) => existsSync(p)),
+const browser = await launchBrowser({
   headless: true,
   args: ['--no-sandbox', '--disable-gpu'],
 })

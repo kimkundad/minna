@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { ApiError, api, mediaUrl, type QuizResult, type StudyCurriculum } from '@/lib/api'
+import { useAuthStore } from '@/stores/auth'
 import AppAvatar from '@/components/ui/AppAvatar.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import AppNotice from '@/components/ui/AppNotice.vue'
@@ -9,7 +11,7 @@ import CtaButton from '@/components/ui/CtaButton.vue'
 import CourseImage from '@/components/course/CourseImage.vue'
 import CompactHeader from '@/components/learning/CompactHeader.vue'
 import FileChip from '@/components/learning/FileChip.vue'
-import { call, useStoreTick } from '@/components/learning/learning'
+import { useStoreTick } from '@/components/learning/learning'
 import { date as fmtDate, dateTime, num } from '@/lib/format'
 import { courseView, store, type CourseView } from '@/vendor'
 import type {
@@ -43,38 +45,73 @@ const locale = computed(() => String(route.params.locale ?? 'th'))
 const path = (p: string) => `/${locale.value}${p}`
 const id = computed(() => String(route.params.id ?? ''))
 
-const tick = useStoreTick()
+const auth = useAuthStore()
+const loggedIn = computed(() => auth.isLoggedIn)
 
-const course = computed<Course | null>(() => {
-  void tick.value
-  return call<Course | null>('course', id.value)
+/* ---------------- the result, from the API ---------------- */
+
+const result = ref<QuizResult | null>(null)
+const curriculum = ref<StudyCurriculum | null>(null)
+const loading = ref(true)
+const denied = ref<'none' | 'missing' | null>(null)
+
+async function load(): Promise<void> {
+  if (!id.value || !loggedIn.value) {
+    loading.value = false
+    return
+  }
+  loading.value = result.value === null
+  denied.value = null
+  try {
+    const [res, cur] = await Promise.all([
+      api.quizResult(id.value),
+      api.studyCurriculum(id.value).catch(() => null),
+    ])
+    result.value = res.data
+    curriculum.value = cur?.data ?? null
+  } catch (err) {
+    result.value = null
+    denied.value = err instanceof ApiError && err.status === 404 ? 'missing' : 'none'
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(id, () => void load(), { immediate: true })
+watch(loggedIn, (now, before) => {
+  if (now !== before) void load()
 })
-const quiz = computed(() => course.value?.quiz ?? null)
-const category = computed(() =>
-  course.value
-    ? call<{ name: string; icon: string; palette?: number } | null>('category', course.value.category)
+
+/** The shapes this screen was written against, built from the API's. */
+const course = computed(() =>
+  curriculum.value
+    ? {
+        id: id.value,
+        title: curriculum.value.course.title,
+        image: curriculum.value.course.thumbnailPath
+          ? { src: mediaUrl(curriculum.value.course.thumbnailPath), alt: curriculum.value.course.title }
+          : null,
+        quiz: result.value ? { passPct: result.value.quiz.passPct } : null,
+      }
     : null,
 )
-const loggedIn = computed(() => {
-  void tick.value
-  return call<boolean>('isLoggedIn')
-})
-const access = computed<Access>(() => {
-  void tick.value
-  return call<Access>('access', id.value)
-})
-const view = computed<CourseView | null>(() => {
-  void tick.value
-  return course.value ? courseView(id.value) : null
-})
-const status = computed<QuizStatus>(() => {
-  void tick.value
-  return call<QuizStatus>('quizStatus', id.value)
-})
-const progress = computed<Progress>(() => {
-  void tick.value
-  return call<Progress>('progress', id.value)
-})
+const quiz = computed(() => (result.value ? { passPct: result.value.quiz.passPct } : null))
+/** Only what the art needs: the cover carries the picture, and the fallback
+ *  drawing needs an icon and a colour. */
+const category = computed(() => ({ name: '', icon: 'book-open', palette: 0 }))
+
+const access = computed<Access>(() =>
+  result.value
+    ? { has: true, reason: 'ok', source: null, expiredType: null }
+    : { has: false, reason: denied.value ?? 'missing', source: null, expiredType: null },
+)
+const view = computed<CourseView | null>(() => null)
+
+const progress = computed(() => ({
+  done: curriculum.value?.progress.done ?? 0,
+  total: curriculum.value?.progress.total ?? 0,
+  pct: curriculum.value?.progress.pct ?? 0,
+}))
 
 const learnPath = computed(() => path(`/learn/${id.value}`))
 const quizPath = computed(() => path(`/quiz/${id.value}`))
@@ -106,35 +143,85 @@ const flashNotice = computed(() => {
 
 /* ---------------- model ---------------- */
 
-const lessonsExQuiz = computed(() =>
-  course.value ? call<Lesson[]>('lessons', course.value).filter((l) => l.type !== 'quiz') : [],
-)
-const doneCount = computed(
-  () => lessonsExQuiz.value.filter((l) => progress.value.map[l.id]?.done).length,
-)
+/** Counted by the API, which counts them the same way everywhere else. */
+const lessonsExQuiz = computed(() => ({ length: progress.value.total }))
+const doneCount = computed(() => progress.value.done)
 
 /** The attempt on show: the passing one once there is a pass, otherwise the
  *  most recent — a later failed retry must not hide a pass already earned. */
+/**
+ * Every attempt, newest first, in the shape this screen reads.
+ *
+ * A score is a percentage on the wire; the screen shows "7 of 10", so the count
+ * is worked back from the percentage and the number of questions. One number
+ * decides both, which is why they cannot disagree.
+ */
+const total = computed(() => result.value?.quiz.choiceCount ?? 0)
+const attempts = computed(() =>
+  (result.value?.attempts ?? []).map((a) => ({
+    correct: Math.round((a.scorePct / 100) * total.value),
+    total: total.value,
+    pct: a.scorePct,
+    passed: a.passed,
+    at: a.submittedAt,
+    attemptNo: a.attemptNo,
+  })),
+)
+
+const choicePassed = computed(() => Boolean(result.value?.latest?.passed))
+
+/**
+ * The attempt on show: the passing one once there is a pass, otherwise the most
+ * recent — a later failed retry must not hide a pass already earned.
+ */
 const shown = computed(() => {
-  void tick.value
-  const attempts =
-    (call<{ choice?: Record<string, { passed: boolean }[]> }>('bucket').choice?.[id.value] ??
-      []) as { correct: number; total: number; passed: boolean; at: string }[]
-  if (status.value.choicePassed) {
-    const passing = attempts.filter((a) => a.passed)
-    return passing[passing.length - 1] ?? null
+  if (choicePassed.value) {
+    const passing = attempts.value.filter((a) => a.passed)
+    return passing[0] ?? null
   }
-  return status.value.latest
+  return attempts.value[0] ?? null
 })
 
-const essay = computed(() => status.value.essay)
-const lastVersion = computed<EssayVersion | null>(() => {
-  const e = essay.value
-  return e ? (e.versions[e.versions.length - 1] ?? null) : null
-})
-const lastReview = computed<EssayReview | null>(() => {
-  const e = essay.value
-  return e && e.reviews.length ? (e.reviews[e.reviews.length - 1] ?? null) : null
+const essay = computed(() => result.value?.essays[0] ?? null)
+const essayStatus = computed(() => essay.value?.status ?? 'none')
+
+/**
+ * What this screen used to read off the fixture store, now from the result.
+ *
+ * Kept as one object because the screen asks it a dozen questions in a dozen
+ * places; splitting it would be a dozen edits for no gain.
+ */
+const status = computed(() => ({
+  attempts: attempts.value.length,
+  choicePassed: choicePassed.value,
+  essayStatus: essayStatus.value,
+  completed: Boolean(result.value?.completed),
+}))
+
+/** Every lesson finished — the other half of "completed". */
+const lessonsDone = computed(
+  () => progress.value.total > 0 && progress.value.done === progress.value.total,
+)
+/**
+ * The draft on show is the current one.
+ *
+ * The API keeps every version but hands back the one the teacher is looking at
+ * — which is the one the page is about. The older drafts matter to the review
+ * history, and that is what the reviews below are.
+ */
+const lastVersion = computed(() =>
+  essay.value
+    ? {
+        v: essay.value.version,
+        at: essay.value.submittedAt,
+        text: essay.value.body,
+        file: essay.value.attachment,
+      }
+    : null,
+)
+const lastReview = computed(() => {
+  const reviews = essay.value?.reviews ?? []
+  return reviews.length ? reviews[reviews.length - 1]! : null
 })
 
 type Overall =
@@ -150,7 +237,7 @@ type Overall =
 const overall = computed<Overall>(() => {
   const qs = status.value
   if (!qs.attempts) return 'none'
-  if (qs.completed) return progress.value.lessonsDone ? 'passed' : 'passed-lessons'
+  if (qs.completed) return lessonsDone.value ? 'passed' : 'passed-lessons'
   if (!qs.choicePassed) return 'failed'
   if (qs.essayStatus === 'revision') return 'revision'
   if (qs.essayStatus === 'resubmitted') return 'resubmitted'
@@ -241,21 +328,44 @@ const answerIsLong = computed(() => (lastVersion.value?.text.length ?? 0) > 260)
 
 /* ---------------- review history ---------------- */
 
+interface HistoryVersion {
+  v: number
+  at: string
+  text: string
+  file: { name: string | null; url: string | null } | null
+}
+
+interface HistoryReview {
+  version: number
+  result: 'passed' | 'revision'
+  comment: string
+  reviewer: string | null
+  reviewedAt: string
+  attachmentUrl: string | null
+}
+
 type Event =
-  | { kind: 'sub'; at: string; version: EssayVersion }
-  | { kind: 'rev'; at: string; review: EssayReview }
+  | { kind: 'sub'; at: string; version: HistoryVersion }
+  | { kind: 'rev'; at: string; review: HistoryReview }
   | { kind: 'wait'; at: null }
 
+/**
+ * The written answer's story: what was sent, what came back, what is still
+ * waiting.
+ *
+ * The API hands back the current draft and every verdict. Older drafts are kept
+ * server-side but are not sent — a review names the version it is about, which
+ * is what the reader needs to follow the thread.
+ */
 const history = computed<Event[]>(() => {
   const e = essay.value
   if (!e) return []
-  const parse = (store as unknown as { date: { parse: (v: unknown) => Date | null } }).date.parse
   const events: Event[] = [
-    ...e.versions.map((v) => ({ kind: 'sub' as const, at: v.at, version: v })),
-    ...e.reviews.map((r) => ({ kind: 'rev' as const, at: r.at, review: r })),
+    { kind: 'sub' as const, at: e.submittedAt, version: { v: e.version, at: e.submittedAt, text: e.body, file: e.attachment } },
+    ...e.reviews.map((r) => ({ kind: 'rev' as const, at: r.reviewedAt, review: r })),
   ]
   events.sort((a, b) => {
-    const diff = (parse(a.at)?.getTime() ?? 0) - (parse(b.at)?.getTime() ?? 0)
+    const diff = new Date(String(a.at)).getTime() - new Date(String(b.at)).getTime()
     return diff || (a.kind === 'sub' ? -1 : 1)
   })
   if (e.status === 'pending' || e.status === 'resubmitted') {
@@ -273,13 +383,13 @@ const checklist = computed(() => {
   const s = essay.value?.status ?? 'none'
   const items: { mark: Mark; title: string; detail: string; link?: string }[] = [
     {
-      mark: progress.value.lessonsDone ? 'done' : 'todo',
+      mark: lessonsDone.value ? 'done' : 'todo',
       title: t('learning.result.checkLessons'),
       detail: t('learning.result.checkLessonsDetail', {
         done: doneCount.value,
         total: lessonsExQuiz.value.length,
       }),
-      link: !progress.value.lessonsDone && access.value.has ? learnPath.value : undefined,
+      link: !lessonsDone.value && access.value.has ? learnPath.value : undefined,
     },
     {
       mark: qs.choicePassed ? 'done' : qs.attempts ? 'fail' : 'todo',
@@ -339,27 +449,30 @@ const accessNotice = computed(() => {
 
 /* ---------------- instructor ---------------- */
 
-const s = store as unknown as { instructor: (id: string) => Person }
-
-const reviewer = computed<Person | null>(() => {
-  const c = course.value
-  const name = lastReview.value?.by
-  if (!c) return null
-  const people = c.instructors.map((i) => s.instructor(i.id))
-  return people.find((p) => p.name === name) ?? people[0] ?? null
+/**
+ * Who marked it.
+ *
+ * The review carries the name, so there is no list to search and nobody to get
+ * wrong — the avatar falls back to initials, which is what it does everywhere
+ * else when there is no photograph.
+ */
+const reviewer = computed(() => {
+  const name = lastReview.value?.reviewer
+  return name ? { name, initials: name.slice(0, 1), color: 0, photo: null } : null
 })
 
 /* ---------------- actions ---------------- */
 
 function runAction(action: string, courseId?: string) {
   const cid = courseId ?? id.value
-  if (action === 'add-cart') call('addToCart', cid)
-  else if (action === 'enroll-free') call('enrollFree', cid)
+  if (action === 'buy' || action === 'enroll-free') {
+    void router.push({ path: path('/checkout'), query: { items: cid } })
+    return
+  }
   else if (action === 'buy') {
     void router.push({ path: path('/checkout'), query: { items: cid } })
     return
   }
-  tick.value += 1
 }
 </script>
 
@@ -374,8 +487,15 @@ function runAction(action: string, courseId?: string) {
 
   <div class="rs-root">
     <div class="container rs-wrap" id="rs-app">
+      <!-- Still fetching. Without this the empty first tick reads as "no such
+           course", which is the wrong thing to tell somebody who has just sat
+           the test. -->
+      <div v-if="loading" class="state-box state-box--plain">
+        <p>{{ t('learning.result.loading') }}</p>
+      </div>
+
       <!-- No such course -->
-      <div v-if="!course || !quiz" class="state-box">
+      <div v-else-if="!course || !quiz" class="state-box">
         <div class="state-ico"><AppIcon name="search" /></div>
         <h3>{{ t('learning.result.missingTitle') }}</h3>
         <p>{{ t('learning.result.missingText') }}</p>
@@ -488,7 +608,7 @@ function runAction(action: string, courseId?: string) {
               <RouterLink
                 v-if="
                   (overall === 'pending' || overall === 'resubmitted' || overall === 'none') &&
-                  !progress.lessonsDone &&
+                  !lessonsDone &&
                   access.has
                 "
                 class="btn"
@@ -499,7 +619,7 @@ function runAction(action: string, courseId?: string) {
               </RouterLink>
               <RouterLink
                 v-else-if="
-                  (overall === 'pending' || overall === 'resubmitted') && progress.lessonsDone
+                  (overall === 'pending' || overall === 'resubmitted') && lessonsDone
                 "
                 class="btn btn--secondary"
                 :to="learnPath"
@@ -553,7 +673,7 @@ function runAction(action: string, courseId?: string) {
                 <p>
                   {{ t('learning.result.emptyText')
                   }}{{
-                    progress.lessonsDone
+                    lessonsDone
                       ? ''
                       : ` · ${t('learning.result.emptyProgress', {
                           done: doneCount,
@@ -567,7 +687,7 @@ function runAction(action: string, courseId?: string) {
                       <AppIcon name="clipboard-check" />{{ t('learning.quizCard.take') }}
                     </RouterLink>
                     <RouterLink
-                      v-if="!progress.lessonsDone"
+                      v-if="!lessonsDone"
                       class="btn btn--secondary"
                       :to="learnPath"
                     >
@@ -689,7 +809,7 @@ function runAction(action: string, courseId?: string) {
               </section>
 
               <!-- Essay -->
-              <section v-if="quiz.questions.some((q) => q.type === 'essay')" class="rs-card" id="rs-essay" aria-labelledby="rs-es-h">
+              <section v-if="(result?.quiz.essayCount ?? 0) > 0" class="rs-card" id="rs-essay" aria-labelledby="rs-es-h">
                 <header class="rs-card-head">
                   <span class="rs-card-ico"><AppIcon name="pen" /></span>
                   <div class="rs-card-ttl">
@@ -697,8 +817,8 @@ function runAction(action: string, courseId?: string) {
                     <p v-if="essay && lastVersion">
                       {{ t('learning.result.sentAt', { when: dateTime(lastVersion.at) })
                       }}{{
-                        essay.versions.length > 1
-                          ? ` · ${t('learning.quiz.version', { n: essay.versions.length })}`
+                        essay.version > 1
+                          ? ` · ${t('learning.quiz.version', { n: essay.version })}`
                           : ''
                       }}
                     </p>
@@ -711,14 +831,14 @@ function runAction(action: string, courseId?: string) {
 
                 <p class="rs-q">
                   <span>{{ t('learning.result.question') }}</span>
-                  {{ quiz.questions.find((q) => q.type === 'essay')?.text }}
+                  {{ essay?.questionText }}
                 </p>
 
                 <template v-if="essay && lastVersion">
                   <div class="rs-answer">
                     <span class="rs-flabel">
                       {{
-                        essay.versions.length > 1
+                        essay.version > 1
                           ? t('learning.result.yourAnswerLatest')
                           : t('learning.result.yourAnswer')
                       }}
@@ -759,7 +879,9 @@ function runAction(action: string, courseId?: string) {
 
                   <div v-if="lastVersion.file" class="rs-files">
                     <span class="rs-flabel">{{ t('learning.result.yourFile') }}</span>
-                    <FileChip :file="lastVersion.file" extra-class="rs-chip" download />
+                    <a class="rs-chip link" :href="lastVersion.file.url ?? '#'" target="_blank" rel="noopener">
+                      <AppIcon name="download" />{{ lastVersion.file.name ?? t('learning.doc.download') }}
+                    </a>
                   </div>
 
                   <!-- The instructor's verdict, when there is one worth showing -->
@@ -783,17 +905,19 @@ function runAction(action: string, courseId?: string) {
                         :photo="reviewer.photo"
                       />
                       <span>
-                        <b>{{ lastReview.by }}</b>
+                        <b>{{ lastReview.reviewer }}</b>
                         <small>
-                          {{ t('learning.result.reviewedAt', { when: dateTime(lastReview.at) }) }} ·
-                          {{ t('learning.quiz.version', { n: lastReview.v }) }}
+                          {{ t('learning.result.reviewedAt', { when: dateTime(lastReview.reviewedAt) }) }} ·
+                          {{ t('learning.quiz.version', { n: lastReview.version }) }}
                         </small>
                       </span>
                     </div>
                     <blockquote class="rs-fb-quote">{{ lastReview.comment }}</blockquote>
-                    <div v-if="lastReview.file" class="rs-files">
+                    <div v-if="lastReview.attachmentUrl" class="rs-files">
                       <span class="rs-flabel">{{ t('learning.result.instructorFile') }}</span>
-                      <FileChip :file="lastReview.file" extra-class="rs-chip" download />
+                      <a class="rs-chip link" :href="lastReview.attachmentUrl ?? '#'" target="_blank" rel="noopener">
+                        <AppIcon name="download" />{{ t('learning.result.instructorFile') }}
+                      </a>
                     </div>
                     <div class="rs-card-actions">
                       <RouterLink class="btn btn--primary" :to="essayPath">
@@ -811,7 +935,7 @@ function runAction(action: string, courseId?: string) {
                       <b>{{ t('learning.result.instructorComment') }}</b>
                     </div>
                     <blockquote class="rs-fb-quote">{{ lastReview.comment }}</blockquote>
-                    <p class="rs-muted">{{ lastReview.by }} · {{ dateTime(lastReview.at) }}</p>
+                    <p class="rs-muted">{{ lastReview.reviewer }} · {{ dateTime(lastReview.reviewedAt) }}</p>
                   </div>
                 </template>
 
@@ -834,7 +958,7 @@ function runAction(action: string, courseId?: string) {
                     <p>
                       {{
                         t('learning.result.historySub', {
-                          versions: essay.versions.length,
+                          versions: essay.version,
                           reviews: essay.reviews.length,
                         })
                       }}
@@ -858,38 +982,41 @@ function runAction(action: string, courseId?: string) {
                       </div>
                       <div class="tl-body">
                         <p class="rs-tl-excerpt">{{ e.version.text }}</p>
-                        <FileChip
-                          v-if="e.version.file"
-                          :file="e.version.file"
-                          extra-class="rs-chip"
-                          download
-                        />
+                        <a
+                          v-if="e.version.file?.url"
+                          class="rs-chip link"
+                          :href="e.version.file.url"
+                          target="_blank"
+                          rel="noopener"
+                        >
+                          <AppIcon name="download" />{{ e.version.file.name ?? t('learning.doc.download') }}
+                        </a>
                       </div>
                     </template>
 
                     <template v-else-if="e.kind === 'rev'">
                       <span
                         class="tl-dot"
-                        :class="e.review.result === 'pass' ? 'tl-dot--success' : 'tl-dot--danger'"
+                        :class="e.review.result === 'passed' ? 'tl-dot--success' : 'tl-dot--danger'"
                       >
-                        <AppIcon :name="e.review.result === 'pass' ? 'check' : 'alert-circle'" />
+                        <AppIcon :name="e.review.result === 'passed' ? 'check' : 'alert-circle'" />
                       </span>
                       <div class="tl-head">
                         <b>
                           {{
-                            e.review.result === 'pass'
+                            e.review.result === 'passed'
                               ? t('learning.result.reviewPass')
                               : t('learning.result.reviewRevision')
                           }}
                         </b>
                         <span
                           class="badge"
-                          :class="e.review.result === 'pass' ? 'badge--passed' : 'badge--revision'"
+                          :class="e.review.result === 'passed' ? 'badge--passed' : 'badge--revision'"
                         >
                           <AppIcon
-                            :name="e.review.result === 'pass' ? 'check-circle' : 'alert-circle'"
+                            :name="e.review.result === 'passed' ? 'check-circle' : 'alert-circle'"
                           />{{
-                            e.review.result === 'pass'
+                            e.review.result === 'passed'
                               ? t('learning.result.essayBadge.passed')
                               : t('learning.result.essayBadge.revision')
                           }}
@@ -897,10 +1024,17 @@ function runAction(action: string, courseId?: string) {
                         <span class="tl-time">{{ dateTime(e.at) }}</span>
                       </div>
                       <div class="tl-body">
-                        <span class="rs-tl-by">{{ e.review.by }}</span>
+                        <span class="rs-tl-by">{{ e.review.reviewer }}</span>
                         <div v-if="e.review.comment" class="tl-quote">{{ e.review.comment }}</div>
-                        <div v-if="e.review.file" class="rs-tl-file">
-                          <FileChip :file="e.review.file" extra-class="rs-chip" download />
+                        <div v-if="e.review.attachmentUrl" class="rs-tl-file">
+                          <a
+                            class="rs-chip link"
+                            :href="e.review.attachmentUrl"
+                            target="_blank"
+                            rel="noopener"
+                          >
+                            <AppIcon name="download" />{{ t('learning.result.instructorFile') }}
+                          </a>
                         </div>
                       </div>
                     </template>

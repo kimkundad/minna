@@ -1,0 +1,489 @@
+{
+  "id": {
+    "account": {
+      "learning": {
+        "filterLabel": "Saring kursus menurut status",
+        "showing": "Menampilkan {count} kursus",
+        "noneInTab": "Tidak ada kursus dengan status ini",
+        "noneInTabText": "Coba status lain, atau lihat semua kursus Anda.",
+        "grantedOn": "Akses diberikan",
+        "expiryDate": "Tanggal berakhir",
+        "quiz": "Kuis",
+        "source": {
+          "package": "Termasuk dalam paket",
+          "purchase": "Dibeli terpisah",
+          "free": "Gratis untuk anggota",
+          "admin": "Diberikan oleh sekolah"
+        },
+        "expiredValue": "Berakhir",
+        "endedOn": "Ditarik pada {date}",
+        "accessEndedOn": "Akses berakhir {date}",
+        "followsPackage": "Mengikuti paket",
+        "untilDate": "sampai {date}",
+        "noExpiry": "Tanpa batas waktu",
+        "accessUntil": "Akses berlaku sampai tanggal ini",
+        "quizPassed": "Lulus",
+        "quizPassedNote": "Pilihan ganda dan esainya sudah lulus",
+        "quizRevision": "Perlu diperbaiki",
+        "quizRevisionNote": "Pengajar Anda sudah mengirim catatan untuk dikerjakan",
+        "quizPending": "Menunggu penilaian",
+        "quizPendingNote": "Pengajar Anda sedang menilai esai Anda",
+        "quizTodo": "Belum dikerjakan",
+        "quizTodoNote": "Terbuka setelah semua pelajaran selesai",
+        "quizEndedNote": "Kursus ini sudah ditarik",
+        "quizExpiredNote": "Beli kursusnya lagi untuk melanjutkan dan mengerjakan kuis",
+        "progress": "Kemajuan",
+        "progressKept": "Kemajuan (tersimpan dari sebelumnya)",
+        "lessonsDone": "{done}/{total} pelajaran",
+        "notStartedBadge": "Belum dimulai",
+        "endedNote": "Kursus ini sudah ditutup",
+        "quizScore": "Nilai {pct}%",
+        "review": "Ulangi pelajarannya",
+        "loading": "Memuat kursus Anda…",
+        "loadFailed": "Tidak dapat memuat kursus Anda"
+      },
+      "lock": {
+        "ended": {
+          "title": "Kursus ini sudah ditarik",
+          "text": "Kursus ini tidak dijual lagi dan video serta materi belajarnya tidak dapat dibuka. Riwayat dan kemajuan yang Anda capai ({pct}%) tetap tersimpan."
+        },
+        "access-expired": {
+          "title": "Akses Anda ke kursus ini sudah berakhir",
+          "text": "Beli lagi untuk membukanya kembali — kemajuan Anda ({pct}%) tersimpan dan Anda lanjut dari pelajaran yang sama."
+        },
+        "pkg-expired": {
+          "title": "Paket Anda sudah berakhir",
+          "text": "Perpanjang untuk melanjutkan kursus yang dicakupnya dari tempat Anda berhenti ({pct}%), atau beli kursus ini sendiri."
+        }
+      },
+      "orders": {
+        "filterLabel": "Saring pesanan menurut status",
+        "toolbarNote": "Hanya pesanan kursus, terbaru dulu",
+        "showing": "Menampilkan {count} pesanan",
+        "order": "Pesanan",
+        "tab": {
+          "all": "Semua",
+          "success": "Berhasil",
+          "failed": "Gagal atau dibatalkan",
+          "pending": "Menunggu pembayaran"
+        },
+        "status": {
+          "paid": "Dibayar",
+          "free": "Pendaftaran gratis",
+          "failed": "Pembayaran gagal",
+          "cancelled": "Dibatalkan",
+          "pending": "Menunggu pembayaran",
+          "refunded": "Dikembalikan"
+        },
+        "method": {
+          "card": "Kartu kredit atau debit",
+          "qr": "QR PromptPay",
+          "free": "Tanpa biaya",
+          "promptpay": "QR PromptPay",
+          "unset": "Belum ada cara pembayaran"
+        },
+        "itemCount": "{count} kursus",
+        "coupon": "Kode {code}",
+        "normalPrice": "Harga biasa",
+        "net": "Total",
+        "saved": "Anda hemat {amount} baht",
+        "noteFailed": "Pembayaran gagal — tidak ada biaya yang ditagih dan tidak ada akses yang dibuka · tanpa kuitansi",
+        "noteCancelled": "Pesanan ini dibatalkan · tanpa kuitansi",
+        "noteTax": "Faktur pajak diminta ({type}) · {status}",
+        "taxType": { "individual": "perorangan", "corporate": "perusahaan" },
+        "receiptStatus": { "issued": "diterbitkan", "processing": "sedang diproses" },
+        "reorder": "Pesan lagi",
+        "receipt": "Kuitansi",
+        "receiptFor": "Unduh kuitansi untuk pesanan {id}",
+        "detail": "Rincian",
+        "noneInTab": "Tidak ada pesanan dengan status ini",
+        "noneInTabText": "Coba status lain, atau lihat semua pesanan Anda.",
+        "emptyTitle": "Belum ada pesanan",
+        "emptyText": "Begitu Anda membeli sebuah kursus, pesanan dan kuitansinya muncul di sini.",
+        "methodLabel": "Cara pembayaran",
+        "placedAt": "Dibuat",
+        "paidAt": "Dibayar",
+        "subtotal": "Subtotal",
+        "courseDiscount": "Potongan kursus",
+        "orderDiscount": "Potongan keranjang",
+        "vat": "PPN",
+        "detailFor": "Pesanan {id}",
+        "renamed": "Sekarang bernama “{title}”",
+        "notePending": "Menunggu pembayaran · akses terbuka sendiri begitu dananya masuk",
+        "noteRefunded": "Dikembalikan · akses dari pesanan ini ditarik",
+        "noteTaxIssued": "Faktur pajak ({type}) · no. {no}",
+        "taxFor": "Faktur pajak ({type}) untuk {name}",
+        "taxNo": "Nomor dokumen {no}",
+        "reorderNothing": "Tidak ada yang bisa masuk kembali ke keranjang — sudah dimiliki, atau tidak dijual lagi.",
+        "loading": "Memuat pesanan Anda…",
+        "loadFailed": "Tidak dapat memuat pesanan Anda"
+      }
+    }
+  },
+
+  "zh": {
+    "account": {
+      "learning": {
+        "filterLabel": "按状态筛选课程",
+        "showing": "显示 {count} 门课程",
+        "noneInTab": "没有此状态的课程",
+        "noneInTabText": "换个状态看看，或查看你的全部课程。",
+        "grantedOn": "开通日期",
+        "expiryDate": "到期日",
+        "quiz": "测验",
+        "source": {
+          "package": "套餐内含",
+          "purchase": "单独购买",
+          "free": "会员免费",
+          "admin": "由学校开通"
+        },
+        "expiredValue": "已到期",
+        "endedOn": "{date} 撤下",
+        "accessEndedOn": "观看权限于 {date} 结束",
+        "followsPackage": "随套餐而定",
+        "untilDate": "至 {date}",
+        "noExpiry": "不会到期",
+        "accessUntil": "观看权限到这一天为止",
+        "quizPassed": "已通过",
+        "quizPassedNote": "选择题与作文都已通过",
+        "quizRevision": "需修改",
+        "quizRevisionNote": "你的讲师已给出可依循的评语",
+        "quizPending": "等待批改",
+        "quizPendingNote": "你的讲师正在批改你的作文",
+        "quizTodo": "未作答",
+        "quizTodoNote": "学完所有课节后开放",
+        "quizEndedNote": "这门课程已撤下",
+        "quizExpiredNote": "重新购买这门课程即可继续学习并作答测验",
+        "progress": "进度",
+        "progressKept": "进度（沿用先前的）",
+        "lessonsDone": "{done}/{total} 节课",
+        "notStartedBadge": "未开始",
+        "endedNote": "这门课程已结束",
+        "quizScore": "得分 {pct}%",
+        "review": "复习课节",
+        "loading": "正在载入你的课程…",
+        "loadFailed": "无法载入你的课程"
+      },
+      "lock": {
+        "ended": {
+          "title": "这门课程已撤下",
+          "text": "它已停售，影片与学习材料都无法开启。你的记录与已完成的进度（{pct}%）都会保留。"
+        },
+        "access-expired": {
+          "title": "你对这门课程的观看权限已到期",
+          "text": "重新购买即可再次开启 — 你的进度（{pct}%）都保留着，可从同一节课接着学。"
+        },
+        "pkg-expired": {
+          "title": "你的套餐已到期",
+          "text": "续购套餐即可从停下的地方（{pct}%）继续学习套餐内的课程，或单独购买这门课程。"
+        }
+      },
+      "orders": {
+        "filterLabel": "按状态筛选订单",
+        "toolbarNote": "仅课程订单，最新的在前",
+        "showing": "显示 {count} 笔订单",
+        "order": "订单",
+        "tab": {
+          "all": "全部",
+          "success": "成功",
+          "failed": "失败或已取消",
+          "pending": "等待付款"
+        },
+        "status": {
+          "paid": "已付款",
+          "free": "免费开通",
+          "failed": "付款失败",
+          "cancelled": "已取消",
+          "pending": "等待付款",
+          "refunded": "已退款"
+        },
+        "method": {
+          "card": "信用卡或借记卡",
+          "qr": "QR PromptPay",
+          "free": "无费用",
+          "promptpay": "QR PromptPay",
+          "unset": "尚未选择付款方式"
+        },
+        "itemCount": "{count} 门课程",
+        "coupon": "代码 {code}",
+        "normalPrice": "原价",
+        "net": "合计",
+        "saved": "你省下 {amount} 泰铢",
+        "noteFailed": "付款失败 — 未扣款也未开通课程 · 无收据",
+        "noteCancelled": "这笔订单已取消 · 无收据",
+        "noteTax": "已申请税务发票（{type}）· {status}",
+        "taxType": { "individual": "个人", "corporate": "公司" },
+        "receiptStatus": { "issued": "已开立", "processing": "处理中" },
+        "reorder": "重新下单",
+        "receipt": "收据",
+        "receiptFor": "下载订单 {id} 的收据",
+        "detail": "明细",
+        "noneInTab": "没有此状态的订单",
+        "noneInTabText": "换个状态看看，或查看你的全部订单。",
+        "emptyTitle": "还没有订单",
+        "emptyText": "一旦你购买课程，订单与收据就会出现在这里。",
+        "methodLabel": "付款方式",
+        "placedAt": "下单时间",
+        "paidAt": "付款时间",
+        "subtotal": "小计",
+        "courseDiscount": "课程折扣",
+        "orderDiscount": "购物车折扣",
+        "vat": "增值税",
+        "detailFor": "订单 {id}",
+        "renamed": "现在名为“{title}”",
+        "notePending": "等待付款 · 款项到账后会自动开通",
+        "noteRefunded": "已退款 · 这笔订单开通的课程已收回",
+        "noteTaxIssued": "税务发票（{type}）· 号码 {no}",
+        "taxFor": "开给 {name} 的税务发票（{type}）",
+        "taxNo": "文件号 {no}",
+        "reorderNothing": "没有可放回购物车的项目 — 已经拥有，或已停售。",
+        "loading": "正在载入你的订单…",
+        "loadFailed": "无法载入你的订单"
+      }
+    }
+  },
+
+  "ko": {
+    "account": {
+      "learning": {
+        "filterLabel": "상태로 강의 걸러 보기",
+        "showing": "{count}개 강의 표시",
+        "noneInTab": "이 상태인 강의가 없습니다",
+        "noneInTabText": "다른 상태를 보시거나, 전체 강의를 확인해 보세요.",
+        "grantedOn": "수강 시작일",
+        "expiryDate": "종료일",
+        "quiz": "퀴즈",
+        "source": {
+          "package": "패키지 포함",
+          "purchase": "개별 구매",
+          "free": "회원 무료",
+          "admin": "학교에서 부여"
+        },
+        "expiredValue": "만료",
+        "endedOn": "{date} 내려감",
+        "accessEndedOn": "{date} 수강 종료",
+        "followsPackage": "패키지에 따름",
+        "untilDate": "{date}까지",
+        "noExpiry": "기한 없음",
+        "accessUntil": "이 날짜까지 수강할 수 있습니다",
+        "quizPassed": "합격",
+        "quizPassedNote": "객관식과 작문 모두 합격했습니다",
+        "quizRevision": "수정 필요",
+        "quizRevisionNote": "강사가 참고할 평을 보냈습니다",
+        "quizPending": "평가 대기",
+        "quizPendingNote": "강사가 작문을 평가하고 있습니다",
+        "quizTodo": "응시 전",
+        "quizTodoNote": "모든 수업을 마치면 열립니다",
+        "quizEndedNote": "이 강의는 내려갔습니다",
+        "quizExpiredNote": "강의를 다시 구매하면 이어서 학습하고 퀴즈를 볼 수 있습니다",
+        "progress": "진도",
+        "progressKept": "진도 (이전 기록 유지)",
+        "lessonsDone": "{done}/{total} 수업",
+        "notStartedBadge": "시작 전",
+        "endedNote": "이 강의는 종료되었습니다",
+        "quizScore": "{pct}% 득점",
+        "review": "수업 다시 보기",
+        "loading": "강의를 불러오는 중…",
+        "loadFailed": "강의를 불러오지 못했습니다"
+      },
+      "lock": {
+        "ended": {
+          "title": "이 강의는 내려갔습니다",
+          "text": "더 이상 판매하지 않으며 영상과 학습 자료를 열 수 없습니다. 회원님의 기록과 진도({pct}%)는 그대로 보관됩니다."
+        },
+        "access-expired": {
+          "title": "이 강의의 수강 기간이 끝났습니다",
+          "text": "다시 구매하시면 열립니다 — 진도({pct}%)는 그대로 있어 같은 수업에서 이어 갑니다."
+        },
+        "pkg-expired": {
+          "title": "패키지가 만료되었습니다",
+          "text": "갱신하시면 패키지에 포함된 강의를 멈춘 자리({pct}%)에서 이어 갈 수 있고, 이 강의만 따로 구매하셔도 됩니다."
+        }
+      },
+      "orders": {
+        "filterLabel": "상태로 주문 걸러 보기",
+        "toolbarNote": "강의 주문만, 최근 순",
+        "showing": "{count}건 주문 표시",
+        "order": "주문",
+        "tab": {
+          "all": "전체",
+          "success": "성공",
+          "failed": "실패 또는 취소",
+          "pending": "결제 대기"
+        },
+        "status": {
+          "paid": "결제 완료",
+          "free": "무료 등록",
+          "failed": "결제 실패",
+          "cancelled": "취소됨",
+          "pending": "결제 대기",
+          "refunded": "환불됨"
+        },
+        "method": {
+          "card": "신용카드 또는 체크카드",
+          "qr": "QR PromptPay",
+          "free": "결제 없음",
+          "promptpay": "QR PromptPay",
+          "unset": "결제 수단 미정"
+        },
+        "itemCount": "{count}개 강의",
+        "coupon": "코드 {code}",
+        "normalPrice": "정상가",
+        "net": "합계",
+        "saved": "{amount} 바트 절약했습니다",
+        "noteFailed": "결제 실패 — 청구된 금액도 열린 강의도 없습니다 · 영수증 없음",
+        "noteCancelled": "이 주문은 취소되었습니다 · 영수증 없음",
+        "noteTax": "세금계산서 요청 ({type}) · {status}",
+        "taxType": { "individual": "개인", "corporate": "법인" },
+        "receiptStatus": { "issued": "발행됨", "processing": "진행 중" },
+        "reorder": "다시 주문",
+        "receipt": "영수증",
+        "receiptFor": "{id} 주문의 영수증 내려받기",
+        "detail": "상세",
+        "noneInTab": "이 상태인 주문이 없습니다",
+        "noneInTabText": "다른 상태를 보시거나, 전체 주문을 확인해 보세요.",
+        "emptyTitle": "아직 주문이 없습니다",
+        "emptyText": "강의를 구매하시면 주문과 영수증이 여기에 표시됩니다.",
+        "methodLabel": "결제 수단",
+        "placedAt": "주문 일시",
+        "paidAt": "결제 일시",
+        "subtotal": "소계",
+        "courseDiscount": "강의 할인",
+        "orderDiscount": "장바구니 할인",
+        "vat": "부가세",
+        "detailFor": "{id} 주문",
+        "renamed": "지금은 “{title}”입니다",
+        "notePending": "결제 대기 · 금액이 들어오면 저절로 열립니다",
+        "noteRefunded": "환불됨 · 이 주문으로 열린 수강 권한은 회수되었습니다",
+        "noteTaxIssued": "세금계산서 ({type}) · 번호 {no}",
+        "taxFor": "{name}에게 발행한 세금계산서 ({type})",
+        "taxNo": "문서번호 {no}",
+        "reorderNothing": "장바구니로 되돌릴 것이 없습니다 — 이미 보유했거나 판매가 끝났습니다.",
+        "loading": "주문을 불러오는 중…",
+        "loadFailed": "주문을 불러오지 못했습니다"
+      }
+    }
+  },
+
+  "tw": {
+    "account": {
+      "learning": {
+        "filterLabel": "依狀態篩選課程",
+        "showing": "顯示 {count} 門課程",
+        "noneInTab": "沒有此狀態的課程",
+        "noneInTabText": "換個狀態看看，或查看你的全部課程。",
+        "grantedOn": "開通日期",
+        "expiryDate": "到期日",
+        "quiz": "測驗",
+        "source": {
+          "package": "套裝內含",
+          "purchase": "單獨購買",
+          "free": "會員免費",
+          "admin": "由學校開通"
+        },
+        "expiredValue": "已到期",
+        "endedOn": "{date} 撤下",
+        "accessEndedOn": "觀看權限於 {date} 結束",
+        "followsPackage": "隨套裝而定",
+        "untilDate": "至 {date}",
+        "noExpiry": "不會到期",
+        "accessUntil": "觀看權限到這一天為止",
+        "quizPassed": "已通過",
+        "quizPassedNote": "選擇題與作文都已通過",
+        "quizRevision": "需修改",
+        "quizRevisionNote": "你的講師已給出可依循的評語",
+        "quizPending": "等待批改",
+        "quizPendingNote": "你的講師正在批改你的作文",
+        "quizTodo": "未作答",
+        "quizTodoNote": "學完所有課節後開放",
+        "quizEndedNote": "這門課程已撤下",
+        "quizExpiredNote": "重新購買這門課程即可繼續學習並作答測驗",
+        "progress": "進度",
+        "progressKept": "進度（沿用先前的）",
+        "lessonsDone": "{done}/{total} 堂課",
+        "notStartedBadge": "未開始",
+        "endedNote": "這門課程已結束",
+        "quizScore": "得分 {pct}%",
+        "review": "複習課節",
+        "loading": "正在載入你的課程…",
+        "loadFailed": "無法載入你的課程"
+      },
+      "lock": {
+        "ended": {
+          "title": "這門課程已撤下",
+          "text": "它已停售，影片與學習材料都無法開啟。你的紀錄與已完成的進度（{pct}%）都會保留。"
+        },
+        "access-expired": {
+          "title": "你對這門課程的觀看權限已到期",
+          "text": "重新購買即可再次開啟 — 你的進度（{pct}%）都保留著，可從同一堂課接著學。"
+        },
+        "pkg-expired": {
+          "title": "你的套裝已到期",
+          "text": "續購套裝即可從停下的地方（{pct}%）繼續學習套裝內的課程，或單獨購買這門課程。"
+        }
+      },
+      "orders": {
+        "filterLabel": "依狀態篩選訂單",
+        "toolbarNote": "僅課程訂單，最新的在前",
+        "showing": "顯示 {count} 筆訂單",
+        "order": "訂單",
+        "tab": {
+          "all": "全部",
+          "success": "成功",
+          "failed": "失敗或已取消",
+          "pending": "等待付款"
+        },
+        "status": {
+          "paid": "已付款",
+          "free": "免費開通",
+          "failed": "付款失敗",
+          "cancelled": "已取消",
+          "pending": "等待付款",
+          "refunded": "已退款"
+        },
+        "method": {
+          "card": "信用卡或金融卡",
+          "qr": "QR PromptPay",
+          "free": "無費用",
+          "promptpay": "QR PromptPay",
+          "unset": "尚未選擇付款方式"
+        },
+        "itemCount": "{count} 門課程",
+        "coupon": "代碼 {code}",
+        "normalPrice": "原價",
+        "net": "合計",
+        "saved": "你省下 {amount} 泰銖",
+        "noteFailed": "付款失敗 — 未扣款也未開通課程 · 無收據",
+        "noteCancelled": "這筆訂單已取消 · 無收據",
+        "noteTax": "已申請稅務發票（{type}）· {status}",
+        "taxType": { "individual": "個人", "corporate": "公司" },
+        "receiptStatus": { "issued": "已開立", "processing": "處理中" },
+        "reorder": "重新下單",
+        "receipt": "收據",
+        "receiptFor": "下載訂單 {id} 的收據",
+        "detail": "明細",
+        "noneInTab": "沒有此狀態的訂單",
+        "noneInTabText": "換個狀態看看，或查看你的全部訂單。",
+        "emptyTitle": "還沒有訂單",
+        "emptyText": "一旦你購買課程，訂單與收據就會出現在這裡。",
+        "methodLabel": "付款方式",
+        "placedAt": "下單時間",
+        "paidAt": "付款時間",
+        "subtotal": "小計",
+        "courseDiscount": "課程折扣",
+        "orderDiscount": "購物車折扣",
+        "vat": "加值稅",
+        "detailFor": "訂單 {id}",
+        "renamed": "現在名為「{title}」",
+        "notePending": "等待付款 · 款項入帳後會自動開通",
+        "noteRefunded": "已退款 · 這筆訂單開通的課程已收回",
+        "noteTaxIssued": "稅務發票（{type}）· 號碼 {no}",
+        "taxFor": "開給 {name} 的稅務發票（{type}）",
+        "taxNo": "文件號 {no}",
+        "reorderNothing": "沒有可放回購物車的項目 — 已經擁有，或已停售。",
+        "loading": "正在載入你的訂單…",
+        "loadFailed": "無法載入你的訂單"
+      }
+    }
+  }
+}

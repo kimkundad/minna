@@ -6,6 +6,7 @@ import AppAvatar from '@/components/ui/AppAvatar.vue'
 import AppBadge from '@/components/ui/AppBadge.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import AppPrice from '@/components/ui/AppPrice.vue'
+import AppProgress from '@/components/ui/AppProgress.vue'
 import AdsSlot from '@/components/ui/AdsSlot.vue'
 import CtaButton from '@/components/ui/CtaButton.vue'
 import CourseCard from '@/components/course/CourseCard.vue'
@@ -15,9 +16,12 @@ import LessonPreviewDialog from '@/components/course/LessonPreviewDialog.vue'
 import { ApiError, api, mediaUrl } from '@/lib/api'
 import type { Curriculum, CurriculumLesson, PublicCategory, PublicCourseDetail } from '@/lib/api'
 import { categoryLabel, courseView, personOf } from '@/lib/course'
-import { dateLong, minutes } from '@/lib/format'
+import { date, dateLong, minutes } from '@/lib/format'
 import { openAuth } from '@/components/auth/authChannel'
 import { useCartStore } from '@/stores/cart'
+import { useLearningStore } from '@/stores/learning'
+import { useChatDockStore } from '@/stores/chatDock'
+import ShareRow from '@/components/ui/ShareRow.vue'
 
 /**
  * One course, in full — the sales page a visitor reads before buying.
@@ -36,6 +40,7 @@ import { useCartStore } from '@/stores/cart'
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+const dock = useChatDockStore()
 const cart = useCartStore()
 
 const locale = computed(() => String(route.params.locale ?? 'th'))
@@ -73,7 +78,7 @@ const category = computed(() => {
 
 const categoryName = computed(() =>
   category.value
-    ? categoryLabel(category.value, categories.value)
+    ? categoryLabel(category.value, categories.value, locale.value)
     : (course.value?.categoryName ?? ''),
 )
 
@@ -309,6 +314,61 @@ const perks = computed(() => {
   if (c.inPackage) out.push(['package', t('course.perkInPackage')])
   return out
 })
+
+/**
+ * This course, if it is already theirs.
+ *
+ * The panel is a till for everybody else and a way back in for them: a reader
+ * who owns a course has no use for its price, and being shown a buy button for
+ * something they have paid for reads as a mistake in the shop.
+ */
+const learning = useLearningStore()
+const mine = computed(() => (course.value ? learning.itemFor(course.value.id) : undefined))
+const owned = computed(() => mine.value !== undefined && mine.value.blocked === null)
+
+/** How they came by it, in the panel's own words. */
+const ownedNote = computed(() => {
+  const item = mine.value
+  if (!item) return null
+  return {
+    title: item.source === 'free' ? t('course.ownedFreeTitle') : t('course.ownedTitle'),
+    sub: t(`account.learning.source.${item.source}`),
+    icon: item.source === 'free' ? 'gift' : 'check-circle',
+  }
+})
+
+/** The learning room, at the lesson they were last on. */
+const learnHref = computed(() => {
+  const slug = course.value?.slug ?? courseRef.value
+  const resume = mine.value?.progress.resume?.id
+  return resume
+    ? { path: path(`/learn/${slug}`), query: { lesson: String(resume) } }
+    : { path: path(`/learn/${slug}`) }
+})
+
+/**
+ * The marks for this course.
+ *
+ * Offered the moment somebody owns it rather than only after a quiz, because
+ * the page answers "nothing marked yet" perfectly well — and a button that
+ * appears only once there is something behind it is one nobody knows exists.
+ */
+const resultHref = computed(() => path(`/result/${course.value?.slug ?? courseRef.value}`))
+
+/**
+ * Asking about this course.
+ *
+ * The line naming the course is sent on arrival rather than left in the box:
+ * pressing this button has already said what the question is about, and the
+ * school needs that line to know which teacher it belongs to. The learner is
+ * left with the question itself to write.
+ *
+ * The conversation it lands in is with the school — a learner has no way to
+ * reach a teacher directly, and an admin passes on what is worth passing on.
+ */
+function askTheSchool(): void {
+  dock.open(t('messages.aboutCourse', { title: course.value?.title ?? '' }))
+}
 
 const moreCtas = computed(() => (view.value?.secondary ? [view.value.secondary] : []))
 
@@ -796,12 +856,92 @@ function toInstructors(): void {
             </div>
 
             <div class="cd-buy">
+              <!-- Theirs already: the panel stops being a till. Progress first,
+                   because that is what they came back to check. -->
+              <template v-if="owned && mine">
+                <div id="cd-buy-top" class="cd-buy-top">
+                  <!-- `.cd-prog` and `.cd-access` are the prototype's own
+                       blocks for exactly this state, so they are reused rather
+                       than restyled under new names. -->
+                  <div class="cd-prog">
+                    <div class="cd-prog-head">
+                      <span>{{ t('course.yourProgress') }}</span>
+                      <span class="cd-prog-n">{{
+                        t('account.learning.lessonsDone', {
+                          done: mine.progress.done,
+                          total: mine.progress.total,
+                        })
+                      }}</span>
+                    </div>
+                    <AppProgress
+                      :value="mine.progress.pct"
+                      :label="t('course.progressAria', { title: course.title })"
+                    />
+                    <p v-if="mine.progress.resume" class="cd-prog-sub">
+                      {{ t('course.lastLesson') }}: <b>{{ mine.progress.resume.title }}</b>
+                    </p>
+                    <p v-else class="cd-prog-sub">{{ t('course.ownedNotStarted') }}</p>
+                    <p v-if="mine.progress.lastStudiedAt" class="cd-prog-sub">
+                      {{ t('course.lastStudied', { when: date(mine.progress.lastStudiedAt) }) }}
+                    </p>
+                  </div>
+
+                  <p
+                    v-if="ownedNote"
+                    class="cd-access"
+                    :class="{ 'cd-access--free': mine.source === 'free' }"
+                  >
+                    <AppIcon :name="ownedNote.icon" />
+                    <span>
+                      <b>{{ ownedNote.title }}</b>
+                      <span>{{ ownedNote.sub }}</span>
+                    </span>
+                  </p>
+                </div>
+
+                <div class="cd-ctas" id="cd-ctas" ref="ctasEl">
+                  <div class="cd-cta-primary" data-cta-primary tabindex="-1">
+                    <!-- Straight into the room, at the lesson they left off
+                         on. The lesson is named in the link so the player does
+                         not have to guess twice. -->
+                    <RouterLink class="btn btn--primary btn--lg btn--block" :to="learnHref" data-owned-cta>
+                      <AppIcon name="play" />{{
+                        mine.progress.done ? t('cta.continue') : t('cta.start')
+                      }}
+                    </RouterLink>
+                  </div>
+                  <div class="cd-cta-more">
+                    <RouterLink class="btn btn--secondary btn--block" :to="resultHref">
+                      <AppIcon name="clipboard-check" />{{ t('cta.viewResult') }}
+                    </RouterLink>
+                    <RouterLink class="btn btn--secondary btn--block" :to="path('/account/learning')">
+                      <AppIcon name="book-open" />{{ t('commerce.success.myCourses') }}
+                    </RouterLink>
+                    <!-- To the school, not to the teacher. The course title
+                         rides along so the first message says what it is
+                         about without anyone having to type it; staff pass on
+                         what needs passing on. Only here, inside `owned`,
+                         because a question about a course you have not got is
+                         a sales question and belongs on the contact page. -->
+                    <button
+                      type="button"
+                      class="btn btn--secondary btn--block cd-cta-ask"
+                      @click="askTheSchool"
+                    >
+                      <AppIcon name="message-square" />{{ t('messages.askAbout') }}
+                    </button>
+                  </div>
+                </div>
+              </template>
+
+              <template v-else>
               <div id="cd-buy-top" class="cd-buy-top">
                 <div class="cd-price">
                   <AppPrice
                     :price="view.price"
                     :normal-price="view.normalPrice"
                     :is-free="view.isFree"
+          :currency="view.currency"
                     lg
                   />
                   <span v-if="discount" class="badge badge--bestseller cd-off">{{
@@ -832,8 +972,10 @@ function toInstructors(): void {
                 </div>
               </div>
 
+              </template>
+
               <div id="cd-buy-foot" class="cd-buy-foot">
-                <p v-if="notForSale" class="cd-note">
+                <p v-if="notForSale && !owned" class="cd-note">
                   <AppIcon name="info" />
                   <span>{{ t('course.notForSaleNote') }}</span>
                 </p>
@@ -1035,7 +1177,14 @@ function toInstructors(): void {
                       t('course.yearsTeaching', { years: p.yearsExperience })
                     }}</span
                   >
-                  <p v-if="p.bio">{{ p.bio }}</p>
+                  <!-- The biography is written in the admin's rich text
+                       editor and stored as HTML, so it is rendered as HTML.
+                       Printed as text it showed its own <p> tags to the
+                       reader. The API cleans it on the way in — see
+                       api/src/lib/rich-text.ts — which is what makes this
+                       safe to do with a field a teacher writes themselves. -->
+                  <!-- eslint-disable-next-line vue/no-v-html -->
+                  <div v-if="p.bio" class="cd-ins-bio" v-html="p.bio" />
                   <p v-if="p.credentials" class="cd-ins-cred">
                     <AppIcon name="award" /><span>{{ p.credentials }}</span>
                   </p>
@@ -1043,6 +1192,12 @@ function toInstructors(): void {
               </li>
             </ul>
           </section>
+
+          <!-- Four ways to pass it on, the same four the article page offers.
+               What the shared link then looks like is decided by the API:
+               this site is a single-page app and its tags arrive empty, so
+               nginx sends crawlers to og.routes.ts instead. -->
+          <ShareRow :title="course?.title" :label="t('course.share')" class="cd-share" />
 
           <!-- Course details -->
           <section class="cd-sec" aria-labelledby="cd-info-h">
@@ -1111,15 +1266,27 @@ function toInstructors(): void {
         :hidden="!showBar"
       >
         <div class="cd-bar-info">
+          <!-- A course they own has no price to quote; how far through it they
+               are is the useful number in its place. -->
+          <span v-if="owned && mine" class="cd-bar-label">{{
+            t('account.learning.lessonsDone', {
+              done: mine.progress.done,
+              total: mine.progress.total,
+            })
+          }}</span>
           <AppPrice
-            v-if="!notForSale"
+            v-else-if="!notForSale"
             :price="view.price"
             :normal-price="view.normalPrice"
             :is-free="view.isFree"
+          :currency="view.currency"
           />
           <span v-else class="cd-bar-label">{{ t('course.barNotForSale') }}</span>
         </div>
-        <CtaButton :action="view.primary" :course-id="course.slug" @run="runAction" />
+        <RouterLink v-if="owned && mine" class="btn btn--primary" :to="learnHref">
+          <AppIcon name="play" />{{ mine.progress.done ? t('cta.continue') : t('cta.start') }}
+        </RouterLink>
+        <CtaButton v-else :action="view.primary" :course-id="course.slug" @run="runAction" />
       </div>
 
       <LessonPreviewDialog

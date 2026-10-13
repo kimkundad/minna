@@ -13,8 +13,8 @@ import { removeOrphanedPath } from '../../lib/media'
  */
 
 /** A site language, or every one of them. */
-export type HeroLocale = 'th' | 'en' | 'jp' | 'vn' | 'all'
-export type SiteLocale = 'th' | 'en' | 'jp' | 'vn'
+export type HeroLocale = 'th' | 'en' | 'jp' | 'vn' | 'id' | 'zh' | 'ko' | 'tw' | 'all'
+export type SiteLocale = 'th' | 'en' | 'jp' | 'vn' | 'id' | 'zh' | 'ko' | 'tw'
 
 export interface HeroSlideInput {
   locale: HeroLocale

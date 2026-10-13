@@ -6,14 +6,15 @@ import AppAvatar from '@/components/ui/AppAvatar.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import AppNotice from '@/components/ui/AppNotice.vue'
 import CtaButton from '@/components/ui/CtaButton.vue'
-import CommerceToasts from '@/components/commerce/CommerceToasts.vue'
 import CommerceConfirm from '@/components/commerce/CommerceConfirm.vue'
 import CompactHeader from '@/components/learning/CompactHeader.vue'
 import FileAttach from '@/components/learning/FileAttach.vue'
 import FileChip from '@/components/learning/FileChip.vue'
 import LearningSheet from '@/components/learning/LearningSheet.vue'
 import QuizNavigator from '@/components/learning/QuizNavigator.vue'
-import { call, confirm, hm, toast, useBodyClass, useStoreTick } from '@/components/learning/learning'
+import { confirm, hm, toast, useBodyClass } from '@/components/learning/learning'
+import { ApiError, api, type QuizPaper, type QuizResult } from '@/lib/api'
+import { useAuthStore } from '@/stores/auth'
 import { clock, dateTime, num, relative } from '@/lib/format'
 import { courseView, store, type CourseView } from '@/vendor'
 import type {
@@ -52,29 +53,100 @@ const path = (p: string) => `/${locale.value}${p}`
 const id = computed(() => String(route.params.id ?? ''))
 const essayMode = computed(() => route.query.mode === 'essay')
 
-const tick = useStoreTick()
+const auth = useAuthStore()
+const loggedIn = computed(() => auth.isLoggedIn)
 
-const course = computed<Course | null>(() => {
-  void tick.value
-  return call<Course | null>('course', id.value)
+/* ---------------- the paper, from the API ---------------- */
+
+const paper = ref<QuizPaper | null>(null)
+const status = ref<QuizResult | null>(null)
+const loading = ref(true)
+/** Why the test is shut, when it is. */
+const denied = ref<'none' | 'missing' | null>(null)
+
+/**
+ * Choice ids, by question, in the order the page shows them.
+ *
+ * The page works in positions — "the second option" — because that is what its
+ * markup and its keyboard handling were written against. The API works in
+ * choice ids, because a position means nothing to a server marking a paper.
+ * This is the one place the two meet.
+ */
+const choiceIds = ref<Record<string, number[]>>({})
+
+async function load(): Promise<void> {
+  if (!id.value || !loggedIn.value) {
+    loading.value = false
+    return
+  }
+  loading.value = paper.value === null
+  denied.value = null
+  try {
+    const [got, res] = await Promise.all([
+      api.quizPaper(id.value),
+      api.quizResult(id.value).catch(() => null),
+    ])
+    paper.value = got.data
+    status.value = res?.data ?? null
+    choiceIds.value = Object.fromEntries(
+      got.data.questions.map((q) => [String(q.id), q.choices.map((c) => c.id)]),
+    )
+  } catch (err) {
+    paper.value = null
+    denied.value = err instanceof ApiError && err.status === 404 ? 'missing' : 'none'
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(id, () => void load(), { immediate: true })
+// As soon as the paper is there, find out whether a half-finished attempt is
+// waiting — that is what the intro screen's "carry on" offer is built from.
+watch(paper, (got) => {
+  if (got) void openAttempt()
 })
-const quiz = computed(() => course.value?.quiz ?? null)
-const loggedIn = computed(() => {
-  void tick.value
-  return call<boolean>('isLoggedIn')
+watch(loggedIn, (now, before) => {
+  if (now !== before) void load()
 })
-const access = computed<Access>(() => {
-  void tick.value
-  return call<Access>('access', id.value)
-})
-const view = computed<CourseView | null>(() => {
-  void tick.value
-  return course.value ? courseView(id.value) : null
-})
-const status = computed<QuizStatus>(() => {
-  void tick.value
-  return call<QuizStatus>('quizStatus', id.value)
-})
+
+/**
+ * The shapes the screen was written against, built from the API's.
+ *
+ * Deliberately a translation rather than a rewrite of the screen: the running
+ * test, its keyboard handling and its timer are good and were not what changed.
+ */
+const course = computed(() =>
+  paper.value
+    ? { id: id.value, title: paper.value.quiz.title, quiz: quizShape.value }
+    : null,
+)
+
+const quizShape = computed(() =>
+  paper.value
+    ? {
+        id: String(paper.value.quiz.id),
+        title: paper.value.quiz.title,
+        passPct: paper.value.quiz.passPct,
+        timerMin: paper.value.quiz.timerMinutes,
+        questions: paper.value.questions.map((q) => ({
+          id: String(q.id),
+          type: q.type,
+          text: q.text,
+          choices: q.choices.map((c) => c.text),
+        })),
+      }
+    : null,
+)
+
+const quiz = computed(() => quizShape.value)
+
+const access = computed<Access>(() =>
+  paper.value
+    ? { has: true, reason: 'ok', source: null, expiredType: null }
+    : { has: false, reason: denied.value ?? 'missing', source: null, expiredType: null },
+)
+
+const view = computed<CourseView | null>(() => null)
 
 const questions = computed<QuizQuestion[]>(() => quiz.value?.questions ?? [])
 const choiceQuestions = computed(() => questions.value.filter((q) => q.type !== 'essay'))
@@ -104,7 +176,8 @@ const screen = computed<View>(() => {
 
 /* ---------------- essay already submitted? ---------------- */
 
-const essaySubmitted = computed(() => !!status.value.essay)
+const essayAnswer = computed(() => status.value?.essays[0] ?? null)
+const essaySubmitted = computed(() => essayAnswer.value !== null)
 const essayNeeded = computed(() => !!essayQuestion.value && !essaySubmitted.value)
 
 /* ---------------- draft / answers ---------------- */
@@ -120,10 +193,66 @@ const savingDraft = ref(false)
 const submitting = ref(false)
 const essayError = ref('')
 
-const draft = computed<QuizDraft | null>(() => {
-  void tick.value
-  return call<QuizDraft | null>('quizDraft', id.value)
-})
+/**
+ * The attempt in progress, with whatever was last autosaved.
+ *
+ * One attempt is open at a time: starting the test twice carries on with the
+ * same paper rather than beginning a second, which is what makes closing the
+ * tab halfway harmless.
+ */
+const attemptId = ref<number | null>(null)
+const draft = ref<QuizDraft | null>(null)
+
+/** Positions, as the screen thinks; ids, as the API does. */
+function toChoiceIds(byIndex: Record<string, number[]>): Record<string, number[]> {
+  const out: Record<string, number[]> = {}
+  for (const [questionId, positions] of Object.entries(byIndex)) {
+    const ids = choiceIds.value[questionId] ?? []
+    out[questionId] = positions.map((i) => ids[i]).filter((v): v is number => v !== undefined)
+  }
+  return out
+}
+
+function toPositions(byId: Record<string, number[]>): Record<string, number[]> {
+  const out: Record<string, number[]> = {}
+  for (const [questionId, picked] of Object.entries(byId)) {
+    const ids = choiceIds.value[questionId] ?? []
+    out[questionId] = picked.map((id) => ids.indexOf(id)).filter((i) => i >= 0)
+  }
+  return out
+}
+
+/** One request at a time: the paper arriving and the reader pressing start
+ *  both ask, and two at once used to be a server error. */
+let opening: Promise<void> | null = null
+
+async function openAttempt(): Promise<void> {
+  if (!id.value) return
+  if (opening) return opening
+  opening = doOpenAttempt().finally(() => {
+    opening = null
+  })
+  return opening
+}
+
+async function doOpenAttempt(): Promise<void> {
+  try {
+    const started = (await api.startAttempt(id.value)).data
+    attemptId.value = started.attemptId
+    draft.value = {
+      answers: toPositions(started.draft),
+      essayText: '',
+      essayFile: null,
+      current: 0,
+      deadline: null,
+      startedAt: started.startedAt,
+      savedAt: started.startedAt,
+    }
+  } catch {
+    attemptId.value = null
+    draft.value = null
+  }
+}
 
 function loadDraft(d: QuizDraft | null) {
   answers.value = d?.answers ? JSON.parse(JSON.stringify(d.answers)) : {}
@@ -140,22 +269,34 @@ function saveDraft(immediate: boolean) {
   clearTimeout(saveTimer)
   savingDraft.value = true
   const run = () => {
-    if (!running.value || submitting.value) return
-    const at = call<string | null>('saveQuizDraft', id.value, {
-      answers: answers.value,
-      essayText: essayText.value,
-      essayFile: essayFile.value,
-      current: index.value,
-      deadline: deadline.value,
-      startedAt: startedAt.value,
-    })
-    if (at) {
-      savedAt.value = at
-      savingDraft.value = false
-    }
+    if (!running.value || submitting.value || attemptId.value === null) return
+    // Only the ticked choices go up. Where the reader is on the paper and how
+    // long is left are this screen's business, not the server's.
+    void api
+      .saveQuizDraft(attemptId.value, toChoiceIds(answers.value))
+      .then(() => {
+        savedAt.value = isoNow()
+        savingDraft.value = false
+      })
+      .catch(() => {
+        // The next change tries again, and the answers are still on screen.
+        savingDraft.value = false
+      })
   }
   if (immediate) run()
   else saveTimer = window.setTimeout(run, 500)
+}
+
+/**
+ * Opens the attempt, then starts the run.
+ *
+ * An attempt has to exist before an answer can be saved against it, and the
+ * intro screen is where somebody decides to begin — so this is the moment to
+ * ask for one, not page load.
+ */
+async function beginRun(fromDraft: boolean): Promise<void> {
+  if (attemptId.value === null) await openAttempt()
+  startRun(fromDraft)
 }
 
 function startRun(fromDraft: boolean) {
@@ -195,8 +336,10 @@ async function restart() {
     cancelLabel: t('common.cancel'),
   })
   if (!ok) return
-  call('clearQuizDraft', id.value)
-  tick.value += 1
+  // A restart is a new attempt, not a wiped draft: every attempt is kept, and
+  // the result page shows them all.
+  attemptId.value = null
+  await openAttempt()
   startRun(false)
 }
 
@@ -233,7 +376,22 @@ function order(q: QuizQuestion): number[] {
   return idx
 }
 
-const LETTERS = ['ก', 'ข', 'ค', 'ง', 'จ', 'ฉ', 'ช', 'ซ']
+/**
+ * What marks each option: 1, 2, 3, 4.
+ *
+ * These were Thai consonants — ก ข ค ง — which read as a label to a Thai
+ * student and as decoration to everybody else. The quiz is taken in four
+ * languages, and a Japanese learner was being shown a letter from an alphabet
+ * the course never taught them, sitting beside the answer it was meant to
+ * identify.
+ *
+ * Numbers are the one marker every reader of this site already has, and they
+ * also match how a teacher says it out loud: "the second one".
+ *
+ * Derived rather than listed, so a question with more options than anybody
+ * planned for still numbers them all instead of running out of letters.
+ */
+const optionKey = (index: number) => String(index + 1)
 
 /* ---------------- progress ---------------- */
 
@@ -360,24 +518,41 @@ async function doSubmit(auto: boolean) {
   // The prototype pauses before committing so the button's loading state reads
   // as work rather than a flicker.
   await new Promise((r) => setTimeout(r, auto ? 1200 : 750))
-  const payload = {
-    answers: answers.value,
-    essay:
-      essayNeeded.value && essayText.value.trim()
-        ? { text: essayText.value.trim(), file: essayFile.value }
-        : null,
-  }
-  const r = call<{ essaySubmitted: boolean } | null>('submitQuiz', id.value, payload)
-  if (!r) {
+  if (attemptId.value === null) {
     submitting.value = false
     toast(t('learning.quiz.submitFailed'), { type: 'error' })
     return
   }
+
+  let essaySent = false
+  try {
+    await api.submitQuiz(attemptId.value, toChoiceIds(answers.value))
+
+    // The written answer goes separately: a teacher reads it, so it is not part
+    // of the score and does not fail the submission if it is refused.
+    const written = essayQuestion.value
+    if (written && essayNeeded.value && essayText.value.trim()) {
+      try {
+        await api.submitEssay(Number(written.id), { body: essayText.value.trim() })
+        essaySent = true
+      } catch {
+        toast(t('learning.quiz.essaySaveFailed'), { type: 'error' })
+      }
+    }
+  } catch (err) {
+    submitting.value = false
+    toast(
+      err instanceof ApiError ? err.message : t('learning.quiz.submitFailed'),
+      { type: 'error' },
+    )
+    return
+  }
+
+  attemptId.value = null
   running.value = false
-  tick.value += 1
   void router.replace({
     path: resultPath.value,
-    query: { submitted: auto ? 'timeout' : r.essaySubmitted ? 'all' : 'choice' },
+    query: { submitted: auto ? 'timeout' : essaySent ? 'all' : 'choice' },
   })
 }
 
@@ -391,20 +566,24 @@ function submitSavedDraft() {
 
 /* ---------------- essay revision mode ---------------- */
 
-const s = store as unknown as { instructor: (id: string) => Person }
-
-const essay = computed(() => status.value.essay)
-const lastVersion = computed(() => {
-  const e = essay.value
-  return e ? e.versions[e.versions.length - 1]! : null
-})
+/**
+ * The written answer and what the teacher said about it.
+ *
+ * One written question per quiz in practice, so the first is the one.
+ */
+const essay = computed(() => essayAnswer.value)
+const lastVersion = computed(() =>
+  essay.value ? { text: essay.value.body, file: null, v: essay.value.version } : null,
+)
 const lastReview = computed(() => {
-  const e = essay.value
-  return e && e.reviews.length ? e.reviews[e.reviews.length - 1]! : null
+  const reviews = essay.value?.reviews ?? []
+  return reviews.length ? reviews[reviews.length - 1]! : null
 })
 
+/** The teacher's name comes with the review itself, so there is nobody to look
+ *  up — and nobody to get wrong. */
 const reviewer = computed(() =>
-  course.value ? s.instructor(course.value.instructors[0]!.id) : null,
+  lastReview.value?.reviewer ? { name: lastReview.value.reviewer, initials: '', color: 0, photo: null } : null,
 )
 
 const originalFile = ref<AttachedFile | null>(null)
@@ -415,26 +594,25 @@ const essayDraftSaving = ref(false)
 function loadEssayMode() {
   const e = essay.value
   if (!e || e.status !== 'revision') return
-  const d = call<EssayDraft | null>('quizDraft', `${id.value}|essay`)
-  essayText.value = d ? (d.text ?? '') : (lastVersion.value?.text ?? '')
-  originalFile.value = lastVersion.value?.file ?? null
-  essayFile.value = d ? (d.file ?? null) : originalFile.value
-  essayDraftSavedAt.value = d?.savedAt ?? null
+  // The last draft they sent, to edit rather than to retype. A local draft of
+  // the revision has nowhere to live yet, so what is on screen is what was
+  // submitted.
+  essayText.value = lastVersion.value?.text ?? ''
+  originalFile.value = null
+  essayFile.value = null
+  essayDraftSavedAt.value = null
 }
 
+/**
+ * A revision has no draft of its own yet.
+ *
+ * The choice answers autosave because an attempt exists to hang them on; a
+ * revision is one box of text with nothing opened for it until it is sent. The
+ * indicator stays quiet rather than claiming a save that is not happening.
+ */
 function saveEssayDraft() {
   clearTimeout(essaySaveTimer)
-  essayDraftSaving.value = true
-  essaySaveTimer = window.setTimeout(() => {
-    const at = call<string | null>('saveQuizDraft', `${id.value}|essay`, {
-      text: essayText.value,
-      file: essayFile.value,
-    })
-    if (at) {
-      essayDraftSavedAt.value = at
-      essayDraftSaving.value = false
-    }
-  }, 600)
+  essayDraftSaving.value = false
 }
 
 async function submitEssayRevision() {
@@ -458,17 +636,21 @@ async function submitEssayRevision() {
     cancelLabel: t('learning.quiz.backToEdit'),
   })
   if (!ok) return
+  const written = essayQuestion.value
+  if (!written) return
+
   submitting.value = true
-  await new Promise((r) => setTimeout(r, 750))
-  const r = call<unknown>('resubmitEssay', id.value, text, essayFile.value)
-  submitting.value = false
-  if (!r) {
-    toast(t('learning.quiz.resubmitFailed'), { type: 'error' })
-    tick.value += 1
+  try {
+    await api.submitEssay(Number(written.id), { body: text })
+  } catch (err) {
+    submitting.value = false
+    toast(
+      err instanceof ApiError ? err.message : t('learning.quiz.resubmitFailed'),
+      { type: 'error' },
+    )
     return
   }
-  call('clearQuizDraft', `${id.value}|essay`)
-  tick.value += 1
+  submitting.value = false
   void router.replace({ path: resultPath.value, query: { submitted: 'essay' } })
 }
 
@@ -509,7 +691,18 @@ const draftExpired = computed(() => !!draft.value?.deadline && draft.value.deadl
 
 /** Choice passed and the essay is in the instructor's hands: there is nothing
  *  left to take, so the intro becomes a summary. */
-const showSummary = computed(() => status.value.choicePassed && status.value.essayStatus !== 'none')
+const latest = computed(() => status.value?.latest ?? null)
+const choicePassed = computed(() => Boolean(latest.value?.passed))
+/** How many of the choice questions the last attempt got right. */
+const lastScore = computed(() => {
+  const l = latest.value
+  const total = status.value?.quiz.choiceCount ?? 0
+  if (!l || !total) return null
+  return { correct: Math.round((l.scorePct / 100) * total), total, pct: l.scorePct }
+})
+const essayStatus = computed(() => essayAnswer.value?.status ?? 'none')
+
+const showSummary = computed(() => choicePassed.value && essayStatus.value !== 'none')
 
 const ESSAY_BADGE: Record<string, [string, string]> = {
   pending: ['pending', 'hourglass'],
@@ -520,19 +713,33 @@ const ESSAY_BADGE: Record<string, [string, string]> = {
 }
 
 const essayBadge = computed(() => {
-  const key = status.value.essayStatus
+  const key = essayStatus.value
   const [kind, icon] = ESSAY_BADGE[key] ?? ESSAY_BADGE.none!
   return { kind, icon, text: t(`learning.quiz.essayBadge.${key}`) }
 })
 
-const progressDone = computed(() => {
-  void tick.value
-  const pr = call<{ map: Record<string, { done: boolean }> }>('progress', id.value)
-  const list = call<{ id: string; type: string }[]>('lessons', course.value).filter(
-    (l) => l.type !== 'quiz',
-  )
-  return { done: list.filter((l) => pr.map[l.id]?.done).length, total: list.length }
-})
+/**
+ * How much of the course is done, for the line above the start button.
+ *
+ * Fetched rather than computed from the paper: the quiz knows nothing about
+ * lessons, and the curriculum endpoint already counts them the same way the
+ * room and the account page do.
+ */
+const progressDone = ref({ done: 0, total: 0 })
+
+watch(
+  [id, loggedIn],
+  async () => {
+    if (!id.value || !loggedIn.value) return
+    try {
+      const cur = (await api.studyCurriculum(id.value)).data
+      progressDone.value = { done: cur.progress.done, total: cur.progress.total }
+    } catch {
+      progressDone.value = { done: 0, total: 0 }
+    }
+  },
+  { immediate: true },
+)
 
 /* ---------------- chrome ---------------- */
 
@@ -555,15 +762,14 @@ onBeforeUnmount(() => {
   if (running.value && !submitting.value) saveDraft(true)
 })
 
+/** Somebody without the course, offered the only thing that would get them in. */
 function runAction(action: string, courseId?: string) {
   const cid = courseId ?? id.value
-  if (action === 'add-cart') call('addToCart', cid)
-  else if (action === 'enroll-free') call('enrollFree', cid)
-  else if (action === 'buy') {
+  if (action === 'buy' || action === 'enroll-free') {
     void router.push({ path: path('/checkout'), query: { items: cid } })
-    return
+  } else {
+    void router.push(path(`/courses/${cid}`))
   }
-  tick.value += 1
 }
 
 const lockActions = computed(() =>
@@ -687,7 +893,7 @@ const lockActions = computed(() =>
             </div>
 
             <div
-              v-if="showSummary || status.latest || draft || progressDone.done < progressDone.total"
+              v-if="showSummary || latest || draft || progressDone.done < progressDone.total"
               class="qz-notices"
             >
               <div v-if="showSummary" class="qz-summary">
@@ -699,30 +905,30 @@ const lockActions = computed(() =>
                     <AppIcon :name="essayBadge.icon" />{{ essayBadge.text }}
                   </span>
                 </div>
-                <p>{{ t(`learning.quiz.summary.${status.essayStatus}`) }}</p>
+                <p>{{ t(`learning.quiz.summary.${essayStatus}`) }}</p>
               </div>
 
               <template v-else>
                 <AppNotice
-                  v-if="status.latest && !status.choicePassed"
+                  v-if="lastScore && !choicePassed"
                   tone="warning"
                   :title="t('learning.quiz.lastFailedTitle')"
                   :text="
                     t('learning.quiz.lastFailedText', {
-                      correct: status.latest.correct,
-                      total: status.latest.total,
+                      correct: lastScore.correct,
+                      total: lastScore.total,
                       pct: quiz.passPct,
                     })
                   "
                 />
                 <AppNotice
-                  v-if="status.essay"
+                  v-if="essay"
                   tone="info"
                   :title="t('learning.quiz.essaySentTitle', { status: essayBadge.text })"
                   :text="t('learning.quiz.essaySentText')"
                 />
                 <AppNotice
-                  v-if="status.choicePassed && status.essayStatus === 'none'"
+                  v-if="choicePassed && essayStatus === 'none'"
                   tone="info"
                   :title="t('learning.quiz.essayStillNeededTitle')"
                   :text="t('learning.quiz.essayStillNeededText')"
@@ -771,7 +977,7 @@ const lockActions = computed(() =>
             <div class="qz-intro-actions">
               <template v-if="showSummary">
                 <RouterLink
-                  v-if="status.essayStatus === 'revision'"
+                  v-if="essayStatus === 'revision'"
                   class="btn btn--primary btn--lg"
                   :to="`${path(`/quiz/${id}`)}?mode=essay`"
                   data-cta-primary
@@ -780,11 +986,11 @@ const lockActions = computed(() =>
                 </RouterLink>
                 <RouterLink
                   class="btn btn--lg"
-                  :class="status.essayStatus === 'revision' ? 'btn--secondary' : 'btn--primary'"
+                  :class="essayStatus === 'revision' ? 'btn--secondary' : 'btn--primary'"
                   :to="resultPath"
-                  :data-cta-primary="status.essayStatus === 'revision' ? undefined : ''"
+                  :data-cta-primary="essayStatus === 'revision' ? undefined : ''"
                 >
-                  <AppIcon v-if="status.essayStatus !== 'revision'" name="badge-check" />{{
+                  <AppIcon v-if="essayStatus !== 'revision'" name="badge-check" />{{
                     t('learning.quizCard.result')
                   }}
                 </RouterLink>
@@ -809,7 +1015,7 @@ const lockActions = computed(() =>
                   type="button"
                   class="btn btn--primary btn--lg"
                   data-cta-primary
-                  @click="startRun(true)"
+                  @click="beginRun(true)"
                 >
                   <AppIcon name="play" />{{ t('learning.quiz.resume') }}
                 </button>
@@ -824,7 +1030,7 @@ const lockActions = computed(() =>
                 class="btn btn--primary btn--lg"
                 data-q="start"
                 data-cta-primary
-                @click="startRun(false)"
+                @click="beginRun(false)"
               >
                 <AppIcon name="play" />{{ t('learning.quiz.start') }}
               </button>
@@ -956,7 +1162,7 @@ const lockActions = computed(() =>
                     />
                   </span>
                   <span class="oc-body qz-opt-body">
-                    <span class="qz-opt-key" aria-hidden="true">{{ LETTERS[k] }}</span>
+                    <span class="qz-opt-key" aria-hidden="true">{{ optionKey(k) }}</span>
                     <span class="qz-opt-text">{{ current.choices?.[ci] }}</span>
                   </span>
                 </label>
@@ -969,10 +1175,10 @@ const lockActions = computed(() =>
                     <AppIcon :name="essayBadge.icon" />{{ essayBadge.text }}
                   </span>
                   <span class="qz-ro-time">
-                    {{ t('learning.quiz.sentAt', { when: dateTime(lastVersion.at) })
+                    {{ t('learning.quiz.sentAt', { when: dateTime(essay.submittedAt) })
                     }}{{
-                      essay.versions.length > 1
-                        ? ` · ${t('learning.quiz.version', { n: essay.versions.length })}`
+                      essay.version > 1
+                        ? ` · ${t('learning.quiz.version', { n: essay.version })}`
                         : ''
                     }}
                   </span>
@@ -1206,19 +1412,21 @@ const lockActions = computed(() =>
                   :photo="reviewer.photo"
                 />
                 <div>
-                  <b>{{ lastReview?.by ?? reviewer?.name }}</b>
+                  <b>{{ lastReview?.reviewer ?? reviewer?.name }}</b>
                   <small>
-                    {{ t('learning.result.reviewedAt', { when: dateTime(lastReview?.at) }) }} ·
-                    {{ t('learning.quiz.version', { n: lastReview?.v ?? essay.versions.length }) }}
+                    {{ t('learning.result.reviewedAt', { when: dateTime(lastReview?.reviewedAt) }) }} ·
+                    {{ t('learning.quiz.version', { n: lastReview?.version ?? essay.version }) }}
                   </small>
                 </div>
               </div>
               <blockquote class="qz-fb-quote">
                 {{ lastReview?.comment || t('learning.quiz.genericRevision') }}
               </blockquote>
-              <div v-if="lastReview?.file" class="qz-fb-file">
+              <div v-if="lastReview?.attachmentUrl" class="qz-fb-file">
                 <span class="qz-fb-label">{{ t('learning.result.instructorFile') }}</span>
-                <FileChip :file="lastReview.file" extra-class="qz-chip" download />
+                <a class="qz-chip link" :href="lastReview.attachmentUrl" target="_blank" rel="noopener">
+                  <AppIcon name="download" />{{ t('learning.result.instructorFile') }}
+                </a>
               </div>
               <RouterLink class="link-arrow qz-fb-hist" :to="`${resultPath}#rs-history`">
                 {{ t('learning.quiz.seeFullHistory') }}<AppIcon name="arrow-right" />
@@ -1268,7 +1476,7 @@ const lockActions = computed(() =>
                   />
                   <div class="field-row">
                     <span class="field-help" id="qz-essay-help">
-                      {{ t('learning.quiz.editHelp', { n: essay.versions.length }) }}
+                      {{ t('learning.quiz.editHelp', { n: essay.version }) }}
                     </span>
                     <span
                       class="counter"
@@ -1345,5 +1553,4 @@ const lockActions = computed(() =>
   </LearningSheet>
 
   <CommerceConfirm />
-  <CommerceToasts />
 </template>

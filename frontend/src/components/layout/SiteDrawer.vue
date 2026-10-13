@@ -4,13 +4,14 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import AppAvatar from '@/components/ui/AppAvatar.vue'
-import { data, store } from '@/vendor'
 import FlagIcon from '@/components/ui/FlagIcon.vue'
+import { mediaUrl } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 import { openAuth } from '@/components/auth/authChannel'
 import { LOCALES, LOCALE_META, storeLocale, type AppLocale } from '@/locales'
-import logoUrl from '@/assets/img/logo.png'
+import BrandLogo from './BrandLogo.vue'
 import { useCartStore } from '@/stores/cart'
+import { useCategoriesStore } from '@/stores/categories'
 
 /**
  * The navigation drawer behind the burger, for widths where the pill nav and
@@ -37,30 +38,26 @@ const auth = useAuthStore()
 const locale = computed(() => String(route.params.locale ?? 'th'))
 const path = (p: string) => `/${locale.value}${p}`
 
-interface FixtureUser {
-  loggedIn: boolean
-  name: string
-  initials: string
-}
-
-const fixtureUser = computed(() => (store as unknown as { user: () => FixtureUser }).user())
 const isLoggedIn = computed(() => auth.isLoggedIn)
-const user = computed(() => ({
-  name: auth.displayName || fixtureUser.value.name,
-  initials: fixtureUser.value.initials,
-}))
-
-const memberPhoto = computed(() => {
-  const photo = data.memberPhoto
-  if (!photo) return null
-  return photo.startsWith('assets/') ? `/${photo}` : photo
+const user = computed(() => {
+  const u = auth.user
+  return {
+    name: auth.displayName,
+    initials: `${u?.firstName?.[0] ?? ''}${u?.lastName?.[0] ?? ''}`.trim(),
+  }
 })
+
+const memberPhoto = computed(() =>
+  auth.user?.avatarPath ? mediaUrl(auth.user.avatarPath) : null,
+)
 
 /** The real basket, so the badge and the cart page cannot disagree. */
 const cart = useCartStore()
 const cartCount = computed(() => cart.count)
 
-const categories = computed(() => data.categories)
+/** The same list the header's panel shows, from the same store. */
+const categoryStore = useCategoriesStore()
+const categories = computed(() => categoryStore.tiles)
 
 /** Collapsed by default: the full category list is longer than the menu above
  *  it, and opening the drawer should not mean scrolling past it. */
@@ -144,7 +141,10 @@ watch(
  *  was just asked for. */
 watch(() => route.fullPath, close)
 
-onMounted(() => document.addEventListener('keydown', onKeydown))
+onMounted(() => {
+  void categoryStore.load()
+  document.addEventListener('keydown', onKeydown)
+})
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeydown)
   document.body.classList.remove('is-locked')
@@ -165,7 +165,7 @@ onBeforeUnmount(() => {
       >
         <div class="drawer-head">
           <RouterLink class="brand" :to="path('')" :aria-label="t('header.brandHome')">
-            <img class="brand-logo" :src="logoUrl" width="85" height="35" alt="" decoding="async" />
+            <BrandLogo class="brand-logo" />
           </RouterLink>
           <button
             type="button"
@@ -218,6 +218,7 @@ onBeforeUnmount(() => {
               v-for="c in categories"
               :key="c.id"
               :to="`${path('/courses')}?category=${c.id}`"
+              :style="c.depth ? 'padding-left: 34px' : undefined"
             >
               <AppIcon :name="c.icon" />{{ c.name }}
             </RouterLink>
@@ -260,9 +261,6 @@ onBeforeUnmount(() => {
           <template v-if="isLoggedIn">
             <RouterLink :to="path('/account/learning')">
               <AppIcon name="graduation" />{{ t('account.nav.learning') }}
-            </RouterLink>
-            <RouterLink :to="path('/account/package')">
-              <AppIcon name="package" />{{ t('account.nav.package') }}
             </RouterLink>
             <RouterLink :to="path('/account/orders')">
               <AppIcon name="receipt" />{{ t('account.nav.orders') }}

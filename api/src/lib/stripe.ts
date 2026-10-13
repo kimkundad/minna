@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { env } from '../config/env'
+import { toStripeAmount } from './currencies'
 import { AppError } from './errors'
 
 /**
@@ -123,7 +124,11 @@ export async function createCheckoutSession(opts: {
       quantity: 1,
       price_data: {
         currency: opts.currency.toLowerCase(),
-        unit_amount: l.amount,
+        // The one place the database's rule is undone. Every money column here
+        // is hundredths, including for yen, won and dong, which Stripe counts
+        // in whole units — ¥5,000 is stored as 500000 and must be sent as
+        // 5000, or the buyer is charged a hundred times the price.
+        unit_amount: toStripeAmount(l.amount, opts.currency),
         product_data: {
           name: l.name.slice(0, 120),
           ...(l.description ? { description: l.description.slice(0, 200) } : {}),

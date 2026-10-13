@@ -1,0 +1,42 @@
+{
+  "th": { "drop": {
+    "badType": "“{name}” เป็นชนิดไฟล์ที่ใช้ไม่ได้ ดูชนิดที่รับได้ด้านล่าง",
+    "tooBig": "“{name}” ขนาด {size} เกิน {max} MB ที่รับได้",
+    "empty": "“{name}” เป็นไฟล์ว่าง เลือกไฟล์อื่น"
+  } },
+  "en": { "drop": {
+    "badType": "“{name}” is not a kind of file we accept — see what is below.",
+    "tooBig": "“{name}” is {size}, over the {max} MB limit.",
+    "empty": "“{name}” is empty. Please choose another."
+  } },
+  "jp": { "drop": {
+    "badType": "「{name}」は対応していない種類のファイルです。下の対応形式をご確認ください。",
+    "tooBig": "「{name}」は {size} で、上限の {max} MB を超えています。",
+    "empty": "「{name}」は空のファイルです。別のものを選んでください。"
+  } },
+  "vn": { "drop": {
+    "badType": "“{name}” không thuộc loại tệp được nhận — xem các định dạng bên dưới.",
+    "tooBig": "“{name}” nặng {size}, vượt giới hạn {max} MB.",
+    "empty": "“{name}” là tệp rỗng. Vui lòng chọn tệp khác."
+  } },
+  "id": { "drop": {
+    "badType": "“{name}” bukan jenis berkas yang kami terima — lihat yang di bawah.",
+    "tooBig": "“{name}” berukuran {size}, melebihi batas {max} MB.",
+    "empty": "“{name}” kosong. Mohon pilih yang lain."
+  } },
+  "zh": { "drop": {
+    "badType": "“{name}”不是我们接受的文件类型 — 可用格式见下方。",
+    "tooBig": "“{name}”有 {size}，超过 {max} MB 上限。",
+    "empty": "“{name}”是空文件，请换一个。"
+  } },
+  "ko": { "drop": {
+    "badType": "“{name}”은(는) 받을 수 없는 형식입니다 — 아래 형식을 확인하세요.",
+    "tooBig": "“{name}”은(는) {size}로, {max} MB 한도를 넘습니다.",
+    "empty": "“{name}”은(는) 빈 파일입니다. 다른 파일을 골라 주세요."
+  } },
+  "tw": { "drop": {
+    "badType": "「{name}」不是我們接受的檔案類型 — 可用格式見下方。",
+    "tooBig": "「{name}」有 {size}，超過 {max} MB 上限。",
+    "empty": "「{name}」是空檔案，請換一個。"
+  } }
+}

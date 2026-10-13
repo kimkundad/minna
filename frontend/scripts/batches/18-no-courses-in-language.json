@@ -1,0 +1,58 @@
+{
+  "th": { "catalog": {
+    "emptyLanguageTitle": "ยังไม่มีคอร์สที่สอนเป็น{language}",
+    "emptyLanguageText": "คอร์สที่แสดงบนหน้านี้คือคอร์สที่สอนเป็นภาษาที่คุณเลือกไว้ และคอร์สที่ระบุว่าใช้ได้ทุกภาษา ขณะนี้ยังไม่มีทั้งสองแบบ",
+    "showEveryLanguage": "ดูคอร์สทุกภาษา",
+    "showingEveryLanguage": "กำลังแสดงคอร์สทุกภาษา ไม่ใช่เฉพาะ{language}",
+    "backToMyLanguage": "แสดงเฉพาะ{language}"
+  } },
+  "en": { "catalog": {
+    "emptyLanguageTitle": "No courses are taught in {language} yet",
+    "emptyLanguageText": "This page shows the courses taught in the language you are reading the site in, plus any marked as suiting every language. There are none of either just now.",
+    "showEveryLanguage": "Show courses in every language",
+    "showingEveryLanguage": "Showing courses in every language, not only {language}",
+    "backToMyLanguage": "Show only {language}"
+  } },
+  "jp": { "catalog": {
+    "emptyLanguageTitle": "{language}で教えるコースはまだありません",
+    "emptyLanguageText": "このページには、サイトの表示言語で教えるコースと、すべての言語に対応と指定されたコースが並びます。現在はどちらもありません。",
+    "showEveryLanguage": "すべての言語のコースを見る",
+    "showingEveryLanguage": "{language}だけでなく、すべての言語のコースを表示しています",
+    "backToMyLanguage": "{language}のみ表示"
+  } },
+  "vn": { "catalog": {
+    "emptyLanguageTitle": "Chưa có khoá nào dạy bằng {language}",
+    "emptyLanguageText": "Trang này hiển thị các khoá dạy bằng ngôn ngữ bạn đang đọc trang web, cùng những khoá được ghi là dùng cho mọi ngôn ngữ. Hiện chưa có khoá nào thuộc hai loại đó.",
+    "showEveryLanguage": "Xem khoá học bằng mọi ngôn ngữ",
+    "showingEveryLanguage": "Đang hiển thị khoá học bằng mọi ngôn ngữ, không chỉ {language}",
+    "backToMyLanguage": "Chỉ hiển thị {language}"
+  } },
+  "id": { "catalog": {
+    "emptyLanguageTitle": "Belum ada kursus yang diajarkan dalam {language}",
+    "emptyLanguageText": "Halaman ini menampilkan kursus yang diajarkan dalam bahasa yang Anda pakai membaca situs ini, ditambah kursus yang ditandai cocok untuk semua bahasa. Saat ini belum ada keduanya.",
+    "showEveryLanguage": "Tampilkan kursus dalam semua bahasa",
+    "showingEveryLanguage": "Menampilkan kursus dalam semua bahasa, bukan hanya {language}",
+    "backToMyLanguage": "Tampilkan hanya {language}"
+  } },
+  "zh": { "catalog": {
+    "emptyLanguageTitle": "目前还没有以{language}授课的课程",
+    "emptyLanguageText": "这个页面只显示以你阅读本站所用语言授课的课程，以及标示为适用所有语言的课程。目前两者都还没有。",
+    "showEveryLanguage": "查看所有语言的课程",
+    "showingEveryLanguage": "正在显示所有语言的课程，不只是{language}",
+    "backToMyLanguage": "只显示{language}"
+  } },
+  "ko": { "catalog": {
+    "emptyLanguageTitle": "{language}로 진행하는 강의가 아직 없습니다",
+    "emptyLanguageText": "이 페이지에는 회원님이 사이트를 읽고 있는 언어로 진행하는 강의와, 모든 언어에 맞는다고 표시된 강의가 표시됩니다. 지금은 둘 다 없습니다.",
+    "showEveryLanguage": "모든 언어의 강의 보기",
+    "showingEveryLanguage": "{language}만이 아니라 모든 언어의 강의를 보여 주고 있습니다",
+    "backToMyLanguage": "{language}만 보기"
+  } },
+  "tw": { "catalog": {
+    "emptyLanguageTitle": "目前還沒有以{language}授課的課程",
+    "emptyLanguageText": "這個頁面只顯示以你閱讀本站所用語言授課的課程，以及標示為適用所有語言的課程。目前兩者都還沒有。",
+    "showEveryLanguage": "查看所有語言的課程",
+    "showingEveryLanguage": "正在顯示所有語言的課程，不只是{language}",
+    "backToMyLanguage": "只顯示{language}"
+  } }
+}

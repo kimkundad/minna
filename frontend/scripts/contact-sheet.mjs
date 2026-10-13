@@ -7,8 +7,8 @@
  * point being to actually see what is going into the site rather than trusting
  * a filename.
  */
-import { existsSync, readdirSync, writeFileSync } from 'node:fs'
-import puppeteer from 'puppeteer-core'
+import { readdirSync, writeFileSync } from 'node:fs'
+import { launchBrowser } from './browser.mjs'
 
 const [dir, out] = process.argv.slice(2)
 if (!dir || !out) {
@@ -16,11 +16,6 @@ if (!dir || !out) {
   process.exit(1)
 }
 
-const BROWSERS = [
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-]
 
 const files = readdirSync(dir)
   .filter((f) => /\.(jpe?g|png|webp)$/i.test(f))
@@ -47,8 +42,7 @@ const html = `<!doctype html><meta charset="utf-8"><style>
 const page = `${dir.replace(/\\/g, '/')}/_sheet.html`
 writeFileSync(page, html)
 
-const browser = await puppeteer.launch({
-  executablePath: BROWSERS.find((p) => existsSync(p)),
+const browser = await launchBrowser({
   headless: true,
   args: ['--no-sandbox', '--disable-gpu', '--allow-file-access-from-files'],
 })

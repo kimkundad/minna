@@ -1,0 +1,48 @@
+# Production stack: the API, and one nginx serving both sites.
+#
+#   cd /srv/minna && bash deploy.sh 2026-10-10-01
+#
+# MySQL and Redis are not here. In production they are managed services the
+# API dials out to, and a database inside the deployment would be wiped by the
+# next `--force-recreate`.
+
+services:
+  web:
+    image: ${WEB_IMAGE}:${IMAGE_TAG}
+    container_name: minna-web
+    # Localhost only. TLS is terminated by the host's proxy, which forwards
+    # here with the original Host intact — that header is what picks between
+    # the public site and the admin.
+    ports:
+      - '127.0.0.1:8096:80'
+    depends_on:
+      api:
+        condition: service_started
+    networks:
+      - minna
+    restart: unless-stopped
+
+  api:
+    image: ${API_IMAGE}:${IMAGE_TAG}
+    container_name: minna-api
+    # No host port. Everything reaches the API through nginx — including
+    # Stripe's webhook, which arrives at the public hostname like any other
+    # request. One way in is one place to look.
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      HOST: 0.0.0.0
+    volumes:
+      # The managed database's CA certificate, if DATABASE_SSL_CA points at
+      # one. Mounted rather than baked in: it belongs to the server, not to
+      # the release, and it is replaced on its own schedule.
+      - ./certs:/app/certs:ro
+    networks:
+      - minna
+    restart: unless-stopped
+
+networks:
+  minna:
+    driver: bridge

@@ -10,7 +10,7 @@
  * whether the test passed or not.
  */
 import { existsSync } from 'node:fs'
-import puppeteer from 'puppeteer-core'
+import { launchBrowser } from './browser.mjs'
 
 const BASE = process.argv[2] ?? 'http://localhost:5174'
 const API = process.env.API ?? 'http://127.0.0.1:3000/api/v1'
@@ -55,14 +55,40 @@ if (!register.ok) {
 }
 console.log(`  buyer: ${buyer.email}\n`)
 
+/** What the buyer types into the tax invoice block. The tax ID is thirteen
+ *  digits whose check digit adds up, because the API refuses anything else. */
+const BILLING = {
+  name: 'บริษัท ทดสอบ จำกัด',
+  taxId: '0105536000020',
+  address: '1 ถนนทดสอบ กรุงเทพฯ 10100',
+}
+
 /* ---------------- what is on sale ---------------- */
 
 const courses = await (await fetch(`${API}/courses?perPage=50`)).json()
 const free = courses.data.find((c) => c.price === 0)
 const paid = courses.data.find((c) => c.price > 0 && c.sellable)
 
-const browser = await puppeteer.launch({
-  executablePath: BROWSERS.find((p) => existsSync(p)),
+/** The buyer's own token, taken once. Several blocks below need to ask the API
+ *  something as this member, and logging in for each was four sessions deep
+ *  enough to meet the rate limiter. */
+const memberToken = await signInForToken()
+
+async function signInForToken() {
+  const res = await fetch(`${API}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    body: JSON.stringify({ email: buyer.email, password: buyer.password }),
+  })
+  const body = await res.json()
+  if (!res.ok) {
+    console.error('could not sign in:', res.status, JSON.stringify(body))
+    process.exit(1)
+  }
+  return body.accessToken
+}
+
+const browser = await launchBrowser({
   headless: true,
   args: ['--no-sandbox', '--disable-gpu'],
 })
@@ -132,12 +158,7 @@ try {
   /* ---------------- 3. the total is the server's ---------------- */
 
   const quote = await (async () => {
-    const login = await fetch(`${API}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ email: buyer.email, password: buyer.password }),
-    })
-    const { accessToken } = await login.json()
+    const accessToken = memberToken
     const res = await fetch(`${API}/checkout/quote`, {
       method: 'POST',
       headers: {
@@ -188,6 +209,13 @@ try {
   /* ---------------- 5. a paid order reaches the payment page ---------------- */
 
   await fill('#co-phone', '0812345678')
+
+  await page.click('#co-sec-tax input[value="yes"]')
+  await page.waitForSelector('#co-tax-fields', { timeout: 6000 })
+  await fill('#tx-co', BILLING.name)
+  await fill('#tx-tid', BILLING.taxId)
+  await fill('#tx-addr', BILLING.address)
+
   await page.click('#co-terms')
   await page.screenshot({ path: `${SHOTS}/checkout.png` })
 
@@ -236,12 +264,7 @@ try {
 
     // The same order, read back through the API: what the page shows has to be
     // what was actually recorded.
-    const login = await fetch(`${API}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ email: buyer.email, password: buyer.password }),
-    })
-    const { accessToken } = await login.json()
+    const accessToken = memberToken
     const stored = await (
       await fetch(`${API}/orders/by-no/${orderNo}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -280,6 +303,52 @@ try {
     )
   }
 
+  /* ---------------- the tax invoice details are kept too ---------------- */
+
+  // The order above carried them; this is the next order asking. The free
+  // course hides the whole tax section — there is no VAT on nothing — so this
+  // has to be a course with a price.
+  const kept = await (
+    await fetch(`${API}/me/billing`, { headers: { Authorization: `Bearer ${memberToken}` } })
+  ).json()
+  check(
+    'the invoice details typed on the order are kept',
+    kept.data?.taxId === BILLING.taxId,
+    JSON.stringify(kept.data?.taxId ?? null),
+  )
+
+  await page.goto(`${BASE}/th/checkout?items=${paid.slug}`, { waitUntil: 'networkidle2' })
+  await page.waitForSelector('#co-sec-tax', { timeout: 12000 })
+  // Before anything is clicked: having details on file is not the same as
+  // wanting a tax invoice for this order, and pre-ticking it would issue
+  // documents nobody asked for.
+  check(
+    'having details on file does not ask for an invoice by itself',
+    (await page.$eval('#co-sec-tax input[value="no"]', (el) => el.checked)) === true,
+  )
+
+  await page.click('#co-sec-tax input[value="yes"]')
+  await page.waitForSelector('#co-tax-fields', { timeout: 6000 })
+
+  check(
+    'the company name comes back',
+    (await page.$eval('#tx-co', (el) => el.value)) === BILLING.name,
+    await page.$eval('#tx-co', (el) => el.value),
+  )
+  check(
+    'and the tax ID',
+    (await page.$eval('#tx-tid', (el) => el.value)).replace(/D/g, '') === BILLING.taxId,
+    await page.$eval('#tx-tid', (el) => el.value),
+  )
+  check(
+    'and the address',
+    (await page.$eval('#tx-addr', (el) => el.value)) === BILLING.address,
+    await page.$eval('#tx-addr', (el) => el.value),
+  )
+  check(
+    'with the head office still the head office',
+    (await page.$('#tx-br-ro')) !== null,
+  )
   const real = errors.filter(
     (e) => !/favicon|Vue Devtools|Failed to load resource|401 \(Unauthorized\)/i.test(e),
   )

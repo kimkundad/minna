@@ -1,236 +1,244 @@
-<template>
-  <div class="relative" ref="dropdownRef">
-    <button
-      class="relative flex items-center justify-center text-gray-500 transition-colors bg-white border border-gray-200 rounded-full hover:text-dark-900 h-11 w-11 hover:bg-gray-100 hover:text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
-      @click="toggleDropdown"
-    >
-      <span
-        :class="{ hidden: !notifying, flex: notifying }"
-        class="absolute right-0 top-0.5 z-1 h-2 w-2 rounded-full bg-orange-400"
-      >
-        <span
-          class="absolute inline-flex w-full h-full bg-orange-400 rounded-full opacity-75 -z-1 animate-ping"
-        ></span>
-      </span>
-      <svg
-        class="fill-current"
-        width="20"
-        height="20"
-        viewBox="0 0 20 20"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          fill-rule="evenodd"
-          clip-rule="evenodd"
-          d="M10.75 2.29248C10.75 1.87827 10.4143 1.54248 10 1.54248C9.58583 1.54248 9.25004 1.87827 9.25004 2.29248V2.83613C6.08266 3.20733 3.62504 5.9004 3.62504 9.16748V14.4591H3.33337C2.91916 14.4591 2.58337 14.7949 2.58337 15.2091C2.58337 15.6234 2.91916 15.9591 3.33337 15.9591H4.37504H15.625H16.6667C17.0809 15.9591 17.4167 15.6234 17.4167 15.2091C17.4167 14.7949 17.0809 14.4591 16.6667 14.4591H16.375V9.16748C16.375 5.9004 13.9174 3.20733 10.75 2.83613V2.29248ZM14.875 14.4591V9.16748C14.875 6.47509 12.6924 4.29248 10 4.29248C7.30765 4.29248 5.12504 6.47509 5.12504 9.16748V14.4591H14.875ZM8.00004 17.7085C8.00004 18.1228 8.33583 18.4585 8.75004 18.4585H11.25C11.6643 18.4585 12 18.1228 12 17.7085C12 17.2943 11.6643 16.9585 11.25 16.9585H8.75004C8.33583 16.9585 8.00004 17.2943 8.00004 17.7085Z"
-          fill=""
-        />
-      </svg>
-    </button>
+<script setup lang="ts">
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
+import { notifications as notifyApi, type AppNotification } from '@/lib/api'
+import { useAuthStore } from '@/stores/auth'
 
-    <!-- Dropdown Start -->
-    <div
-      v-if="dropdownOpen"
-      class="absolute -right-[240px] mt-[17px] flex h-[480px] w-[350px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark sm:w-[361px] lg:right-0"
-    >
-      <div
-        class="flex items-center justify-between pb-3 mb-3 border-b border-gray-100 dark:border-gray-800"
-      >
-        <h5 class="text-lg font-semibold text-gray-800 dark:text-white/90">Notification</h5>
+/**
+ * What has happened that needs somebody here.
+ *
+ * Only this app's own: a learner's receipt belongs to the public site and
+ * would be a dead link in a bell that cannot open it.
+ *
+ * Fetched when the menu opens and when the tab comes back to the front, not on
+ * a timer — an admin left open overnight should not spend the night asking,
+ * and a count that is a minute stale has cost nobody anything.
+ */
+const router = useRouter()
+const auth = useAuthStore()
 
-        <button @click="closeDropdown" class="text-gray-500 dark:text-gray-400">
-          <svg
-            class="fill-current"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              fill-rule="evenodd"
-              clip-rule="evenodd"
-              d="M6.21967 7.28131C5.92678 6.98841 5.92678 6.51354 6.21967 6.22065C6.51256 5.92775 6.98744 5.92775 7.28033 6.22065L11.999 10.9393L16.7176 6.22078C17.0105 5.92789 17.4854 5.92788 17.7782 6.22078C18.0711 6.51367 18.0711 6.98855 17.7782 7.28144L13.0597 12L17.7782 16.7186C18.0711 17.0115 18.0711 17.4863 17.7782 17.7792C17.4854 18.0721 17.0105 18.0721 16.7176 17.7792L11.999 13.0607L7.28033 17.7794C6.98744 18.0722 6.51256 18.0722 6.21967 17.7794C5.92678 17.4865 5.92678 17.0116 6.21967 16.7187L10.9384 12L6.21967 7.28131Z"
-              fill=""
-            />
-          </svg>
-        </button>
-      </div>
+const open = ref(false)
+const rows = ref<AppNotification[]>([])
+const unread = ref(0)
+const loading = ref(false)
+const loaded = ref(false)
+const root = ref<HTMLElement | null>(null)
 
-      <ul class="flex flex-col h-auto overflow-y-auto custom-scrollbar">
-        <li v-for="notification in notifications" :key="notification.id" @click="handleItemClick">
-          <a
-            class="flex gap-3 rounded-lg border-b border-gray-100 p-3 px-4.5 py-3 hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-white/5"
-            href="#"
-          >
-            <span class="relative block w-full h-10 rounded-full z-1 max-w-10">
-              <img :src="notification.userImage" alt="User" class="overflow-hidden rounded-full" />
-              <span
-                :class="notification.status === 'online' ? 'bg-success-500' : 'bg-error-500'"
-                class="absolute bottom-0 right-0 z-10 h-2.5 w-full max-w-2.5 rounded-full border-[1.5px] border-white dark:border-gray-900"
-              ></span>
-            </span>
+const waiting = computed(() => unread.value > 0)
 
-            <span class="block">
-              <span class="mb-1.5 block text-theme-sm text-gray-500 dark:text-gray-400">
-                <span class="font-medium text-gray-800 dark:text-white/90">
-                  {{ notification.userName }}
-                </span>
-                {{ notification.action }}
-                <span class="font-medium text-gray-800 dark:text-white/90">
-                  {{ notification.project }}
-                </span>
-              </span>
-
-              <span class="flex items-center gap-2 text-gray-500 text-theme-xs dark:text-gray-400">
-                <span>{{ notification.type }}</span>
-                <span class="w-1 h-1 bg-gray-400 rounded-full"></span>
-                <span>{{ notification.time }}</span>
-              </span>
-            </span>
-          </a>
-        </li>
-      </ul>
-
-      <router-link
-        to="#"
-        class="mt-3 flex justify-center rounded-lg border border-gray-300 bg-white p-3 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
-        @click="handleViewAllClick"
-      >
-        View All Notification
-      </router-link>
-    </div>
-    <!-- Dropdown End -->
-  </div>
-</template>
-
-<script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { RouterLink } from 'vue-router'
-
-const dropdownOpen = ref(false)
-const notifying = ref(true)
-const dropdownRef = ref(null)
-
-const notifications = ref([
-  {
-    id: 1,
-    userName: 'Terry Franci',
-    userImage: '/images/user/user-02.jpg',
-    action: 'requests permission to change',
-    project: 'Project - Nganter App',
-    type: 'Project',
-    time: '5 min ago',
-    status: 'online',
-  },
-  {
-    id: 2,
-    userName: 'Terry Franci',
-    userImage: '/images/user/user-03.jpg',
-    action: 'requests permission to change',
-    project: 'Project - Nganter App',
-    type: 'Project',
-    time: '5 min ago',
-    status: 'offline',
-  },
-  {
-    id: 3,
-    userName: 'Terry Franci',
-    userImage: '/images/user/user-04.jpg',
-    action: 'requests permission to change',
-    project: 'Project - Nganter App',
-    type: 'Project',
-    time: '5 min ago',
-    status: 'online',
-  },
-  {
-    id: 4,
-    userName: 'Terry Franci',
-    userImage: '/images/user/user-05.jpg',
-    action: 'requests permission to change',
-    project: 'Project - Nganter App',
-    type: 'Project',
-    time: '5 min ago',
-    status: 'online',
-  },
-  {
-    id: 5,
-    userName: 'Terry Franci',
-    userImage: '/images/user/user-06.jpg',
-    action: 'requests permission to change',
-    project: 'Project - Nganter App',
-    type: 'Project',
-    time: '5 min ago',
-    status: 'offline',
-  },
-  {
-    id: 6,
-    userName: 'Terry Franci',
-    userImage: '/images/user/user-07.jpg',
-    action: 'requests permission to change',
-    project: 'Project - Nganter App',
-    type: 'Project',
-    time: '5 min ago',
-    status: 'online',
-  },
-  {
-    id: 7,
-    userName: 'Terry Franci',
-    userImage: '/images/user/user-08.jpg',
-    action: 'requests permission to change',
-    project: 'Project - Nganter App',
-    type: 'Project',
-    time: '5 min ago',
-    status: 'online',
-  },
-  {
-    id: 7,
-    userName: 'Terry Franci',
-    userImage: '/images/user/user-09.jpg',
-    action: 'requests permission to change',
-    project: 'Project - Nganter App',
-    type: 'Project',
-    time: '5 min ago',
-    status: 'online',
-  },
-  // Add more notifications here...
-])
-
-const toggleDropdown = () => {
-  dropdownOpen.value = !dropdownOpen.value
-  notifying.value = false
-}
-
-const closeDropdown = () => {
-  dropdownOpen.value = false
-}
-
-const handleClickOutside = (event) => {
-  if (dropdownRef.value && !dropdownRef.value.contains(event.target)) {
-    closeDropdown()
+async function load() {
+  if (!auth.isLoggedIn) {
+    rows.value = []
+    unread.value = 0
+    return
+  }
+  loading.value = true
+  try {
+    const res = await notifyApi.list({ limit: 20 })
+    rows.value = res.data
+    unread.value = res.meta.unread
+    loaded.value = true
+  } catch {
+    // The bell goes quiet rather than wrong. Nothing here is load-bearing.
+  } finally {
+    loading.value = false
   }
 }
 
-const handleItemClick = (event) => {
-  event.preventDefault()
-  // Handle the item click action here
-  console.log('Notification item clicked')
-  closeDropdown()
+function toggle() {
+  open.value = !open.value
+  if (open.value) void load()
 }
 
-const handleViewAllClick = (event) => {
-  event.preventDefault()
-  // Handle the "View All Notification" action here
-  console.log('View All Notifications clicked')
-  closeDropdown()
+/**
+ * Marked read on screen first, then on the server: the click is usually a
+ * navigation too, and waiting for the round trip would leave the badge
+ * counting something the reader has already dealt with.
+ */
+async function openOne(row: AppNotification) {
+  open.value = false
+  if (!row.readAt) {
+    row.readAt = new Date().toISOString()
+    unread.value = Math.max(0, unread.value - 1)
+    void notifyApi.read(row.id).catch(() => {})
+  }
+  if (row.link) await router.push(row.link)
 }
+
+async function readAll() {
+  const now = new Date().toISOString()
+  for (const r of rows.value) r.readAt ??= now
+  unread.value = 0
+  await notifyApi.readAll().catch(() => {})
+}
+
+function onDocumentClick(e: MouseEvent) {
+  if (!open.value) return
+  if (root.value?.contains(e.target as Node)) return
+  open.value = false
+}
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') open.value = false
+}
+function onVisible() {
+  if (document.visibilityState === 'visible') void load()
+}
+
+/**
+ * How often the bell asks whether anything has happened.
+ *
+ * It used to ask only when it was mounted, which meant somebody sitting on the
+ * dashboard heard nothing until they happened to change page. That was tolerable
+ * while notifications were about work that could wait an hour; a message
+ * somebody is waiting for an answer to is not that.
+ */
+const EVERY_MS = 60_000
+let timer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
+  document.addEventListener('click', onDocumentClick)
+  document.addEventListener('keydown', onKeydown)
+  document.addEventListener('visibilitychange', onVisible)
+  void load()
+  timer = setInterval(() => {
+    // A background tab is not being read, and `visibilitychange` catches up
+    // the moment it comes back.
+    if (document.visibilityState === 'visible') void load()
+  }, EVERY_MS)
+})
+onUnmounted(() => {
+  if (timer) clearInterval(timer)
+  document.removeEventListener('click', onDocumentClick)
+  document.removeEventListener('keydown', onKeydown)
+  document.removeEventListener('visibilitychange', onVisible)
 })
 
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
+watch(() => auth.isLoggedIn, () => void load())
+
+/** The glyph and colour for each kind. Anything unknown gets the bell. */
+const LOOK: Record<string, { tone: string; path: string }> = {
+  'essay.submitted': {
+    tone: 'bg-brand-50 text-brand-500 dark:bg-brand-500/10',
+    path: 'M8 2h5l5 5v11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm5 0v5h5',
+  },
+  'chat.message': {
+    tone: 'bg-brand-50 text-brand-500 dark:bg-brand-500/10',
+    path: 'M21 11.5a8.4 8.4 0 0 1-9 8.4 8.9 8.9 0 0 1-3.8-.9L3 20.5l1.5-4.6A8.4 8.4 0 0 1 3.6 11.5a8.4 8.4 0 0 1 8.4-8.4 8.4 8.4 0 0 1 9 8.4Z',
+  },
+  'order.paid': {
+    tone: 'bg-success-50 text-success-500 dark:bg-success-500/10',
+    path: 'M20 6 9 17l-5-5',
+  },
+}
+const look = (type: string) =>
+  LOOK[type] ?? { tone: 'bg-gray-100 text-gray-500 dark:bg-white/[0.06]', path: 'M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2Zm6-6V11a6 6 0 1 0-12 0v5l-2 2v1h16v-1l-2-2Z' }
+
+/** "3 นาทีที่แล้ว" without pulling in a date library for one line. */
+function ago(iso: string): string {
+  const seconds = (Date.now() - new Date(iso).getTime()) / 1000
+  if (seconds < 60) return 'เมื่อสักครู่'
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} นาทีที่แล้ว`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} ชม. ที่แล้ว`
+  return new Date(iso).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
+}
 </script>
+
+<template>
+  <div class="relative" ref="root">
+    <button
+      type="button"
+      class="relative flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+      :aria-label="waiting ? `${unread} รายการใหม่` : 'การแจ้งเตือน'"
+      :aria-expanded="open"
+      @click="toggle"
+    >
+      <span
+        v-if="waiting"
+        class="absolute right-0 top-0.5 z-1 flex h-2 w-2 rounded-full bg-orange-400"
+      >
+        <span
+          class="absolute -z-1 inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75"
+        ></span>
+      </span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2Z" />
+        <path d="M18 16V11a6 6 0 1 0-12 0v5l-2 2v1h16v-1l-2-2Z" />
+      </svg>
+    </button>
+
+    <div
+      v-if="open"
+      class="absolute -right-[240px] mt-[17px] flex max-h-[480px] w-[350px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg sm:w-[361px] lg:right-0 dark:border-gray-800 dark:bg-gray-dark"
+      role="dialog"
+      aria-label="การแจ้งเตือน"
+    >
+      <div class="mb-3 flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+        <h5 class="text-lg font-semibold text-gray-800 dark:text-white/90">การแจ้งเตือน</h5>
+        <button
+          v-if="unread"
+          type="button"
+          class="text-sm text-brand-500 hover:text-brand-600"
+          @click="readAll"
+        >
+          อ่านทั้งหมดแล้ว
+        </button>
+      </div>
+
+      <p v-if="loading && !loaded" class="px-2 py-6 text-center text-sm text-gray-500">
+        กำลังโหลด…
+      </p>
+
+      <p v-else-if="!rows.length" class="px-2 py-8 text-center text-sm text-gray-500">
+        ยังไม่มีการแจ้งเตือน<br />
+        <span class="text-xs text-gray-400">งานที่รอคุณจะมาแจ้งที่นี่</span>
+      </p>
+
+      <ul v-else class="custom-scrollbar flex flex-col overflow-y-auto">
+        <li v-for="row in rows" :key="row.id">
+          <button
+            type="button"
+            class="flex w-full gap-3 rounded-lg border-b border-gray-100 p-3 text-left hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-white/5"
+            :class="row.readAt ? '' : 'bg-brand-50/40 dark:bg-brand-500/5'"
+            @click="openOne(row)"
+          >
+            <span
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+              :class="look(row.type).tone"
+              aria-hidden="true"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path :d="look(row.type).path" />
+              </svg>
+            </span>
+            <span class="block min-w-0 flex-1">
+              <span class="block text-theme-sm font-medium text-gray-800 dark:text-white/90">
+                {{ row.title }}
+              </span>
+              <span v-if="row.body" class="mt-0.5 block truncate text-theme-sm text-gray-500 dark:text-gray-400">
+                {{ row.body }}
+              </span>
+              <span class="mt-1 block text-theme-xs text-gray-400">{{ ago(row.createdAt) }}</span>
+            </span>
+            <!-- A dot rather than the word "new": the row is already tinted,
+                 and two ways of saying it is unread is one too many. -->
+            <span
+              v-if="!row.readAt"
+              class="mt-1 h-2 w-2 shrink-0 rounded-full bg-brand-500"
+              aria-hidden="true"
+            ></span>
+          </button>
+        </li>
+      </ul>
+
+      <!-- Twenty fit in a panel; the rest live on a page of their own. -->
+      <RouterLink
+        v-if="rows.length"
+        to="/notifications"
+        class="mt-3 flex justify-center rounded-lg border border-gray-300 bg-white p-3 text-theme-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+        @click="open = false"
+      >
+        See all notifications
+      </RouterLink>
+    </div>
+  </div>
+</template>

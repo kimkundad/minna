@@ -14,6 +14,7 @@ import {
   type PaymentMethod,
 } from '@/lib/api'
 import { formatBaht } from '@/lib/money'
+import { useAuthStore } from '@/stores/auth'
 
 /**
  * Orders.
@@ -69,7 +70,10 @@ async function load() {
 
 const open = ref<OrderDetail | null>(null)
 const openLoading = ref(false)
+const auth = useAuthStore()
 const refunding = ref(false)
+const cancelling = ref(false)
+const markingPaid = ref(false)
 
 async function show(row: OrderRow) {
   openLoading.value = true
@@ -85,6 +89,43 @@ async function show(row: OrderRow) {
 
 function closeOrder() {
   open.value = null
+}
+
+/**
+ * Records money that arrived some other way — a bank transfer, a payment made
+ * at the desk, a webhook that never came — and opens the course.
+ *
+ * Only a superadmin sees this, and only on an order that is not paid. The
+ * button is hidden rather than disabled for everybody else: an administrator
+ * cannot do it, and showing a control that always refuses teaches them to
+ * ignore controls.
+ */
+async function markPaid(order: OrderDetail) {
+  const { ok, reason } = await ask({
+    title: `Mark ${order.orderNo} as paid?`,
+    message: [
+      `This records ${formatBaht(order.total)} as received and opens the course to the student straight away.`,
+      'Only do this when the money has actually arrived. Nothing here checks that it has.',
+    ].join('\n'),
+    confirmLabel: 'Mark as paid',
+    reason: {
+      label: 'Why (recorded in the audit log)',
+      placeholder: 'Bank transfer, slip checked',
+      required: true,
+    },
+  })
+  if (!ok) return
+
+  markingPaid.value = true
+  error.value = ''
+  try {
+    open.value = (await ordersApi.markPaid(order.id, reason ?? '')).data
+    await load()
+  } catch (err) {
+    error.value = err instanceof ApiError ? err.message : 'Could not mark that order paid.'
+  } finally {
+    markingPaid.value = false
+  }
 }
 
 async function refund(order: OrderDetail) {
@@ -109,6 +150,42 @@ async function refund(order: OrderDetail) {
     error.value = err instanceof ApiError ? err.message : 'Could not refund that order.'
   } finally {
     refunding.value = false
+  }
+}
+
+/**
+ * Closing an order nobody ever paid.
+ *
+ * The dead rows: a transfer that never arrived, a PromptPay code gone stale, a
+ * customer who changed their mind. Nothing moves — no money was taken and no
+ * access was granted — so this only stops the row sitting in the list looking
+ * like work. A paid order is refunded instead, which the API enforces.
+ */
+async function cancel(order: OrderDetail) {
+  const { ok, reason } = await ask({
+    title: `Cancel ${order.orderNo}?`,
+    message: [
+      'Nothing was paid and nothing was granted, so nothing is returned or taken away.',
+      'The order stops appearing as work waiting to be done.',
+    ].join('\n'),
+    confirmLabel: 'Cancel the order',
+    reason: {
+      label: 'Why (recorded in the audit log)',
+      placeholder: 'Customer paid again on a new order',
+      required: true,
+    },
+  })
+  if (!ok) return
+
+  cancelling.value = true
+  error.value = ''
+  try {
+    open.value = (await ordersApi.cancel(order.id, reason)).data
+    await load()
+  } catch (err) {
+    error.value = err instanceof ApiError ? err.message : 'Could not cancel that order.'
+  } finally {
+    cancelling.value = false
   }
 }
 
@@ -325,6 +402,31 @@ onMounted(load)
             >
               {{ STATUS_LABEL[open.status] }}
             </span>
+            <!-- Hidden for an administrator rather than disabled: they cannot
+                 do it, and a control that always refuses teaches people to
+                 ignore controls. -->
+            <button
+              v-if="auth.isSuperadmin && open.status !== 'paid' && open.status !== 'refunded'"
+              type="button"
+              :disabled="markingPaid"
+              class="rounded-lg border border-success-500/40 px-4 py-2 text-sm font-medium text-success-600 transition hover:bg-success-50 disabled:opacity-60 dark:hover:bg-success-500/10"
+              data-mark-paid
+              @click="markPaid(open)"
+            >
+              {{ markingPaid ? 'Marking…' : 'Mark as paid' }}
+            </button>
+            <!-- Never paid, so there is nothing to give back — only a row to
+                 close. The API refuses this on a paid order; refunding is what
+                 undoes a payment. -->
+            <button
+              v-if="open.status === 'pending' || open.status === 'failed'"
+              type="button"
+              :disabled="cancelling"
+              class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+              @click="cancel(open)"
+            >
+              {{ cancelling ? 'Cancelling…' : 'Cancel order' }}
+            </button>
             <button
               v-if="open.status === 'paid'"
               type="button"
@@ -334,6 +436,16 @@ onMounted(load)
             >
               {{ refunding ? 'Refunding…' : 'Refund' }}
             </button>
+            <!-- A copy of what the buyer can already print from their own
+                 account, for when they ring up having lost it. Opened in its
+                 own tab so the list and the filters are still here afterwards. -->
+            <router-link
+              :to="`/orders/${open.id}/receipt`"
+              target="_blank"
+              class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+            >
+              Receipt
+            </router-link>
             <button
               type="button"
               class="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"

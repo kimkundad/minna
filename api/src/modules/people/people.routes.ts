@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { audit } from '../../lib/audit'
 import { conflict, forbidden } from '../../lib/errors'
 import { env } from '../../config/env'
-import { emailVerifiedMail, passwordResetMail } from '../../lib/email-templates'
+import { passwordResetMail, teacherApprovedMail } from '../../lib/email-templates'
 import { sendMail } from '../../lib/mailer'
 import * as schemas from './people.schemas'
 import * as authService from '../auth/auth.service'
@@ -89,7 +89,7 @@ export default async function peopleRoutes(app: FastifyInstance) {
     const reset = await authService.createPasswordReset(member.email)
     const url = reset ? `${env.APP_URL}/reset-password?token=${reset.token}` : null
     if (url) {
-      void sendMail({ ...passwordResetMail(member.firstName, url), to: member.email }, req.log)
+      void sendMail({ ...passwordResetMail(member.firstName, url, member.locale), to: member.email }, req.log)
     }
 
     audit(req, {
@@ -206,13 +206,7 @@ export default async function peopleRoutes(app: FastifyInstance) {
     // happen: the applicant has no way to know their account changed.
     if (body.decision === 'approved' && application.account) {
       void sendMail(
-        {
-          ...emailVerifiedMail(application.name),
-          to: application.email,
-          subject: 'You can now teach on Minna',
-          text: `Hello ${application.name},\n\nYour application to teach has been approved. Sign in and you will find your courses in the admin.\n\n— Minna`,
-          html: `<p>Hello ${application.name},</p><p>Your application to teach has been approved. Sign in and you will find your courses in the admin.</p><p>— Minna</p>`,
-        },
+        { ...teacherApprovedMail(application.name, env.ADMIN_URL), to: application.email },
         req.log,
       )
     }

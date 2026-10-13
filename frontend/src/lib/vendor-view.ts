@@ -74,6 +74,8 @@ export function vendorCourseView(courseId: string, locale: string): CourseView {
     levelLabel: String(course.levelLabel ?? ''),
     spokenLabel: String(course.languageLabel ?? ''),
     price: Number(course.price ?? 0),
+    // The prototype store predates per-course currencies and holds baht.
+    currency: String(course.currency ?? 'THB'),
     normalPrice: (course.normalPrice as number | null) ?? null,
     isFree: Boolean(course.isFree),
     inPackage: Boolean(course.packageIncluded),

@@ -1,6 +1,8 @@
+import { richTextField } from '../../lib/rich-text'
 import { z } from 'zod'
 import { LOCALES } from '../../db/schema/auth'
-import { COURSE_LEVELS, LESSON_TYPES } from '../../db/schema/catalog'
+import { COURSE_LEVELS, COURSE_LOCALES, LESSON_TYPES } from '../../db/schema/catalog'
+import { isCurrencyCode } from '../../lib/currencies'
 import { queryBool } from '../../lib/query'
 
 /**
@@ -19,6 +21,29 @@ const slug = z
   .max(150)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Use lowercase letters, numbers and hyphens.')
 
+/**
+ * The languages a category name can be translated into — every language the
+ * site has, less the one the name itself is written in. Driven off `LOCALES`
+ * so that adding a fifth language does not need an edit here.
+ */
+export const TRANSLATABLE_LOCALES = LOCALES.filter((l) => l !== 'th')
+
+/**
+ * The name in the other languages, keyed by locale.
+ *
+ * Thai is rejected rather than ignored: it is `name` on the category itself,
+ * and accepting a second copy of it would create two places to edit one name
+ * and no way to tell which of them the site is showing.
+ *
+ * An empty string is allowed, and means "no translation" — it is what a
+ * cleared field in the form sends, and clearing a field has to be possible.
+ */
+export const categoryNames = z
+  .record(z.string(), z.string().max(150))
+  .refine((names) => Object.keys(names).every((l) => (TRANSLATABLE_LOCALES as string[]).includes(l)), {
+    message: `Translations are only kept for: ${TRANSLATABLE_LOCALES.join(', ')}.`,
+  })
+
 export const categoryBody = z.object({
   name: z.string().min(1, 'A name is required.').max(150),
   slug,
@@ -26,6 +51,7 @@ export const categoryBody = z.object({
   parentId: z.coerce.number().int().positive().nullable().optional(),
   icon: z.string().max(64).nullable().optional(),
   sortOrder: z.coerce.number().int().min(0).default(0),
+  names: categoryNames.optional(),
 })
 
 export const categoryPatch = categoryBody.partial()
@@ -46,20 +72,47 @@ const courseFields = z.object({
     slug: slug.max(255),
     categoryId: z.coerce.number().int().positive().nullable().optional(),
     shortDesc: z.string().max(500).nullable().optional(),
-    description: z.string().max(20000).nullable().optional(),
+    description: richTextField(20000),
     outcomes: z.array(z.string().max(300)).max(30).optional(),
     audience: z.array(z.string().max(300)).max(30).optional(),
     thumbnailPath: z.string().max(512).nullable().optional(),
     sampleVideoPath: z.string().max(512).nullable().optional(),
     level: z.enum(COURSE_LEVELS).nullable().optional(),
-    contentLocale: z.enum(LOCALES).default('th'),
-    /** Satang. */
+    contentLocale: z.enum(COURSE_LOCALES).default('th'),
+    /**
+     * What this course is priced in, and what Stripe charges. No conversion
+     * happens on the way to a buyer: a course priced at €49 takes €49 from
+     * everybody, whatever language they are reading the site in.
+     */
+    currency: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .refine((c) => isCurrencyCode(c), 'That is not a currency we can charge in.')
+      .default('THB'),
+    /** The currency's smallest unit — hundredths, including for yen. */
     price: money.default(0),
     /** The struck-through "was" price. Null when there is no discount. */
     normalPrice: money.nullable().optional(),
     accessType: z.enum(['lifetime', 'limited']).default('lifetime'),
     accessDurationDays: z.coerce.number().int().min(1).max(3650).nullable().optional(),
     status: z.enum(['draft', 'pending', 'approved', 'rejected', 'ended']).default('draft'),
+    /**
+     * Why a course was sent back. Written by an administrator alongside
+     * `status: 'rejected'`, and shown to the teacher in the notice and on the
+     * course itself — without it the verdict says only that something is
+     * wrong, and the next step is a conversation somewhere else.
+     */
+    reviewNote: z.string().trim().max(1000).nullable().optional(),
+    /**
+     * How this one looks when shared, where that should differ from the
+     * page itself — a title that reads well on a page and badly in a chat
+     * window, or a cover that is beautiful at 16:9 and cropped to nonsense
+     * at 1200×630. Empty is the normal state: it shares as the page reads.
+     */
+    ogTitle: z.string().trim().max(255).nullable().optional(),
+    ogDescription: z.string().trim().max(500).nullable().optional(),
+    ogImagePath: z.string().trim().max(512).nullable().optional(),
     sellable: z.boolean().default(true),
     repurchase: z.boolean().default(true),
     badge: z.enum(['bestseller', 'recommended', 'new', 'free']).nullable().optional(),
@@ -82,7 +135,16 @@ export const courseBody = courseFields
   // Every course belongs to somebody who teaches it. A course with no teacher
   // has nobody to answer its questions or mark its written answers, and the
   // card has no face to show.
-  .refine((v) => v.instructorIds?.length === 1, {
+  /**
+   * Left out, a teacher's own course is put under their name.
+   *
+   * It used to be required here, which made the route's fallback for exactly
+   * that case unreachable — and meant a teacher could not create a course
+   * without naming an instructor from a list only admins may read. The route
+   * refuses an admin who names nobody; it is their choice to make, and there
+   * is no obvious answer to fall back on.
+   */
+  .refine((v) => v.instructorIds === undefined || v.instructorIds.length === 1, {
     message: 'Choose who teaches this course.',
     path: ['instructorIds'],
   })
@@ -137,7 +199,7 @@ export const courseListQuery = listQuery.extend({
         : undefined,
     ),
   levels: csv(['beginner', 'intermediate', 'advanced'] as const),
-  locales: csv(['th', 'en', 'jp', 'vn'] as const),
+  locales: csv(LOCALES),
   durations: csv(['le1', '1-3', '3-6', 'gt6'] as const),
   prices: csv(['free', 'lt1000', '1000-2000', 'gt2000'] as const),
   access: csv(['free', 'course', 'package'] as const),
@@ -170,7 +232,7 @@ export const lessonBody = z
     type: z.enum(LESSON_TYPES),
     title: z.string().min(1, 'A title is required.').max(255),
     subtitle: z.string().max(255).nullable().optional(),
-    description: z.string().max(10000).nullable().optional(),
+    description: richTextField(10000),
     /** Seconds. Course length is the sum of these. */
     durationSeconds: z.coerce.number().int().min(0).max(86400).default(0),
     videoPath: z.string().max(512).nullable().optional(),

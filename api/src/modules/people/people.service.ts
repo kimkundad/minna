@@ -10,6 +10,7 @@ import {
   users,
 } from '../../db/schema/index'
 import { conflict, notFound } from '../../lib/errors'
+import { deleteFile, signedUrl } from '../../lib/storage'
 import { hashPassword } from '../../lib/password'
 import { revokeAllSessions } from '../auth/auth.service'
 import type { RoleName } from '../../plugins/auth'
@@ -252,7 +253,27 @@ export async function getApplication(id: number) {
     .where(eq(users.email, row.email))
     .limit(1)
 
-  return { ...row, account: account ?? null }
+  return {
+    ...row,
+    account: account ?? null,
+    /**
+     * The CV, as a link that expires.
+     *
+     * It sits outside `content/` — somebody's work history, handed over by a
+     * person who does not work here and may never be offered the chance — so
+     * the stored path cannot be opened directly and a signed link is the only
+     * way in. Minutes, because reading it is what this screen is for and
+     * nothing else needs it afterwards.
+     *
+     * Not audited, unlike reading a teacher's passport: this one is the job.
+     * A row written every time somebody opens an application they were sent to
+     * review would record nothing but that the queue is being worked.
+     */
+    resumeUrl: row.resumePath ? signedUrl(row.resumePath, 300) : null,
+    /** Watched once while deciding, then deleted — so this is null on
+     *  everything that has already been decided. */
+    sampleVideoUrl: row.sampleVideoPath ? signedUrl(row.sampleVideoPath, 900) : null,
+  }
 }
 
 /**
@@ -280,8 +301,34 @@ export async function decideApplication(
       approvedBy: decidedBy,
       approvedAt: new Date(),
       ...(categoryId === undefined ? {} : { categoryId }),
+      // The clip has done its job. Both ways, not only on approval: a hundred
+      // megabytes of somebody's face and voice has no reason to outlive the
+      // question it answered, and the applicant who was turned down has the
+      // better claim to it being gone. The row keeps everything else, so the
+      // decision is still explicable later.
+      sampleVideoPath: null,
     })
     .where(eq(teacherApplications.id, id))
+
+  /**
+   * And from storage, not only from the row.
+   *
+   * After the record, and swallowed: the decision has been made and told to
+   * the applicant, and a storage service having a bad minute is not a reason
+   * to refuse it or to leave the queue unable to move. What is left behind is
+   * a file nobody can reach — the path is gone from the only row that pointed
+   * at it — and a line in the log for whoever tidies up.
+   */
+  if (app.sampleVideoPath) {
+    try {
+      await deleteFile(app.sampleVideoPath)
+    } catch (err) {
+      console.error(
+        `could not delete the sample video for application ${id} (${app.sampleVideoPath}):`,
+        err,
+      )
+    }
+  }
 
   let granted = false
   if (decision === 'approved' && app.account) {

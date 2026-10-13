@@ -584,7 +584,7 @@ const filteredData = computed(() => {
         person.office.toLowerCase().includes(searchLower),
     )
     .sort((a, b) => {
-      let modifier = sortDirection.value === 'asc' ? 1 : -1
+      const modifier = sortDirection.value === 'asc' ? 1 : -1
       if (a[sortColumn.value] < b[sortColumn.value]) return -1 * modifier
       if (a[sortColumn.value] > b[sortColumn.value]) return 1 * modifier
       return 0
@@ -613,7 +613,7 @@ const pageRange = computed(() => {
   const maxPagesToShow = 5 // Adjust this value to show more or fewer pages
 
   let startPage = Math.max(2, currentPage.value - Math.floor(maxPagesToShow / 2))
-  let endPage = Math.min(totalPages.value - 1, startPage + maxPagesToShow - 1)
+  const endPage = Math.min(totalPages.value - 1, startPage + maxPagesToShow - 1)
 
   if (endPage - startPage + 1 < maxPagesToShow) {
     startPage = Math.max(2, endPage - maxPagesToShow + 1)
@@ -630,7 +630,7 @@ const startPage = computed(() => pageRange.value[0] || 2)
 const endPage = computed(() => pageRange.value[pageRange.value.length - 1] || totalPages.value - 1)
 
 const pagesAroundCurrent = computed(() => {
-  let pages = []
+  const pages = []
   const startPage = Math.max(2, currentPage.value - 2)
   const endPage = Math.min(totalPages.value - 1, currentPage.value + 2)
 

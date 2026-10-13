@@ -164,6 +164,24 @@ async function revealForm() {
   formEl.value?.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true })
 }
 
+/**
+ * The course's quiz, if it has one.
+ *
+ * One per course: the questions are stored against the course, and results are
+ * read per course, so a second quiz lesson is not a second test — it is two
+ * rows pointing at the same one. The API refuses it; this keeps the option out
+ * of reach so nobody has to be told off for trying.
+ */
+const quizLesson = computed(() => {
+  const all = [...(data.value?.modules.flatMap((m) => m.lessons) ?? []), ...(data.value?.loose ?? [])]
+  return all.find((l) => l.type === 'quiz') ?? null
+})
+
+/** True while editing the quiz itself, where "Quiz" has to stay selectable. */
+const editingTheQuiz = computed(
+  () => quizLesson.value !== null && lessonOpen.value === quizLesson.value.id,
+)
+
 function openNewLesson(moduleId: number | null) {
   lessonOpen.value = 'new'
   lessonParent.value = moduleId
@@ -289,8 +307,20 @@ onMounted(load)
             <select v-model="lessonForm.type" :class="inputClass">
               <option value="video">Video</option>
               <option value="document">Document</option>
-              <option value="quiz">Quiz</option>
+              <option
+                value="quiz"
+                :disabled="quizLesson !== null && !editingTheQuiz"
+              >
+                Quiz{{ quizLesson && !editingTheQuiz ? ' — this course already has one' : '' }}
+              </option>
             </select>
+            <p v-if="quizLesson && !editingTheQuiz" class="mt-1.5 text-xs text-gray-400">
+              The quiz is
+              <button type="button" class="text-brand-500 hover:underline" @click="openLesson(quizLesson)">
+                {{ quizLesson.title }}
+              </button>
+              — one per course, because results are counted per course.
+            </p>
           </div>
 
           <div>

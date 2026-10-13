@@ -9,7 +9,7 @@ import CoAccessNote from './CoAccessNote.vue'
 import CoCouponApplied from './CoCouponApplied.vue'
 import type { AccessNote, Coupon } from './types'
 import type { CheckoutLine } from '@/lib/checkout'
-import { num } from '@/lib/format'
+import { num, money } from '@/lib/format'
 
 /**
  * One course on the order, with its own coupon field.
@@ -22,6 +22,8 @@ import { num } from '@/lib/format'
  * the last one would leave an order with nothing in it.
  */
 const props = defineProps<{
+  /** What this basket is priced in. Every line shares it. */
+  currency?: string
   line: CheckoutLine
   /** How many lines the order has, which decides whether removing is offered. */
   count: number
@@ -38,14 +40,16 @@ const emit = defineEmits<{
   remove: [slug: string]
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const view = computed(() => props.line.view)
 const cid = computed(() => props.line.slug)
 const titleId = computed(() => `co-it-${cid.value}`)
 const inputId = computed(() => `cp-in-${cid.value}`)
 
-const baht = (n: number) => t('commerce.baht', { n: num(n) })
+/** The basket's currency, which every line in it shares — a basket that
+ *  mixed two could not be charged at all, so the server refuses one. */
+const asMoney = (n: number) => money(n, props.currency ?? 'THB', String(locale.value))
 
 /**
  * The coupon as `CoCouponApplied` draws it. The server decided the discount;
@@ -133,17 +137,17 @@ function submit() {
         <span class="co-price-lbl">{{ t('commerce.checkout.netPrice') }}</span>
         <s
           ><span class="sr-only">{{ t('commerce.checkout.priceBeforeCoupon') }}</span
-          >{{ baht(line.unitPrice) }}</s
+          >{{ asMoney(line.unitPrice) }}</s
         >
-        <strong class="is-net">{{ baht(line.net) }}</strong>
+        <strong class="is-net">{{ asMoney(line.net) }}</strong>
       </template>
       <template v-else>
         <span class="co-price-lbl">{{ t('commerce.checkout.price') }}</span>
         <s v-if="line.normalPrice"
           ><span class="sr-only">{{ t('commerce.normalPrice') }}</span
-          >{{ baht(line.normalPrice) }}</s
+          >{{ asMoney(line.normalPrice) }}</s
         >
-        <strong>{{ baht(line.unitPrice) }}</strong>
+        <strong>{{ asMoney(line.unitPrice) }}</strong>
       </template>
 
       <button

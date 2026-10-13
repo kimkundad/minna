@@ -14,7 +14,11 @@
     "close": "Close",
     "viewAll": "View all",
     "breadcrumb": "Breadcrumb",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "captchaRequired": "Tick “I’m not a robot” before sending",
+    "captchaFailed": "The check could not load — try reloading the page",
+    "previous": "Previous",
+    "next": "Next"
   },
   "language": {
     "chooseTitle": "Choose your language",
@@ -140,7 +144,13 @@
     "previewFailed": "The sample could not be loaded. Please try again.",
     "previewFree": "A sample lesson — free for anyone, no account needed.",
     "previewFreeWithLength": "A sample lesson, {length} — free for anyone, no account needed.",
-    "previewSeeCurriculum": "See the whole curriculum"
+    "previewSeeCurriculum": "See the whole curriculum",
+    "yourProgress": "Your progress",
+    "ownedFreeTitle": "Enrolled, free",
+    "ownedTitle": "You have access to this course",
+    "ownedNotStarted": "Not started yet",
+    "goToLessons": "Go to the lessons",
+    "share": "Share this course"
   },
   "minutes": "{n} min",
   "hours": "{n} hr",
@@ -260,7 +270,12 @@
     "retry": "Try again",
     "groupSpoken": "Language of instruction",
     "loadMore": "Show more ({count} left)",
-    "loadingMore": "Loading…"
+    "loadingMore": "Loading…",
+    "emptyLanguageTitle": "No courses are taught in {language} yet",
+    "emptyLanguageText": "This page shows the courses taught in the language you are reading the site in, plus any marked as suiting every language. There are none of either just now.",
+    "showEveryLanguage": "Show courses in every language",
+    "showingEveryLanguage": "Showing courses in every language, not only {language}",
+    "backToMyLanguage": "Show only {language}"
   },
   "account": {
     "title": "My account",
@@ -274,8 +289,10 @@
       "overview": "Account overview",
       "learning": "My learning",
       "orders": "Order history",
-      "package": "My package",
-      "profile": "Account settings"
+      "profile": "Account settings",
+      "teaching": "Teaching admin",
+      "messages": "Messages",
+      "notifications": "Notifications"
     },
     "page": {
       "overview": {
@@ -297,6 +314,14 @@
       "profile": {
         "title": "Account settings",
         "desc": "Personal information, interests, security and what we may send you"
+      },
+      "notifications": {
+        "title": "Notifications",
+        "desc": "Everything that has happened to your account and your courses"
+      },
+      "messages": {
+        "title": "Messages",
+        "desc": "Ask the school anything"
       }
     },
     "pkgStatus": {
@@ -331,7 +356,12 @@
       "allCourses": "All my courses ({count})",
       "lastLesson": "Last lesson:",
       "lastStudied": "Last studied {when}",
-      "quizLesson": "End-of-course quiz"
+      "quizLesson": "End-of-course quiz",
+      "overallPct": "{pct}% through",
+      "shelfLabel": "Overall progress",
+      "lessonsDone": "{done} of {total} lessons done",
+      "allDoneTitle": "Nothing left to carry on with",
+      "allDoneText": "Every lesson you own is finished. Go back over one, or find something new."
     },
     "empty": {
       "learningTitle": "You are not studying anything yet",
@@ -368,7 +398,8 @@
       "source": {
         "package": "Included in package",
         "purchase": "Bought separately",
-        "free": "Free for members"
+        "free": "Free for members",
+        "admin": "Granted by the school"
       },
       "expiredValue": "Expired",
       "endedOn": "Withdrawn on {date}",
@@ -390,7 +421,12 @@
       "progress": "Progress",
       "progressKept": "Progress (kept from before)",
       "lessonsDone": "{done}/{total} lessons",
-      "notStartedBadge": "Not started"
+      "notStartedBadge": "Not started",
+      "endedNote": "This course has closed",
+      "quizScore": "Scored {pct}%",
+      "review": "Review the lessons",
+      "loading": "Loading your courses…",
+      "loadFailed": "Could not load your courses"
     },
     "lock": {
       "ended": {
@@ -414,18 +450,23 @@
       "tab": {
         "all": "All",
         "success": "Successful",
-        "failed": "Failed or cancelled"
+        "failed": "Failed or cancelled",
+        "pending": "Awaiting payment"
       },
       "status": {
         "paid": "Paid",
         "free": "Free enrolment",
         "failed": "Payment failed",
-        "cancelled": "Cancelled"
+        "cancelled": "Cancelled",
+        "pending": "Awaiting payment",
+        "refunded": "Refunded"
       },
       "method": {
         "card": "Credit or debit card",
         "qr": "QR PromptPay",
-        "free": "No charge"
+        "free": "No charge",
+        "promptpay": "QR PromptPay",
+        "unset": "No payment method yet"
       },
       "itemCount": "{count} courses",
       "coupon": "Code {code}",
@@ -450,7 +491,24 @@
       "noneInTab": "No orders with this status",
       "noneInTabText": "Try another status, or look at all of your orders.",
       "emptyTitle": "No orders yet",
-      "emptyText": "Once you buy a course, the order and its receipt appear here."
+      "emptyText": "Once you buy a course, the order and its receipt appear here.",
+      "methodLabel": "Payment method",
+      "placedAt": "Placed",
+      "paidAt": "Paid",
+      "subtotal": "Subtotal",
+      "courseDiscount": "Course discount",
+      "orderDiscount": "Basket discount",
+      "vat": "VAT",
+      "detailFor": "Order {id}",
+      "renamed": "Now called “{title}”",
+      "notePending": "Waiting for payment · access opens by itself once the money arrives",
+      "noteRefunded": "Refunded · the access from this order was withdrawn",
+      "noteTaxIssued": "Tax invoice ({type}) · no. {no}",
+      "taxFor": "Tax invoice ({type}) for {name}",
+      "taxNo": "Document no. {no}",
+      "reorderNothing": "Nothing could go back in the basket — already owned, or no longer for sale.",
+      "loading": "Loading your orders…",
+      "loadFailed": "Could not load your orders"
     },
     "pkg": {
       "currentEyebrow": "Current package",
@@ -557,7 +615,81 @@
       },
       "on": "On",
       "off": "Off",
-      "logoutText": "Signs you out on this device. Your progress and account details are kept."
+      "logoutText": "Signs you out on this device. Your progress and account details are kept.",
+      "photo": "Profile photo",
+      "photoHint": "JPG, PNG or WebP, up to 4 MB · shown beside your questions in a course",
+      "photoChoose": "Choose a photo",
+      "photoUploading": "Uploading…",
+      "photoRemove": "Remove photo",
+      "language": "Language",
+      "languageHelp": "The language of the site and of the mail we send you",
+      "birthdate": "Date of birth",
+      "birthdateHelp": "{date} · correct it here if it went in wrong at sign-up",
+      "emailUnverified": "This email has not been verified yet",
+      "verifyResend": "Send the link again",
+      "verifySent": "Sent — check your inbox",
+      "undo": "Undo",
+      "saving": "Saving…",
+      "billing": "Tax invoice details",
+      "billingNote": "Filled in once; checkout brings them back for you",
+      "taxType": "Taxpayer type",
+      "taxIdCorporate": "Tax ID",
+      "taxIdIndividual": "National ID",
+      "billingNameCorporate": "Registered company name",
+      "billingNameIndividual": "Name as it appears on your ID",
+      "branch": "Office",
+      "branchHead": "Head office",
+      "branchOther": "Branch",
+      "branchCode": "Branch code",
+      "address": "Address for the tax invoice",
+      "billingUpdated": "Last saved {when}",
+      "billingForget": "Delete these details",
+      "billingForgetConfirm": "The saved tax details are removed. Invoices already issued do not change.",
+      "passwordModalSub": "Changing it signs every device out, including this one.",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "newPasswordHelp": "At least 8 characters",
+      "confirmPassword": "New password again",
+      "devicesLoading": "Loading devices…",
+      "unknownDevice": "Unnamed device",
+      "unknownIp": "Unknown origin",
+      "signedInAt": "Signed in {when}",
+      "signOutAllTitle": "Sign out everywhere",
+      "signOutAllConfirm": "Every device is signed out, including the one you are using now.",
+      "errFirstName": "Enter your first name",
+      "errLastName": "Enter your last name",
+      "errPhone": "That phone number is not valid",
+      "errSave": "Could not save. Try again.",
+      "errPhoto": "Could not upload that photo",
+      "errBillingName": "Enter the name for the invoice",
+      "errTaxId": "This should be 13 digits",
+      "errAddress": "Enter an address",
+      "errBranch": "Enter the branch code",
+      "errCurrentPw": "Enter your current password",
+      "errNewPw": "A new password needs at least 8 characters",
+      "errConfirmPw": "The two passwords do not match",
+      "consentUpdated": "Last answered {when}",
+      "consentNever": "Not set yet, so the defaults apply — no mail from us, but a warning before access runs out",
+      "birthdateEmpty": "Not set"
+    },
+    "receipt": {
+      "title": "Receipt",
+      "titleTax": "Receipt / Tax invoice",
+      "back": "Back to orders",
+      "print": "Print / save as PDF",
+      "notFound": "No such order",
+      "documentNo": "Document no.",
+      "issuedAt": "Date",
+      "buyer": "Billed to",
+      "item": "Item",
+      "unitPrice": "Price",
+      "discount": "Discount",
+      "grandTotal": "Total",
+      "taxIdLabel": "Tax ID",
+      "onFile": "on file",
+      "noSeller": "The seller details have not been set in the admin, so this receipt carries no issuer.",
+      "taxPending": "The full tax invoice is being prepared; its number appears here once issued.",
+      "thanks": "Thank you for studying with us"
     }
   },
   "about": {
@@ -1513,7 +1645,8 @@
       "loading": "Loading your basket…",
       "emptyTextGuest": "Sign in to use the basket, or have a look around first.",
       "noteOwned": "You already have access to this one — no need to buy it again.",
-      "noteEnded": "This course is no longer sold."
+      "noteEnded": "This course is no longer sold.",
+      "viewCart": "View cart"
     },
     "coupon": {
       "percent": "{pct}% off",
@@ -1662,7 +1795,9 @@
       "errFirstName": "Please give a first name",
       "errLastName": "Please give a surname",
       "errTaxId": "A tax ID is 13 digits",
-      "errAddress": "Please give the address for the invoice"
+      "errAddress": "Please give the address for the invoice",
+      "errTaxIdCheck": "That tax ID is not valid — check the digits",
+      "errIdCardCheck": "That national ID is not valid — check the digits"
     },
     "pay": {
       "heading": "How you will pay",
@@ -1674,7 +1809,8 @@
       "cardDesc": "Paid straight away with a supported card",
       "note": "Paid on the provider’s own page — no card details reach this site",
       "freeTitle": "Free course, nothing to pay",
-      "freeText": "Press “Claim free access” to start straight away. No payment details and no tax invoice needed."
+      "freeText": "Press “Claim free access” to start straight away. No payment details and no tax invoice needed.",
+      "cardOnly": "This basket is priced in {currency}, so card is the only way to pay it — PromptPay takes baht only."
     },
     "error": {
       "name": "Please enter your full name",
@@ -1827,7 +1963,8 @@
       "courseProgress": "Course progress {pct}%",
       "focusMode": "Focus Mode",
       "focusHint": "Focus Mode — a dark background to keep your attention on the lesson",
-      "myAccount": "My account"
+      "myAccount": "My account",
+      "jumpToCurriculum": "Go to the course contents"
     },
     "missing": {
       "title": "Course not found",
@@ -1853,7 +1990,9 @@
       "timeline": "Video position",
       "timeOf": "{current} of {total}",
       "fullscreen": "Full screen",
-      "exitFullscreen": "Exit full screen"
+      "exitFullscreen": "Exit full screen",
+      "noFile": "Nothing has been uploaded for this lesson yet",
+      "loadFailed": "Could not open the lesson file — try again"
     },
     "doc": {
       "eyebrow": "Lesson document · PDF",
@@ -1882,7 +2021,10 @@
       "otherCourses": "Other courses",
       "rebuy": "Buy the course again",
       "unfinished": "Left unfinished:",
-      "watchSample": "Watch the free sample: {title}"
+      "watchSample": "Watch the free sample: {title}",
+      "none": "You do not have access to this course",
+      "expired": "Your access to this course has ended — buy it again to carry on",
+      "guest": "Sign in to open the learning room"
     },
     "info": {
       "moduleLabel": "Module {n} — {title}",
@@ -1931,7 +2073,8 @@
       "downloadNamed": "Download {name}",
       "lockedTitle": "Downloads open once you have access",
       "lockedGuest": "Sign in or create an account, then choose the access that suits you.",
-      "lockedFallback": "You do not have access to this course yet"
+      "lockedFallback": "You do not have access to this course yet",
+      "failed": "Could not open that file — try again"
     },
     "notes": {
       "label": "Notes on “{title}”",
@@ -1960,7 +2103,22 @@
       "inLesson": "Lesson: {title}",
       "instructor": "Instructor",
       "gateTitle": "Sign in to ask a question",
-      "gateText": "Members can ask the instructor about a lesson straight from the learning room."
+      "gateText": "Members can ask the instructor about a lesson straight from the learning room.",
+      "loading": "Loading questions…",
+      "empty": "No questions on this lesson yet — be the first",
+      "reply": "Reply",
+      "replyPlaceholder": "Help a classmate, or add to the question",
+      "remove": "Delete",
+      "failed": "That did not send — try again",
+      "cooldown": "You can post again in {n} seconds",
+      "edit": "Edit",
+      "save": "Save",
+      "removeConfirm": "Delete this post?",
+      "removeWithReplies": "Delete this question? Its {n} answers go with it"
+    },
+    "ask": {
+      "title": "Send a question to your teacher",
+      "hint": "The school passes it on"
     },
     "side": {
       "title": "Course contents",
@@ -2152,7 +2310,8 @@
       "nothingToReviseNone": "No essay has been sent for this course yet.",
       "nothingToReviseStatus": "Current essay status: {status} — you can revise it once the instructor sends it back.",
       "answeredBarSuffix": "/{total}",
-      "answeredNavSuffix": "of {total}"
+      "answeredNavSuffix": "of {total}",
+      "essaySaveFailed": "Could not save your draft. What you wrote is still here — try again."
     },
     "result": {
       "title": "Your result",
@@ -2260,8 +2419,11 @@
       "markDone": "met",
       "markTodo": "not met",
       "markFail": "needs action",
-      "markWait": "awaiting a result"
-    }
+      "markWait": "awaiting a result",
+      "loading": "Loading your result…",
+      "cardHint": "Scores and completion"
+    },
+    "loading": "Opening the learning room…"
   },
   "auth": {
     "loginTitle": "Sign in",
@@ -2338,7 +2500,17 @@
     "verifyNoTokenSub": "The link was copied from the email without all of it, or this page was opened directly.",
     "goHome": "Go to the home page",
     "goSignIn": "Sign in",
-    "reasonCart": "Sign in to use the basket"
+    "reasonCart": "Sign in to use the basket",
+    "teachResume": "CV or résumé",
+    "teachResumeHint": "PDF, Word or an image, up to 10 MB.",
+    "teachClip": "A clip of you teaching",
+    "teachClipHint": "A video file, up to 100 MB. Watched while we decide, then deleted.",
+    "teachClipSending": "Sending the clip… {pct}%",
+    "teachFilesRequired": "Both the CV and the sample lesson are required.",
+    "teachFilesFailed": "You are registered, but the files did not go up. Send them again to complete your application.",
+    "teachFilesRetry": "Send the files again",
+    "teachClipStay": "Keep this page open until it finishes.",
+    "teachClipLeaveWarning": "The clip is still uploading. Leaving now loses it. Leave anyway?"
   },
   "cta": {
     "continue": "Continue",
@@ -2357,7 +2529,12 @@
     "th": "ไทย",
     "en": "English",
     "jp": "日本語",
-    "vn": "Tiếng Việt"
+    "vn": "Tiếng Việt",
+    "all": "All languages",
+    "id": "Bahasa Indonesia",
+    "zh": "简体中文",
+    "ko": "한국어",
+    "tw": "繁體中文"
   },
   "badge": {
     "bestseller": "Bestseller",
@@ -2377,7 +2554,10 @@
     "catsSearchPlaceholder": "Search categories — conversation, JLPT, grammar…",
     "catsCount": "{count} courses",
     "catsSoon": "Coming soon",
-    "catsEmpty": "No category matches that. Try another word, such as conversation or exam."
+    "catsEmpty": "No category matches that. Try another word, such as conversation or exam.",
+    "mineTitle": "My courses",
+    "mineSub": "Pick up where you left off · {n} courses",
+    "mineMore": "See all"
   },
   "blog": {
     "title": "Articles",
@@ -2408,10 +2588,61 @@
     "homeSub": "Study tips, news, and what the teachers want you to know",
     "homeMore": "Read every article"
   },
+  "notifications": {
+    "readAll": "Mark all read",
+    "loading": "Loading…",
+    "emptyTitle": "Nothing yet",
+    "emptyText": "Anything that happens to your account or your courses turns up here.",
+    "seeAll": "See all",
+    "filterLabel": "Filter notifications",
+    "tab": {
+      "all": "All",
+      "unread": "Unread"
+    },
+    "open": "Open",
+    "markRead": "Mark read",
+    "showing": "Showing {count} of {total}",
+    "pageOf": "Page {page} of {total}",
+    "unreadHint": "{count} unread on this page",
+    "noUnreadTitle": "All caught up",
+    "noUnreadText": "Nothing is waiting to be read.",
+    "loadFailed": "Could not load your notifications"
+  },
+  "messages": {
+    "school": "Minna team",
+    "placeholder": "Write a message…",
+    "send": "Send",
+    "sending": "Sending…",
+    "attach": "Attach a file",
+    "uploading": "Sending file… {pct}%",
+    "loading": "Loading…",
+    "loadFailed": "Could not open your messages",
+    "sendFailed": "That did not send",
+    "showEarlier": "Show earlier messages",
+    "emptyText": "Nothing here yet. Ask away.",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "aboutCourse": "About the course: {title}",
+    "privacyNote": "The school passes questions to your teacher without saying who asked.",
+    "askAbout": "Ask about this course",
+    "dockMinimise": "Minimise",
+    "dockExpand": "Expand",
+    "dockClose": "Close chat",
+    "dockOpenFull": "See all"
+  },
   "ads": {
     "region": "Advertisement",
     "label": "ADS",
     "emptyTitle": "ADS / Sponsored",
     "emptySize": "Advertising space · Desktop 4:1 · Mobile 4:5"
+  },
+  "drop": {
+    "here": "Drop a file here",
+    "orPick": "or click to choose one from your device",
+    "replace": "Click to change the file",
+    "badType": "“{name}” is not a kind of file we accept — see what is below.",
+    "tooBig": "“{name}” is {size}, over the {max} MB limit.",
+    "empty": "“{name}” is empty. Please choose another.",
+    "remove": "Remove {name}"
   }
 }

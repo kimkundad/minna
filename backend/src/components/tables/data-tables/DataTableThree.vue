@@ -818,7 +818,7 @@ const filteredData = computed(() => {
         person.office.toLowerCase().includes(searchLower),
     )
     .sort((a, b) => {
-      let modifier = sortDirection.value === 'asc' ? 1 : -1
+      const modifier = sortDirection.value === 'asc' ? 1 : -1
       if (a[sortColumn.value] < b[sortColumn.value]) return -1 * modifier
       if (a[sortColumn.value] > b[sortColumn.value]) return 1 * modifier
       return 0
@@ -840,7 +840,7 @@ const endEntry = computed(() => {
 const totalPages = computed(() => Math.ceil(filteredData.value.length / perPage.value))
 
 const pagesAroundCurrent = computed(() => {
-  let pages = []
+  const pages = []
   const startPage = Math.max(2, currentPage.value - 2)
   const endPage = Math.min(totalPages.value - 1, currentPage.value + 2)
 

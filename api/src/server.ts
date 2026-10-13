@@ -1,8 +1,16 @@
 import { buildApp } from './app'
 import { env } from './config/env'
 import { pool } from './db/client'
+import { isCaptchaConfigured } from './lib/captcha'
 
 const app = await buildApp()
+
+// Said once, at the top, rather than per request. Production refuses to start
+// without it (see REQUIRED_IN_PRODUCTION), so this only ever prints on a
+// developer's machine — where it is a reminder, not a fault.
+if (!isCaptchaConfigured()) {
+  console.warn('RECAPTCHA_SECRET is not set: every captcha check passes.')
+}
 
 try {
   await app.listen({ port: env.PORT, host: env.HOST })

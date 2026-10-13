@@ -1,0 +1,114 @@
+# Production images for all three apps, from one file.
+#
+#   docker build -f Dockerfile.prod --target api-runtime -t minna-api .
+#   docker build -f Dockerfile.prod --target web-runtime -t minna-web .
+#
+# Two images come out, not three. The API is a server and needs one of its
+# own; the public site and the admin are both static files, and one nginx
+# serves them side by side — they ship from the same commit, speak to the same
+# API, and splitting them would only create a way for the two halves of one
+# release to drift apart.
+#
+# Build arguments are the Vite ones only. Everything Vite reads is baked in at
+# build time and visible in the bundle, so nothing secret may be passed here:
+# the reCAPTCHA *site* key is public by design, and the admin URL is a link.
+# Secrets belong in the API's environment, which is read at run time.
+
+# ==========================================
+# Stage 1: the public site (frontend/)
+# ==========================================
+FROM node:20-alpine AS site-builder
+
+# Where staff sign in. Baked in because the site renders a link to it, and
+# there is no API call that would tell the browser where the admin lives.
+ARG VITE_ADMIN_URL=https://minna-admin.learnsbuy.com
+# Public half of the reCAPTCHA pair. The secret is the API's.
+ARG VITE_RECAPTCHA_SITE_KEY=
+ENV VITE_ADMIN_URL=$VITE_ADMIN_URL
+ENV VITE_RECAPTCHA_SITE_KEY=$VITE_RECAPTCHA_SITE_KEY
+
+WORKDIR /app
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+# `build` type-checks first, so a type error stops the release here rather
+# than shipping and surfacing in a browser.
+RUN npm run build
+
+# ==========================================
+# Stage 2: the admin (backend/)
+# ==========================================
+FROM node:20-alpine AS admin-builder
+
+WORKDIR /app
+COPY backend/package*.json ./
+RUN npm ci
+COPY backend/ ./
+RUN npm run build
+
+# ==========================================
+# Stage 3: the API, compiled (api/)
+# ==========================================
+FROM node:20-alpine AS api-builder
+
+WORKDIR /app
+COPY api/package*.json ./
+RUN npm ci
+COPY api/ ./
+# esbuild bundles the source but leaves dependencies external, so the runtime
+# stage below still installs node_modules.
+RUN npm run build
+
+# ==========================================
+# Stage 4: API runtime
+# ==========================================
+FROM node:20-alpine AS api-runtime
+
+# The database stores UTC and the code converts to Asia/Bangkok where it has
+# to (api/src/lib/time.ts). This is for log timestamps and for anything that
+# reaches for the system zone by accident.
+ENV TZ=Asia/Bangkok
+RUN apk add --no-cache tzdata \
+  && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
+  && echo $TZ > /etc/timezone
+
+WORKDIR /app
+COPY api/package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+COPY --from=api-builder /app/dist ./dist
+
+# No migration step, and no `drizzle/` in here. `drizzle-kit push` cannot run
+# against this database at all — DigitalOcean's MySQL sets
+# `sql_require_primary_key = ON` — so every schema change in this project is a
+# hand-written idempotent script under api/scripts/add-*.mts, run with tsx,
+# which is a dev dependency and deliberately not installed here. Those are run
+# from a developer's machine pointed at the production DATABASE_URL, before
+# the release that needs them. See DEPLOY.md.
+
+# Not root. The API writes nothing to disk — uploads go straight to space-kim
+# — so it has no reason to own anything in here.
+USER node
+
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3000/health || exit 1
+
+CMD ["node", "dist/server.js"]
+
+# ==========================================
+# Stage 5: nginx runtime — both sites + the API proxy
+# ==========================================
+FROM nginx:alpine AS web-runtime
+
+COPY docker/nginx/minna.prod.conf /etc/nginx/conf.d/default.conf
+# .inc, not .conf: nginx auto-includes conf.d/*.conf, and this one is meant to
+# be pulled in by each server block rather than loaded on its own.
+COPY docker/nginx/minna-api.inc /etc/nginx/conf.d/minna-api.inc
+COPY docker/nginx/minna-og.inc /etc/nginx/conf.d/minna-og.inc
+COPY docker/nginx/minna-og-proxy.inc /etc/nginx/conf.d/minna-og-proxy.inc
+COPY --from=site-builder  /app/dist /var/www/site
+COPY --from=admin-builder /app/dist /var/www/admin
+
+EXPOSE 80
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget -qO- http://127.0.0.1/nginx-health || exit 1

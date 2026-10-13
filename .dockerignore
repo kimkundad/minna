@@ -1,0 +1,36 @@
+# Keeping the build context small, and keeping secrets out of it.
+#
+# An image layer holds whatever was copied into it, forever, for anyone who
+# pulls it. A .env that slipped into the context is a published secret even if
+# nothing in the Dockerfile reads it.
+
+**/.env
+**/.env.*
+!**/.env.example
+**/certs/
+
+.git
+.gitignore
+**/node_modules
+**/dist
+**/.vite
+**/*.tsbuildinfo
+
+# The old Laravel app and the design reference: neither is built or served.
+_legacy/
+_design-ref/
+Frontend-Read/
+
+# Screenshots the flow tests leave behind.
+*.png
+img/
+
+# Dev-only compose and its data.
+docker-compose.dev.yml
+
+**/.DS_Store
+**/Thumbs.db
+**/*.log
+.idea/
+.vscode/
+.claude/

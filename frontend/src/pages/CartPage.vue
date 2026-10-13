@@ -11,14 +11,13 @@ import CartSummaryRows from '@/components/commerce/CartSummaryRows.vue'
 import CoSteps from '@/components/commerce/CoSteps.vue'
 import CoStateBox from '@/components/commerce/CoStateBox.vue'
 import CommerceConfirm from '@/components/commerce/CommerceConfirm.vue'
-import CommerceToasts from '@/components/commerce/CommerceToasts.vue'
 import { confirm, toast, useBottomBar } from '@/components/commerce/useCommerce'
 import { openAuth } from '@/components/auth/authChannel'
 import { api } from '@/lib/api'
 import type { ContentLocale, PublicCategory, PublicCourse } from '@/lib/api'
 import { baht as toBaht } from '@/lib/checkout'
 import { courseView } from '@/lib/course'
-import { num } from '@/lib/format'
+import { num, money } from '@/lib/format'
 import { useAuthStore } from '@/stores/auth'
 import { useCartStore } from '@/stores/cart'
 
@@ -124,10 +123,15 @@ const totals = computed(() => {
     normal,
     saving: Math.max(0, normal - subtotal),
     total: q ? toBaht(q.total) : 0,
+    // The quote's own answer. Before it arrives there is nothing priced on the
+    // page anyway, so baht is a placeholder rather than a guess at a price.
+    currency: q?.currency ?? 'THB',
   }
 })
 
-const baht = (n: number) => t('commerce.baht', { n: num(n) })
+/** The basket's own currency. A basket cannot mix two — the server refuses
+ *  one that does — so a single answer covers every figure on the page. */
+const baht = (n: number) => money(n, totals.value?.currency ?? 'THB', String(locale.value))
 
 /* ---------------- actions ---------------- */
 
@@ -295,6 +299,13 @@ useBottomBar('page-cart', bar, () => lines.value.length > 0)
           <h2 class="sr-only" id="ct-list-h">{{ t('commerce.cart.listHeading') }}</h2>
 
           <div id="ct-blocked">
+            <!-- A basket that cannot be priced says so here rather than
+                 showing an empty total and no reason. The server sends the
+                 sentence, because it is the one that knows which two
+                 currencies met. -->
+            <div v-if="cart.problem" class="ct-blocked-note">
+              <AppNotice tone="danger" :text="cart.problem" />
+            </div>
             <div v-if="blockedCount" class="ct-blocked-note">
               <AppNotice
                 tone="info"
@@ -349,6 +360,7 @@ useBottomBar('page-cart', bar, () => lines.value.length > 0)
               :count="totals.count"
               :normal="totals.normal"
               :saving="totals.saving"
+              :currency="totals.currency"
             />
 
             <div class="co-total">
@@ -432,7 +444,12 @@ useBottomBar('page-cart', bar, () => lines.value.length > 0)
   >
     <div class="co-bar-in">
       <div class="co-bar-detail" id="ct-bar-detail" :hidden="!barOpen">
-        <CartSummaryRows :count="totals.count" :normal="totals.normal" :saving="totals.saving" />
+        <CartSummaryRows
+          :count="totals.count"
+          :normal="totals.normal"
+          :saving="totals.saving"
+          :currency="totals.currency"
+        />
         <p class="co-sum-note">
           <AppIcon name="tag" /><span>{{ t('commerce.cart.couponNext') }}</span>
         </p>
@@ -472,5 +489,4 @@ useBottomBar('page-cart', bar, () => lines.value.length > 0)
   </div>
 
   <CommerceConfirm />
-  <CommerceToasts />
 </template>

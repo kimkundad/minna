@@ -6,18 +6,12 @@
  *
  *   node scripts/flow-blog.mjs [baseUrl]
  */
-import { existsSync } from 'node:fs'
-import puppeteer from 'puppeteer-core'
+import { launchBrowser } from './browser.mjs'
 
 const BASE = process.argv[2] ?? 'http://localhost:5174'
 const API = process.env.API ?? 'http://127.0.0.1:3000/api/v1'
 const SHOTS = process.env.SHOT_DIR ?? '.'
 
-const BROWSERS = [
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-]
 
 let failures = 0
 function check(name, ok, detail = '') {
@@ -31,8 +25,7 @@ const english = await get('/posts/public?locale=en&perPage=50')
 const pick = thai.data[0]
 const detail = (await get(`/posts/public/${pick.slug}`)).data
 
-const browser = await puppeteer.launch({
-  executablePath: BROWSERS.find((p) => existsSync(p)),
+const browser = await launchBrowser({
   headless: true,
   args: ['--no-sandbox', '--disable-gpu'],
 })

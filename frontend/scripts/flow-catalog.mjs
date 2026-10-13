@@ -5,7 +5,7 @@
  *   node flow-catalog.mjs [baseUrl]
  */
 import { existsSync } from 'node:fs'
-import puppeteer from 'puppeteer-core'
+import { launchBrowser } from './browser.mjs'
 
 const BASE = process.argv[2] ?? 'http://localhost:5174'
 const SHOTS = process.env.SHOT_DIR ?? '.'
@@ -22,8 +22,7 @@ function check(name, ok, detail = '') {
   if (!ok) failures += 1
 }
 
-const browser = await puppeteer.launch({
-  executablePath: BROWSERS.find((p) => existsSync(p)),
+const browser = await launchBrowser({
   headless: true,
   args: ['--no-sandbox', '--disable-gpu'],
 })
@@ -72,14 +71,22 @@ const f = await facets()
 check('facet counts are present', f.some((x) => x.count > 0), `${f.length} options`)
 
 const groups = [...new Set(f.map((x) => x.group))]
+// Four groups besides category. No CE group — that is the reference project's
+// professional-credit scheme, which Minna awards none of. No language group
+// either: the catalogue follows the language the site is being read in, so the
+// only option a tick-box could offer is the one already applied.
 check(
-  'five facet groups besides category, and no CE group',
-  groups.length === 6 && !groups.includes('ce'),
+  'four facet groups besides category, and no CE or language group',
+  groups.length === 5 && !groups.includes('ce') && !groups.includes('locale'),
   groups.join(','),
 )
 
 const spoken = f.filter((x) => x.group === 'locale')
-check('language of instruction is a facet', spoken.length === 4, spoken.map((x) => `${x.label}:${x.count}`).join(' '))
+check(
+  'the language of instruction is not offered as a filter',
+  spoken.length === 0,
+  spoken.map((x) => `${x.label}:${x.count}`).join(' '),
+)
 
 /* ---------------- 2. a facet count is a promise ---------------- */
 // Tick the option and the result count must equal the number that was beside it.
@@ -219,17 +226,33 @@ for (const [where, path] of [
 ]) {
   await page.goto(`${BASE}${path}`, { waitUntil: 'networkidle2' })
   await page.waitForSelector('.cc [data-action]', { timeout: 10000 })
-  const before = page.url()
-  const action = await page.$eval('.cc [data-action]', (el) => el.dataset.action)
-  await page.click('.cc [data-action]')
-  await page
-    .waitForFunction(() => location.pathname.includes('/checkout'), { timeout: 6000 })
-    .catch(() => {})
+
+  // A card offers the basket, not the till. Buying outright asks somebody to
+  // commit before they have seen the lessons or the access period, and both of
+  // those are on the course's own page.
+  const paid = await page.$('.cc:not(:has(.is-free)) [data-action="add-cart"]')
   check(
-    `a card's "${action}" button works on ${where}`,
-    page.url().includes('/checkout?items='),
-    before === page.url() ? 'nothing happened' : page.url(),
+    `a paid card on ${where} offers the basket`,
+    paid !== null,
+    await page.$eval('.cc [data-action]', (el) => `${el.dataset.action}: ${el.textContent.trim()}`),
   )
+  if (!paid) continue
+
+  check(
+    `  and says so in words on ${where}`,
+    (await paid.evaluate((el) => el.textContent.trim())).includes('ตะกร้า'),
+    await paid.evaluate((el) => el.textContent.trim()),
+  )
+
+  // Signed out, the basket needs an account — so the click asks for one rather
+  // than being thrown away.
+  await paid.click()
+  await new Promise((r) => setTimeout(r, 900))
+  check(
+    `  and a signed-out visitor is asked to sign in on ${where}`,
+    (await page.$('input[type="password"]')) !== null,
+  )
+  await page.keyboard.press('Escape')
 }
 
 /* ---------------- 8. images, and a clean console ---------------- */

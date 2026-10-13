@@ -1,0 +1,429 @@
+{
+  "id": {
+    "account": {
+      "title": "Akun saya",
+      "menu": "Menu akun",
+      "logout": "Keluar",
+      "package": "Paket",
+      "courseUnit": "kursus",
+      "days": "{n} hari",
+      "progressOf": "Kemajuan — {title}",
+      "nav": {
+        "overview": "Ringkasan akun",
+        "learning": "Pembelajaran saya",
+        "orders": "Riwayat pesanan",
+        "profile": "Pengaturan akun",
+        "teaching": "Admin pengajar",
+        "messages": "Pesan",
+        "notifications": "Pemberitahuan"
+      },
+      "page": {
+        "overview": {
+          "title": "Ringkasan akun",
+          "desc": "Paket Anda, kemajuan belajar, dan pemberitahuan terbaru, dalam satu halaman"
+        },
+        "learning": {
+          "title": "Pembelajaran saya",
+          "desc": "Kemajuan, status kuis, dan tanggal berakhir untuk setiap kursus yang Anda miliki"
+        },
+        "orders": {
+          "title": "Riwayat pesanan",
+          "desc": "Pesanan kursus Anda, status pembayaran, rincian, dan kuitansi"
+        },
+        "package": {
+          "title": "Paket saya",
+          "desc": "Status paket, tanggal berakhir, manfaat, dan pilihan paket untuk jenis keanggotaan Anda"
+        },
+        "profile": {
+          "title": "Pengaturan akun",
+          "desc": "Data pribadi, minat, keamanan, dan apa yang boleh kami kirim ke Anda"
+        },
+        "notifications": {
+          "title": "Pemberitahuan",
+          "desc": "Semua yang terjadi pada akun dan kursus Anda"
+        },
+        "messages": { "title": "Pesan", "desc": "Tanyakan apa pun kepada sekolah" }
+      },
+      "pkgStatus": { "active": "Aktif", "expiring": "Segera berakhir", "expired": "Berakhir" },
+      "group": {
+        "all": "Semua",
+        "inProgress": "Sedang berjalan",
+        "notStarted": "Belum dimulai",
+        "completed": "Selesai",
+        "completedShort": "Selesai",
+        "expired": "Berakhir"
+      },
+      "gate": {
+        "title": "Masuk untuk melihat akun Anda",
+        "text": "Kursus, kemajuan, pesanan, dan paket Anda muncul di sini setelah Anda masuk.",
+        "alt": "Belum punya akun? Daftar gratis dan mulai dengan kursus gratis."
+      },
+      "overview": {
+        "hello": "Halo, {name}",
+        "summary": "Ringkasan belajar",
+        "currentPackage": "Paket saat ini",
+        "expiresOn": "Berakhir {date}",
+        "daysLeftLabel": "tersisa:",
+        "upgradeHint": "Tingkatkan paket untuk belajar kursus yang termasuk di dalamnya",
+        "managePackage": "Kelola paket",
+        "viewPackages": "Lihat paket",
+        "continueTitle": "Lanjut dari tempat Anda berhenti",
+        "continueSub": "Kemajuan tersimpan otomatis — lanjutkan dari perangkat mana pun",
+        "allCourses": "Semua kursus saya ({count})",
+        "lastLesson": "Pelajaran terakhir:",
+        "lastStudied": "Terakhir dipelajari {when}",
+        "quizLesson": "Kuis akhir kursus",
+        "overallPct": "{pct}% berjalan",
+        "shelfLabel": "Kemajuan keseluruhan",
+        "lessonsDone": "{done} dari {total} pelajaran selesai",
+        "allDoneTitle": "Tidak ada lagi yang perlu dilanjutkan",
+        "allDoneText": "Semua pelajaran yang Anda miliki sudah selesai. Ulangi salah satunya, atau cari yang baru."
+      },
+      "empty": {
+        "learningTitle": "Anda belum mempelajari apa pun",
+        "overviewText": "Mulai dengan kursus gratis untuk anggota, atau cari yang sesuai dengan minat Anda.",
+        "learningText": "Mulai dengan kursus gratis untuk anggota, atau cari yang sesuai dengan minat Anda — kursus yang Anda miliki akan muncul di sini bersama kemajuannya.",
+        "findCourses": "Cari kursus",
+        "freeCourses": "Lihat kursus gratis"
+      },
+      "notif": {
+        "sub": "Pesanan, akses yang segera berakhir, dan hasil penilaian esai",
+        "newCount": "{count} baru",
+        "new": "baru",
+        "readAll": "Tandai semua sudah dibaca",
+        "markRead": "Tandai sudah dibaca",
+        "emptyTitle": "Belum ada pemberitahuan",
+        "emptyText": "Pembelian kursus, hasil penilaian esai, dan akses yang segera berakhir akan muncul di sini.",
+        "type": {
+          "purchase": "Pesanan",
+          "essay-pass": "Esai lulus",
+          "essay-revision": "Esai perlu diperbaiki",
+          "essay-submitted": "Esai dikirim",
+          "expiry": "Akses atau paket segera berakhir",
+          "welcome": "Selamat datang"
+        }
+      }
+    }
+  },
+
+  "zh": {
+    "account": {
+      "title": "我的账户",
+      "menu": "账户菜单",
+      "logout": "退出登录",
+      "package": "套餐",
+      "courseUnit": "门课程",
+      "days": "{n} 天",
+      "progressOf": "进度 — {title}",
+      "nav": {
+        "overview": "账户总览",
+        "learning": "我的学习",
+        "orders": "订单记录",
+        "profile": "账户设置",
+        "teaching": "教学管理",
+        "messages": "消息",
+        "notifications": "通知"
+      },
+      "page": {
+        "overview": {
+          "title": "账户总览",
+          "desc": "你的套餐、学习进度与最新通知，都在一页上"
+        },
+        "learning": {
+          "title": "我的学习",
+          "desc": "你拥有的每门课程的进度、测验状态与到期日"
+        },
+        "orders": {
+          "title": "订单记录",
+          "desc": "你的课程订单、付款状态、明细与收据"
+        },
+        "package": {
+          "title": "我的套餐",
+          "desc": "套餐状态、到期日、权益，以及适用于你会员类别的方案"
+        },
+        "profile": {
+          "title": "账户设置",
+          "desc": "个人资料、兴趣、安全设置，以及我们可以寄给你的内容"
+        },
+        "notifications": {
+          "title": "通知",
+          "desc": "你的账户与课程发生过的一切"
+        },
+        "messages": { "title": "消息", "desc": "有任何问题都可以问学校" }
+      },
+      "pkgStatus": { "active": "有效", "expiring": "即将到期", "expired": "已到期" },
+      "group": {
+        "all": "全部",
+        "inProgress": "进行中",
+        "notStarted": "未开始",
+        "completed": "已完成",
+        "completedShort": "已完成",
+        "expired": "已到期"
+      },
+      "gate": {
+        "title": "登录后查看你的账户",
+        "text": "登录后，你的课程、进度、订单与套餐都会显示在这里。",
+        "alt": "还没有账户？免费注册，从一门免费课程开始。"
+      },
+      "overview": {
+        "hello": "你好，{name}",
+        "summary": "学习概况",
+        "currentPackage": "目前套餐",
+        "expiresOn": "{date} 到期",
+        "daysLeftLabel": "剩余：",
+        "upgradeHint": "升级套餐即可学习套餐内的课程",
+        "managePackage": "管理套餐",
+        "viewPackages": "查看套餐",
+        "continueTitle": "从你停下的地方接着学",
+        "continueSub": "进度自动保存 — 换哪台设备都能接着学",
+        "allCourses": "我的全部课程（{count}）",
+        "lastLesson": "上一节课：",
+        "lastStudied": "上次学习：{when}",
+        "quizLesson": "结课测验",
+        "overallPct": "已完成 {pct}%",
+        "shelfLabel": "整体进度",
+        "lessonsDone": "{total} 节课中已完成 {done} 节",
+        "allDoneTitle": "没有待续的内容了",
+        "allDoneText": "你拥有的每一节课都学完了。可以回头复习一门，或找点新的。"
+      },
+      "empty": {
+        "learningTitle": "你还没有开始学任何课程",
+        "overviewText": "先从会员免费课程开始，或找一门符合你兴趣的。",
+        "learningText": "先从会员免费课程开始，或找一门符合你兴趣的 — 你拥有的课程会连同进度显示在这里。",
+        "findCourses": "寻找课程",
+        "freeCourses": "查看免费课程"
+      },
+      "notif": {
+        "sub": "订单、即将到期的观看权限，以及作文批改结果",
+        "newCount": "{count} 则新通知",
+        "new": "新",
+        "readAll": "全部标为已读",
+        "markRead": "标为已读",
+        "emptyTitle": "还没有通知",
+        "emptyText": "课程购买、作文批改结果与即将到期的观看权限都会显示在这里。",
+        "type": {
+          "purchase": "订单",
+          "essay-pass": "作文通过",
+          "essay-revision": "作文需修改",
+          "essay-submitted": "作文已提交",
+          "expiry": "观看权限或套餐即将到期",
+          "welcome": "欢迎"
+        }
+      }
+    }
+  },
+
+  "ko": {
+    "account": {
+      "title": "내 계정",
+      "menu": "계정 메뉴",
+      "logout": "로그아웃",
+      "package": "패키지",
+      "courseUnit": "개 강의",
+      "days": "{n}일",
+      "progressOf": "진도 — {title}",
+      "nav": {
+        "overview": "계정 개요",
+        "learning": "내 학습",
+        "orders": "주문 내역",
+        "profile": "계정 설정",
+        "teaching": "강의 관리",
+        "messages": "메시지",
+        "notifications": "알림"
+      },
+      "page": {
+        "overview": {
+          "title": "계정 개요",
+          "desc": "패키지, 학습 진도, 최근 알림을 한 화면에"
+        },
+        "learning": {
+          "title": "내 학습",
+          "desc": "수강 중인 모든 강의의 진도와 퀴즈 상태, 수강 종료일"
+        },
+        "orders": {
+          "title": "주문 내역",
+          "desc": "강의 주문과 결제 상태, 상세 내역, 영수증"
+        },
+        "package": {
+          "title": "내 패키지",
+          "desc": "패키지 상태와 종료일, 혜택, 회원 유형에 맞는 플랜"
+        },
+        "profile": {
+          "title": "계정 설정",
+          "desc": "개인정보, 관심 분야, 보안, 그리고 보내 드릴 내용"
+        },
+        "notifications": {
+          "title": "알림",
+          "desc": "회원님의 계정과 강의에 일어난 모든 일"
+        },
+        "messages": { "title": "메시지", "desc": "학교에 무엇이든 물어보세요" }
+      },
+      "pkgStatus": { "active": "이용 중", "expiring": "곧 만료", "expired": "만료됨" },
+      "group": {
+        "all": "전체",
+        "inProgress": "학습 중",
+        "notStarted": "시작 전",
+        "completed": "완료",
+        "completedShort": "완료",
+        "expired": "만료"
+      },
+      "gate": {
+        "title": "계정을 보려면 로그인하세요",
+        "text": "로그인하시면 강의와 진도, 주문, 패키지가 여기에 표시됩니다.",
+        "alt": "아직 계정이 없으신가요? 무료로 가입하고 무료 강의부터 시작하세요."
+      },
+      "overview": {
+        "hello": "안녕하세요, {name}님",
+        "summary": "학습 요약",
+        "currentPackage": "현재 패키지",
+        "expiresOn": "{date} 만료",
+        "daysLeftLabel": "남음:",
+        "upgradeHint": "패키지를 올리면 패키지에 포함된 강의를 들을 수 있습니다",
+        "managePackage": "패키지 관리",
+        "viewPackages": "패키지 보기",
+        "continueTitle": "멈춘 자리에서 이어서",
+        "continueSub": "진도는 저절로 저장됩니다 — 어떤 기기에서든 이어서 보세요",
+        "allCourses": "내 강의 전체 ({count})",
+        "lastLesson": "마지막 수업:",
+        "lastStudied": "최근 학습 {when}",
+        "quizLesson": "강의 마무리 퀴즈",
+        "overallPct": "{pct}% 진행",
+        "shelfLabel": "전체 진도",
+        "lessonsDone": "{total}개 중 {done}개 수업 완료",
+        "allDoneTitle": "이어서 볼 것이 없습니다",
+        "allDoneText": "보유한 수업을 모두 마치셨습니다. 하나를 다시 보시거나 새 강의를 찾아보세요."
+      },
+      "empty": {
+        "learningTitle": "아직 학습 중인 강의가 없습니다",
+        "overviewText": "회원 무료 강의로 시작하시거나, 관심사에 맞는 강의를 찾아보세요.",
+        "learningText": "회원 무료 강의로 시작하시거나, 관심사에 맞는 강의를 찾아보세요 — 수강 가능한 강의가 진도와 함께 여기에 표시됩니다.",
+        "findCourses": "강의 찾기",
+        "freeCourses": "무료 강의 보기"
+      },
+      "notif": {
+        "sub": "주문, 곧 끝나는 수강 기간, 작문 평가 결과",
+        "newCount": "새 알림 {count}건",
+        "new": "새 알림",
+        "readAll": "모두 읽음으로 표시",
+        "markRead": "읽음으로 표시",
+        "emptyTitle": "아직 알림이 없습니다",
+        "emptyText": "강의 구매, 작문 평가 결과, 곧 끝나는 수강 기간이 여기에 표시됩니다.",
+        "type": {
+          "purchase": "주문",
+          "essay-pass": "작문 합격",
+          "essay-revision": "작문 수정 필요",
+          "essay-submitted": "작문 제출",
+          "expiry": "수강 기간 또는 패키지 만료 예정",
+          "welcome": "환영합니다"
+        }
+      }
+    }
+  },
+
+  "tw": {
+    "account": {
+      "title": "我的帳戶",
+      "menu": "帳戶選單",
+      "logout": "登出",
+      "package": "套裝",
+      "courseUnit": "門課程",
+      "days": "{n} 天",
+      "progressOf": "進度 — {title}",
+      "nav": {
+        "overview": "帳戶總覽",
+        "learning": "我的學習",
+        "orders": "訂單紀錄",
+        "profile": "帳戶設定",
+        "teaching": "教學管理",
+        "messages": "訊息",
+        "notifications": "通知"
+      },
+      "page": {
+        "overview": {
+          "title": "帳戶總覽",
+          "desc": "你的套裝、學習進度與最新通知，都在一頁上"
+        },
+        "learning": {
+          "title": "我的學習",
+          "desc": "你擁有的每門課程的進度、測驗狀態與到期日"
+        },
+        "orders": {
+          "title": "訂單紀錄",
+          "desc": "你的課程訂單、付款狀態、明細與收據"
+        },
+        "package": {
+          "title": "我的套裝",
+          "desc": "套裝狀態、到期日、權益，以及適用於你會員類別的方案"
+        },
+        "profile": {
+          "title": "帳戶設定",
+          "desc": "個人資料、興趣、安全設定，以及我們可以寄給你的內容"
+        },
+        "notifications": {
+          "title": "通知",
+          "desc": "你的帳戶與課程發生過的一切"
+        },
+        "messages": { "title": "訊息", "desc": "有任何問題都可以問學校" }
+      },
+      "pkgStatus": { "active": "有效", "expiring": "即將到期", "expired": "已到期" },
+      "group": {
+        "all": "全部",
+        "inProgress": "進行中",
+        "notStarted": "未開始",
+        "completed": "已完成",
+        "completedShort": "已完成",
+        "expired": "已到期"
+      },
+      "gate": {
+        "title": "登入後查看你的帳戶",
+        "text": "登入後，你的課程、進度、訂單與套裝都會顯示在這裡。",
+        "alt": "還沒有帳戶？免費註冊，從一門免費課程開始。"
+      },
+      "overview": {
+        "hello": "你好，{name}",
+        "summary": "學習概況",
+        "currentPackage": "目前套裝",
+        "expiresOn": "{date} 到期",
+        "daysLeftLabel": "剩餘：",
+        "upgradeHint": "升級套裝即可學習套裝內的課程",
+        "managePackage": "管理套裝",
+        "viewPackages": "查看套裝",
+        "continueTitle": "從你停下的地方接著學",
+        "continueSub": "進度自動儲存 — 換哪台裝置都能接著學",
+        "allCourses": "我的全部課程（{count}）",
+        "lastLesson": "上一堂課：",
+        "lastStudied": "上次學習：{when}",
+        "quizLesson": "結業測驗",
+        "overallPct": "已完成 {pct}%",
+        "shelfLabel": "整體進度",
+        "lessonsDone": "{total} 堂課中已完成 {done} 堂",
+        "allDoneTitle": "沒有待續的內容了",
+        "allDoneText": "你擁有的每一堂課都學完了。可以回頭複習一門，或找點新的。"
+      },
+      "empty": {
+        "learningTitle": "你還沒有開始學任何課程",
+        "overviewText": "先從會員免費課程開始，或找一門符合你興趣的。",
+        "learningText": "先從會員免費課程開始，或找一門符合你興趣的 — 你擁有的課程會連同進度顯示在這裡。",
+        "findCourses": "尋找課程",
+        "freeCourses": "查看免費課程"
+      },
+      "notif": {
+        "sub": "訂單、即將到期的觀看權限，以及作文批改結果",
+        "newCount": "{count} 則新通知",
+        "new": "新",
+        "readAll": "全部標為已讀",
+        "markRead": "標為已讀",
+        "emptyTitle": "還沒有通知",
+        "emptyText": "課程購買、作文批改結果與即將到期的觀看權限都會顯示在這裡。",
+        "type": {
+          "purchase": "訂單",
+          "essay-pass": "作文通過",
+          "essay-revision": "作文需修改",
+          "essay-submitted": "作文已提交",
+          "expiry": "觀看權限或套裝即將到期",
+          "welcome": "歡迎"
+        }
+      }
+    }
+  }
+}

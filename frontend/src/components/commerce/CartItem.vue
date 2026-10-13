@@ -8,7 +8,7 @@ import InstructorLine from '@/components/course/InstructorLine.vue'
 import CoAccessNote from './CoAccessNote.vue'
 import type { AccessNote } from './types'
 import type { CourseView } from '@/lib/course'
-import { num } from '@/lib/format'
+import { num, money } from '@/lib/format'
 
 /**
  * One course in the basket.
@@ -31,7 +31,7 @@ const emit = defineEmits<{
   remove: [courseId: number]
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const BLOCK = {
   owned: { icon: 'check-circle', badge: 'done' },
@@ -134,15 +134,15 @@ const note = computed<AccessNote>(() => {
         <span class="text-xs text-muted">{{ t('commerce.freeForMembers') }}</span>
       </template>
       <template v-else>
-        <strong>{{ t('commerce.baht', { n: num(view.price) }) }}</strong>
+        <strong>{{ money(view.price, view.currency, String(locale)) }}</strong>
         <template v-if="saving">
           <s
             ><span class="sr-only">{{ t('commerce.normalPrice') }}</span
-            >{{ t('commerce.baht', { n: num(view.normalPrice ?? 0) }) }}</s
+            >{{ money(view.normalPrice ?? 0, view.currency, String(locale)) }}</s
           >
           <span class="co-save">
             <AppIcon name="tag" />{{
-              t('commerce.cart.saving', { amount: t('commerce.baht', { n: num(saving) }) })
+              t('commerce.cart.saving', { amount: money(saving, view.currency, String(locale)) })
             }}
           </span>
         </template>

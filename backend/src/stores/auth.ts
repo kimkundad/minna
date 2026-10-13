@@ -38,18 +38,31 @@ export const useAuthStore = defineStore('auth', () => {
   })
 
   /** Called once before the app mounts. */
+  /** The one in flight, so two callers wait on one answer rather than race. */
+  let starting: Promise<void> | null = null
+
+  /**
+   * Both `main.ts` and the router guard call this on a cold load, and the
+   * guard's call arrives before the first has finished. Sharing the promise
+   * means one renewal and one `/auth/me`, and — more to the point — one answer
+   * about whether anybody is signed in.
+   */
   async function bootstrap(): Promise<void> {
-    if (await refresh()) {
-      try {
-        user.value = (await api.me()).user
-      } catch {
-        // A token that refreshes but cannot fetch its own user is not a session
-        // worth keeping.
-        setAccessToken(null)
-        user.value = null
+    starting ??= (async () => {
+      if (await refresh()) {
+        try {
+          user.value = (await api.me()).user
+        } catch {
+          // A token that refreshes but cannot fetch its own user is not a
+          // session worth keeping.
+          setAccessToken(null)
+          user.value = null
+        }
       }
-    }
-    ready.value = true
+      ready.value = true
+      starting = null
+    })()
+    return starting
   }
 
   async function login(email: string, password: string, remember = true): Promise<SessionUser> {

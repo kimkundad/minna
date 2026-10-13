@@ -23,12 +23,6 @@ import { fileURLToPath } from 'node:url'
 const BASE = process.argv[2] ?? 'http://localhost:5180'
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', '.reference-dom')
 
-const BROWSERS = [
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
-]
 
 const browser = BROWSERS.find((p) => existsSync(p))
 if (!browser) {

@@ -4,9 +4,11 @@ import {
   categories,
   contactMessages,
   posts,
+  roles,
   subscribers,
   teacherProfiles,
   testimonials,
+  userRoles,
   users,
 } from '../../db/schema/index'
 import type { POST_LOCALES } from '../../db/schema/content'
@@ -38,6 +40,19 @@ export interface PostInput {
   status: 'draft' | 'published'
   /** From the same list the courses use. Null when it fits nowhere. */
   categoryId: number | null
+  /** How it looks when shared, where that should differ from the page. */
+  ogTitle?: string | null | undefined
+  ogDescription?: string | null | undefined
+  ogImagePath?: string | null | undefined
+  /**
+   * Who it is by. Absent leaves it as it was — which on a create means the
+   * person creating it, and on an edit means whoever is already credited.
+   *
+   * Null counts as absent rather than as "no author". An article always has
+   * one: it is the name and the biography on the card at the end of it, and a
+   * blank there is a gap on a published page rather than a tidy empty field.
+   */
+  authorId?: number | null | undefined
 }
 
 export async function listPosts(opts: {
@@ -233,12 +248,40 @@ async function slugTaken(slug: string, exceptId?: number): Promise<boolean> {
   return Boolean(row && row.id !== exceptId)
 }
 
-export async function createPost(input: PostInput, authorId: number) {
+/**
+ * Whether somebody may be credited with an article.
+ *
+ * Staff and teachers, and nobody else. Without this an administrator could
+ * put any user id in the field and credit an article to a student — who would
+ * then have their name on the public site, under writing they did not do and
+ * cannot take down.
+ */
+async function assertCanBeAuthor(userId: number) {
+  const [row] = await db
+    .select({ role: roles.name })
+    .from(users)
+    .innerJoin(userRoles, eq(userRoles.userId, users.id))
+    .innerJoin(roles, eq(roles.id, userRoles.roleId))
+    .where(and(eq(users.id, userId), inArray(roles.name, ['teacher', 'admin', 'superadmin'])))
+    .limit(1)
+
+  if (!row) {
+    throw conflict('That person cannot be an author.', {
+      authorId: 'Pick a teacher or a member of staff.',
+    })
+  }
+}
+
+export async function createPost(input: PostInput, createdBy: number) {
   if (await slugTaken(input.slug)) throw conflict('That web address is already in use.')
+  if (input.authorId) await assertCanBeAuthor(input.authorId)
 
   const [res] = await db.insert(posts).values({
     ...input,
-    authorId,
+    // Whoever was picked, or the person doing the creating. Most articles are
+    // written by the person filing them, so the fallback is the common case
+    // rather than a guess.
+    authorId: input.authorId ?? createdBy,
     // Stamped when it first goes live, and never moved afterwards: the date on
     // an article is part of what it says.
     publishedAt: input.status === 'published' ? new Date() : null,
@@ -249,11 +292,17 @@ export async function createPost(input: PostInput, authorId: number) {
 export async function updatePost(id: number, input: PostInput) {
   const before = await getPost(id)
   if (await slugTaken(input.slug, id)) throw conflict('That web address is already in use.')
+  if (input.authorId) await assertCanBeAuthor(input.authorId)
 
   await db
     .update(posts)
     .set({
       ...input,
+      // Absent means unchanged. Spreading `input` would otherwise write
+      // undefined over the existing author on any save that left it out.
+      ...(input.authorId === undefined || input.authorId === null
+        ? { authorId: before.authorId }
+        : { authorId: input.authorId }),
       // Publishing stamps the date; unpublishing and republishing keeps the
       // original, because readers and search engines have seen it.
       publishedAt:

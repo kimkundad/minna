@@ -1,0 +1,73 @@
+{
+  "id": {
+    "commerce": {
+      "tax": {
+        "idCard": "Nomor identitas Thailand, 13 digit",
+        "taxId": "Nomor pajak (Tax ID), 13 digit",
+        "errTaxId": "Nomor pajak terdiri dari 13 digit",
+        "errTaxIdCheck": "Nomor pajak itu tidak valid — periksa angkanya",
+        "errIdCardCheck": "Nomor identitas itu tidak valid — periksa angkanya"
+      },
+      "error": {
+        "taxIdRequired": "Mohon masukkan nomor pajak 13 digit",
+        "taxIdFormat": "Nomor pajak terdiri dari 13 digit",
+        "idCardRequired": "Mohon masukkan nomor identitas Thailand 13 digit",
+        "idCardFormat": "Nomor identitas Thailand terdiri dari 13 digit"
+      }
+    }
+  },
+
+  "zh": {
+    "commerce": {
+      "tax": {
+        "idCard": "泰国身份证号，13 位",
+        "taxId": "税号（Tax ID），13 位",
+        "errTaxId": "税号为 13 位数字",
+        "errTaxIdCheck": "该税号无效 — 请检查数字",
+        "errIdCardCheck": "该身份证号无效 — 请检查数字"
+      },
+      "error": {
+        "taxIdRequired": "请输入 13 位税号",
+        "taxIdFormat": "税号为 13 位数字",
+        "idCardRequired": "请输入 13 位泰国身份证号",
+        "idCardFormat": "泰国身份证号为 13 位数字"
+      }
+    }
+  },
+
+  "ko": {
+    "commerce": {
+      "tax": {
+        "idCard": "타이 신분증 번호 13자리",
+        "taxId": "납세자번호(Tax ID) 13자리",
+        "errTaxId": "납세자번호는 13자리입니다",
+        "errTaxIdCheck": "그 납세자번호는 올바르지 않습니다 — 숫자를 확인하세요",
+        "errIdCardCheck": "그 신분증 번호는 올바르지 않습니다 — 숫자를 확인하세요"
+      },
+      "error": {
+        "taxIdRequired": "13자리 납세자번호를 입력해 주세요",
+        "taxIdFormat": "납세자번호는 13자리입니다",
+        "idCardRequired": "13자리 타이 신분증 번호를 입력해 주세요",
+        "idCardFormat": "타이 신분증 번호는 13자리입니다"
+      }
+    }
+  },
+
+  "tw": {
+    "commerce": {
+      "tax": {
+        "idCard": "泰國身分證號，13 位",
+        "taxId": "稅號（Tax ID），13 位",
+        "errTaxId": "稅號為 13 位數字",
+        "errTaxIdCheck": "該稅號無效 — 請檢查數字",
+        "errIdCardCheck": "該身分證號無效 — 請檢查數字"
+      },
+      "error": {
+        "taxIdRequired": "請輸入 13 位稅號",
+        "taxIdFormat": "稅號為 13 位數字",
+        "idCardRequired": "請輸入 13 位泰國身分證號",
+        "idCardFormat": "泰國身分證號為 13 位數字"
+      }
+    }
+  }
+}

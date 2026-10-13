@@ -4,7 +4,9 @@ import App from './App.vue'
 import router from './router'
 import { i18n } from './locales'
 import { useAuthStore } from './stores/auth'
+import { useBrandingStore } from './stores/branding'
 import { useCartStore } from './stores/cart'
+import { useLearningStore } from './stores/learning'
 
 // Order matters: tokens define the custom properties every later file reads.
 import './assets/css/tokens.css'
@@ -46,4 +48,11 @@ useAuthStore(pinia)
     // After mounting, not before: the basket is a badge in the corner, and
     // nobody should wait on a page for it. It fills itself in a moment later.
     void useCartStore(pinia).load()
+    // Which courses are already theirs, for the cards' buttons and the home
+    // page's own rail. Also after mounting: a guest's is empty and a member's
+    // arrives in a moment.
+    void useLearningStore(pinia).load()
+    // Same reasoning, and the bundled logo is showing in the meantime, so
+    // there is nothing to wait for.
+    void useBrandingStore(pinia).load()
   })

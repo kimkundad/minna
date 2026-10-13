@@ -9,31 +9,44 @@ const password = z
   .regex(/[A-Za-z]/, 'Include at least one letter.')
   .regex(/[0-9]/, 'Include at least one number.')
 
+/**
+ * Gregorian, YYYY-MM-DD.
+ *
+ * Asked for at registration because asking later is harder than asking once.
+ * Exported so the settings screen can let somebody correct a typo in it
+ * against this rule rather than a looser copy of it.
+ *
+ * The regex only shapes the string; the first `refine` is what rejects
+ * 2026-02-31, and the second what rejects a year nobody was born in.
+ */
+export const birthdate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use the format YYYY-MM-DD.')
+  .refine((value) => {
+    const [y, m, d] = value.split('-').map(Number) as [number, number, number]
+    const date = new Date(Date.UTC(y, m - 1, d))
+    return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d
+  }, 'That date does not exist.')
+  .refine((value) => {
+    const year = Number(value.slice(0, 4))
+    const now = new Date().getUTCFullYear()
+    return year >= now - 120 && year <= now
+  }, 'Enter a realistic year of birth.')
+
 export const registerBody = z.object({
   email: z.string().email('Enter a valid email address.').max(255),
   password,
   firstName: z.string().min(1, 'Enter your first name.').max(100),
   lastName: z.string().min(1, 'Enter your last name.').max(100),
-  /**
-   * Gregorian, YYYY-MM-DD. Required: it is how a course meant for adults can
-   * tell who it is dealing with, and asking later is harder than asking once.
-   * The regex only shapes the string; `refine` is what rejects 2026-02-31.
-   */
-  birthdate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use the format YYYY-MM-DD.')
-    .refine((value) => {
-      const [y, m, d] = value.split('-').map(Number) as [number, number, number]
-      const date = new Date(Date.UTC(y, m - 1, d))
-      return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d
-    }, 'That date does not exist.')
-    .refine((value) => {
-      const year = Number(value.slice(0, 4))
-      const now = new Date().getUTCFullYear()
-      return year >= now - 120 && year <= now
-    }, 'Enter a realistic year of birth.'),
+  birthdate,
   phoneCountryCode: z.string().max(8).optional(),
-  phoneNational: z.string().max(32).optional(),
+  /** Digits only once stored: the field people type into formats as they go
+   *  ("81 123 4567"), and two spellings of one number is one too many. */
+  phoneNational: z
+    .string()
+    .max(32)
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v.replace(/\D/g, ''))),
   locale: z.enum(LOCALES).default('th'),
   /**
    * The terms and the privacy notice, accepted together as one box, as the

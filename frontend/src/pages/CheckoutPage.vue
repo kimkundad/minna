@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import AppNotice from '@/components/ui/AppNotice.vue'
 import CourseImage from '@/components/course/CourseImage.vue'
 import CheckoutItem from '@/components/commerce/CheckoutItem.vue'
 import CoCouponApplied from '@/components/commerce/CoCouponApplied.vue'
@@ -23,7 +24,7 @@ import {
   type ResolvedItem,
   type Unavailable,
 } from '@/lib/checkout'
-import { num } from '@/lib/format'
+import { num, money } from '@/lib/format'
 import { openAuth } from '@/components/auth/authChannel'
 import { useAuthStore } from '@/stores/auth'
 
@@ -126,7 +127,10 @@ async function load(): Promise<void> {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  void load()
+  void loadBilling()
+})
 watch(() => route.fullPath, () => {
   if (route.name === 'checkout') void load()
 })
@@ -150,12 +154,20 @@ async function applyCourseCoupon(slug: string, code: string): Promise<void> {
   couponBusy.value = slug
   couponErrors.value = { ...couponErrors.value, [slug]: '' }
 
-  const before = totals.value?.lines.find((l) => l.slug === slug)?.net ?? 0
+  /**
+   * Whether a coupon worked is whether the bill went down.
+   *
+   * This used to ask whether *this line* got cheaper, which is only true of a
+   * coupon for this course. A basket coupon typed into a course's box takes
+   * its discount off the order instead — the line is untouched — so a code
+   * that had just worked perfectly was reported back as invalid and undone.
+   */
+  const before = totals.value?.total ?? 0
   const previous = courseCoupons.value[slug]
   courseCoupons.value = { ...courseCoupons.value, [slug]: clean }
   try {
     await reprice()
-    const after = totals.value?.lines.find((l) => l.slug === slug)?.net ?? 0
+    const after = totals.value?.total ?? 0
     if (after >= before) {
       courseCoupons.value = { ...courseCoupons.value, [slug]: previous ?? '' }
       if (!previous) delete courseCoupons.value[slug]
@@ -187,12 +199,14 @@ async function applyOrderCoupon(code: string): Promise<void> {
   if (!clean) return
   orderCouponBusy.value = true
   orderCouponError.value = ''
-  const before = totals.value?.orderDiscount ?? 0
+  // The bill, for the same reason as above: one test that holds for every
+  // kind of coupon, rather than one per kind that has to be kept in step.
+  const before = totals.value?.total ?? 0
   const previous = orderCouponCode.value
   orderCouponCode.value = clean
   try {
     await reprice()
-    if ((totals.value?.orderDiscount ?? 0) <= before) {
+    if ((totals.value?.total ?? 0) >= before) {
       orderCouponCode.value = previous
       await reprice()
       orderCouponError.value = t('commerce.coupon.notValid')
@@ -277,6 +291,61 @@ watch(
   },
   { immediate: true },
 )
+
+/**
+ * The tax invoice details, as given last time.
+ *
+ * Filled in but not ticked: wanting a full tax invoice is a decision made per
+ * order, and pre-ticking it would issue documents nobody asked for. What is
+ * saved is the typing, which is the part that was tedious.
+ *
+ * A branch code of 00000 is the head office by law rather than a number
+ * somebody chose, so it goes back into the radio it came from and not into the
+ * box.
+ */
+const billingLoaded = ref(false)
+
+async function loadBilling(): Promise<void> {
+  if (!auth.isLoggedIn) return
+  try {
+    const saved = (await api.myBilling()).data
+    if (!saved) return
+    const f = form.value
+    f.taxType = saved.type
+    if (saved.type === 'corporate') {
+      f.company ||= saved.name
+      f.taxId ||= saved.taxId
+      f.branchType = saved.branchCode === '00000' || !saved.branchCode ? 'head' : 'branch'
+      if (f.branchType === 'branch') f.branchNo ||= saved.branchCode ?? ''
+    } else {
+      const [first = '', ...rest] = saved.name.split(/s+/)
+      f.taxFirstName ||= first
+      f.taxLastName ||= rest.join(' ')
+      f.idCard ||= saved.taxId
+    }
+    f.address ||= saved.address
+    billingLoaded.value = true
+  } catch {
+    // Nothing saved, or it could not be read. The form is simply empty, which
+    // is where everybody started anyway.
+  }
+}
+
+/**
+ * And kept, once an order carries them.
+ *
+ * Same timing as the phone below and for the same reason: after the order, not
+ * while it is being typed. Failing is silent — the order is placed, and these
+ * are a convenience for next time rather than part of the sale.
+ */
+async function rememberBilling(invoice: InvoiceRequest | null): Promise<void> {
+  if (!invoice) return
+  try {
+    await api.saveMyBilling(invoice)
+  } catch {
+    /* next time asks again, which is where it is already asked */
+  }
+}
 
 /**
  * A phone number given at checkout is kept.
@@ -373,6 +442,11 @@ const placing = ref(false)
 const ctaMessage = ref('')
 
 async function confirmOrder(): Promise<void> {
+  // Worked out once: the same block is sent with the order and then saved to
+  // the account, and two calls to `invoicePayload()` could disagree if the
+  // form changed between them.
+  const invoice = invoicePayload()
+
   if (placing.value || !items.value.length) return
   ctaMessage.value = ''
 
@@ -393,10 +467,11 @@ async function confirmOrder(): Promise<void> {
       ),
       ...(orderCouponCode.value ? { couponCode: orderCouponCode.value } : {}),
       method: form.value.method === 'qr' ? 'promptpay' : 'card',
-      invoice: invoicePayload(),
+      invoice,
     })
 
     await rememberPhone()
+    await rememberBilling(invoice)
 
     if (data.url) {
       // Stripe's own page takes the card details, so none of them ever touch
@@ -414,7 +489,47 @@ async function confirmOrder(): Promise<void> {
 
 /* ---------------- what the page says ---------------- */
 
-const baht = (n: number) => t('commerce.baht', { n: num(n) })
+/**
+ * The basket's own currency. A basket cannot mix two — the server refuses one
+ * that does — so a single answer covers every total on the page.
+ *
+ * Only the totals, though: they exist because a quote came back, and the quote
+ * is what names the currency. A signed-out visitor gets no quote, so anything
+ * shown before signing in has to read the currency off the course itself —
+ * see `lineMoney`.
+ */
+const baht = (n: number) => money(n, totals.value?.currency ?? 'THB', String(locale.value))
+
+/**
+ * One line's price, in the currency that line is priced in.
+ *
+ * The preview a guest sees is built without a quote, and falling back to baht
+ * there put "฿100" under a course that costs US$100 — the right number with
+ * the wrong currency on it, which is the one mistake this must never make.
+ */
+const lineMoney = (n: number, currency: string | null | undefined) =>
+  money(n, currency ?? 'THB', String(locale.value))
+
+/**
+ * Whether PromptPay is on offer.
+ *
+ * It is a Thai QR standard and settles in baht only, so a basket priced in
+ * anything else can be paid by card alone. The server refuses the combination
+ * as well, which is where this was discovered: QR is the default choice, so a
+ * dollar-priced course went to the till and came back with a refusal instead
+ * of a payment page.
+ */
+const qrAvailable = computed(() => (totals.value?.currency ?? 'THB') === 'THB')
+
+// Never leave an impossible method selected. Immediate, so a basket that is
+// already in dollars when the page opens starts on the card.
+watch(
+  qrAvailable,
+  (ok) => {
+    if (!ok && form.value.method === 'qr') form.value.method = 'card'
+  },
+  { immediate: true },
+)
 
 const subtitle = computed(() => {
   if (loading.value) return t('commerce.checkout.loading')
@@ -459,7 +574,10 @@ const previewLines = computed(() =>
       : null,
     artIcon: 'book-open',
     artPalette: (i.course.categoryId ?? 0) % 6,
-    price: i.course.price === 0 ? t('commerce.free') : baht(i.course.price / 100),
+    price:
+      i.course.price === 0
+        ? t('commerce.free')
+        : lineMoney(i.course.price / 100, i.course.currency),
   })),
 )
 
@@ -672,6 +790,7 @@ void asContentLocale(uiLocale.value)
                   :draft-code="couponDrafts[line.slug] ?? ''"
                   :error="couponErrors[line.slug]"
                   :busy="couponBusy === line.slug"
+                  :currency="totals.currency"
                   @update:draft-code="
                     (code) => (couponDrafts = { ...couponDrafts, [line.slug]: code })
                   "
@@ -792,10 +911,21 @@ void asContentLocale(uiLocale.value)
                 </div>
 
                 <template v-else>
+                  <AppNotice
+                    v-if="!qrAvailable"
+                    tone="info"
+                    :text="
+                      t('commerce.pay.cardOnly', { currency: totals?.currency ?? '' })
+                    "
+                  />
                   <fieldset class="fieldset">
                     <legend class="sr-only">{{ t('commerce.pay.legend') }}</legend>
                     <div class="co-pay-opts">
-                      <label class="opt-card co-pay-opt">
+                      <!-- PromptPay settles in baht only, so a basket priced
+                           in anything else is not offered it. The server
+                           refuses it too; this is so nobody picks it and then
+                           reads a refusal where a price should be. -->
+                      <label v-if="qrAvailable" class="opt-card co-pay-opt">
                         <span class="radio">
                           <input type="radio" name="method" value="qr" v-model="form.method" />
                         </span>
@@ -911,6 +1041,7 @@ void asContentLocale(uiLocale.value)
                   :total-disc="totalDiscount"
                   :vat="totals.vatAmount"
                   :vat-inclusive="totals.vatInclusive"
+                  :currency="totals.currency"
                 />
                 <div class="co-total">
                   <span class="co-total-lbl"
@@ -1026,6 +1157,7 @@ void asContentLocale(uiLocale.value)
           :total-disc="totalDiscount"
           :vat="totals.vatAmount"
           :vat-inclusive="totals.vatInclusive"
+                  :currency="totals.currency"
         />
       </div>
       <div class="co-bar-row">

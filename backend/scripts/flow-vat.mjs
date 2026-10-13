@@ -7,14 +7,8 @@
  * pricing is worse than no setting at all, because it looks like it worked.
  * Puts the rate back to 7% inclusive at the end.
  */
-import { existsSync } from 'node:fs'
-import puppeteer from 'puppeteer-core'
+import { launchBrowser } from './browser.mjs'
 
-const BROWSERS = [
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-]
 const ADMIN = process.env.ADMIN_URL ?? 'http://localhost:5173'
 const API = process.env.API_URL ?? 'http://127.0.0.1:3000'
 const EMAIL = process.env.SMOKE_ADMIN_EMAIL
@@ -41,6 +35,14 @@ async function call(method, path, body) {
 const admin = await call('POST', '/api/v1/auth/login', { email: EMAIL, password: PASSWORD })
 token = admin.body.accessToken
 
+// Read before changing anything, so the end of this file can put back exactly
+// what it found.
+const settingsNow = await call('GET', '/api/v1/settings')
+const settingValue = (key, fallback) =>
+  (settingsNow.body?.data ?? []).find((s) => s.key === key)?.value ?? fallback
+const wasPercent = settingValue('vat_percent', '0')
+const wasInclusive = settingValue('vat_inclusive', 'false')
+
 const before = await call('POST', '/api/v1/checkout/quote', {
   lines: [{ kind: 'course', id: 1 }],
 })
@@ -50,8 +52,7 @@ console.log('quote at 7% inclusive:', JSON.stringify(before.body?.data && {
   total: before.body.data.total,
 }))
 
-const browser = await puppeteer.launch({
-  executablePath: BROWSERS.find((p) => existsSync(p)),
+const browser = await launchBrowser({
   headless: true,
   args: ['--no-sandbox', '--disable-gpu'],
 })
@@ -117,8 +118,15 @@ console.log('quote at 10% exclusive:', JSON.stringify(after.body?.data && {
   total: after.body.data.total,
 }))
 
-// Put it back, through the API this time.
-await call('PUT', '/api/v1/settings', { vat_percent: '7', vat_inclusive: 'true' })
+// Put it back, through the API this time — to whatever it was, not to 7%.
+// It used to restore a hard-coded 7% inclusive, which was the rate on the day
+// this was written. Running it after the business deregistered for VAT turned
+// the tax back on across the whole site, and nothing said so: the line below
+// prints a restored figure either way.
+await call('PUT', '/api/v1/settings', {
+  vat_percent: wasPercent,
+  vat_inclusive: wasInclusive,
+})
 const restored = await call('POST', '/api/v1/checkout/quote', {
   lines: [{ kind: 'course', id: 1 }],
 })

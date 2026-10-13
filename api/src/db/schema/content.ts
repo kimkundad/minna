@@ -6,6 +6,7 @@ import {
   int,
   mysqlEnum,
   mysqlTable,
+  primaryKey,
   text,
   tinyint,
   uniqueIndex,
@@ -59,6 +60,10 @@ export const posts = mysqlTable(
     contentLocale: mysqlEnum('content_locale', POST_LOCALES).default('th').notNull(),
     status: mysqlEnum('status', ['draft', 'published']).default('draft').notNull(),
     publishedAt: datetime('published_at'),
+    /** Shared-link overrides. Null means share as the page already reads. */
+    ogTitle: varchar('og_title', { length: 255 }),
+    ogDescription: varchar('og_description', { length: 500 }),
+    ogImagePath: varchar('og_image_path', { length: 512 }),
     authorId: bigint('author_id', { mode: 'number', unsigned: true }).references(() => users.id, {
       onDelete: 'set null',
     }),
@@ -199,6 +204,15 @@ export const teacherApplications = mysqlTable(
     reason: text('reason'),
     /** Object key in Spaces, not a public URL. */
     resumePath: varchar('resume_path', { length: 512 }),
+    /**
+     * A clip of them teaching, sent to be watched once and then not kept.
+     *
+     * Deleted from storage the moment the application is decided, either way,
+     * and this column nulled with it. A hundred megabytes each, for a queue
+     * that only grows, of video showing a person's face and voice — there is
+     * no reason to hold it after the question it answered has been answered.
+     */
+    sampleVideoPath: varchar('sample_video_path', { length: 512 }),
     contactTime: varchar('contact_time', { length: 120 }),
     agreedAt: datetime('agreed_at'),
     status: mysqlEnum('status', ['pending', 'approved', 'rejected']).default('pending').notNull(),
@@ -219,14 +233,31 @@ export const notifications = mysqlTable(
     userId: bigint('user_id', { mode: 'number', unsigned: true })
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    type: mysqlEnum('type', NOTIFICATION_TYPES).notNull(),
+    /** Free text rather than an enum: a new kind of notification is a code
+     *  change either way, and an enum would make it a schema change too — on
+     *  a database whose migrations are hand-written, that is a reason to
+     *  invent fewer kinds than the product needs. */
+    type: varchar('type', { length: 40 }).notNull(),
+    /** Which app the link belongs to. A learner's notification must not send
+     *  them into the admin, nor a teacher's out to the public site. */
+    surface: mysqlEnum('surface', ['site', 'admin']).default('site').notNull(),
     title: varchar('title', { length: 255 }).notNull(),
     body: varchar('body', { length: 500 }),
+    /** A path within its surface, never a URL: the two apps are on different
+     *  hosts and each prefixes it with its own. */
     ctaUrl: varchar('cta_url', { length: 512 }),
+    /** What it is about, so the same event cannot be announced twice. */
+    subjectType: varchar('subject_type', { length: 40 }),
+    subjectId: bigint('subject_id', { mode: 'number', unsigned: true }),
     readAt: datetime('read_at'),
+    /** When the matching email went out, or null if none was sent. */
+    mailedAt: datetime('mailed_at'),
     createdAt: datetime('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
   },
-  (t) => [index('notifications_user_idx').on(t.userId, t.readAt, t.createdAt)],
+  (t) => [
+    index('notifications_user_idx').on(t.userId, t.readAt, t.createdAt),
+    uniqueIndex('notifications_subject_unique').on(t.userId, t.type, t.subjectType, t.subjectId),
+  ],
 )
 
 /**
@@ -323,4 +354,65 @@ export const heroSlides = mysqlTable(
       .notNull(),
   },
   (t) => [index('hero_slides_shown_idx').on(t.locale, t.status, t.sortOrder)],
+)
+
+/**
+ * The "how learning works here" band on the home page.
+ *
+ * It was four steps and a heading written into the page in Thai, which meant
+ * the seven other languages read it in Thai and nobody but a developer could
+ * change a word of it. The school writes it now, in each language.
+ *
+ * Two tables because they are two shapes: one heading per language, and a list
+ * of steps under it.
+ *
+ * No `all` here, unlike the slideshow. Every field is a sentence, and a
+ * sentence shared across languages is a Thai paragraph on the Korean page —
+ * the exact thing a slide set to "every language" did to us.
+ */
+/** The two bands at the bottom of the home page. Same shape, different place. */
+export const HOME_BANDS = ['journey', 'cta'] as const
+
+export const journeySections = mysqlTable(
+  'journey_sections',
+  {
+    locale: mysqlEnum('locale', LOCALES).notNull(),
+    /** Which band this is. One row per band per language. */
+    band: mysqlEnum('band', HOME_BANDS).default('journey').notNull(),
+    /** The small line above the heading. */
+    eyebrow: varchar('eyebrow', { length: 120 }),
+    heading: varchar('heading', { length: 200 }).notNull(),
+    intro: text('intro'),
+    ctaLabel: varchar('cta_label', { length: 80 }),
+    ctaHref: varchar('cta_href', { length: 512 }),
+    /** Hidden until somebody has written it, rather than showing a half-made
+     *  band to everybody who happens to read that language. */
+    status: mysqlEnum('status', ['draft', 'published']).default('draft').notNull(),
+    updatedAt: datetime('updated_at')
+      .default(sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.band, t.locale] })],
+)
+
+export const journeySteps = mysqlTable(
+  'journey_steps',
+  {
+    id: bigint('id', { mode: 'number', unsigned: true }).autoincrement().primaryKey(),
+    /** Which band it belongs to: the numbered journey, or the row of chips on
+     *  the closing call to action. */
+    band: mysqlEnum('band', HOME_BANDS).default('journey').notNull(),
+    locale: mysqlEnum('locale', LOCALES).default('th').notNull(),
+    /** A name from the site's own icon set — see `lib/icon-names.ts`. Anything
+     *  else draws an empty circle, so the API refuses it. */
+    icon: varchar('icon', { length: 64 }).default('circle').notNull(),
+    title: varchar('title', { length: 200 }).notNull(),
+    text: text('text'),
+    sortOrder: int('sort_order').default(0).notNull(),
+    createdAt: datetime('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
+    updatedAt: datetime('updated_at')
+      .default(sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (t) => [index('journey_steps_band_idx').on(t.band, t.locale, t.sortOrder)],
 )

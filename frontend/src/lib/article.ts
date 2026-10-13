@@ -58,7 +58,7 @@ export function articleView(post: PublicPost, ctx: ArticleContext): ArticleView 
     excerpt: post.excerpt ?? '',
     image: post.coverPath ? { src: mediaUrl(post.coverPath), alt: post.title } : null,
     categoryId: post.categoryId,
-    categoryName: cat ? categoryLabel(cat, all) : (post.categoryName ?? ''),
+    categoryName: cat ? categoryLabel(cat, all, ctx.locale) : (post.categoryName ?? ''),
     categoryIcon: iconFor(cat, all),
     // Fixed per category, for the same reason a course's is: the same subject
     // has to get the same colours every time or the grid flickers.

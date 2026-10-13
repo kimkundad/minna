@@ -3,6 +3,7 @@ import {
   bigint,
   boolean,
   datetime,
+  decimal,
   index,
   int,
   json,
@@ -83,6 +84,23 @@ export const orders = mysqlTable(
     vatAmount: int('vat_amount').default(0).notNull(),
     total: int('total').default(0).notNull(),
     currency: varchar('currency', { length: 3 }).default('THB').notNull(),
+    /**
+     * The same total, in satang, at the rate on the day it was charged.
+     *
+     * Every figure the school reads about itself is a sum of money columns —
+     * revenue on the dashboard, what a member has spent, what a coupon has
+     * given away. The moment one order is in yen, adding `total` across rows
+     * stops meaning anything, because it adds yen to baht. This is the column
+     * those sums use instead.
+     *
+     * Written once, when the order is made, and never recalculated: what the
+     * school earned that day does not change because the rate moved since.
+     */
+    totalThb: int('total_thb').default(0).notNull(),
+    /** The rate used, and the day's rates it came from, so a figure can be
+     *  explained a year later rather than only trusted. */
+    fxRate: decimal('fx_rate', { precision: 18, scale: 8 }),
+    fxDate: varchar('fx_date', { length: 10 }),
     status: mysqlEnum('status', ORDER_STATUSES).default('pending').notNull(),
     /**
      * The basket-wide coupon, if one was used.
@@ -367,6 +385,77 @@ export const invoices = mysqlTable(
     // Two documents sharing a number is the Revenue Department's problem and
     // then ours, so the database refuses it rather than trusting the allocator.
     uniqueIndex('invoices_document_no_unique').on(t.documentNo),
+  ],
+)
+
+export const EARNING_KINDS = ['royalty', 'refund', 'adjustment'] as const
+export const EARNING_STATUSES = ['pending', 'payable', 'paid', 'cancelled'] as const
+
+/**
+ * What a course sale owes its teacher.
+ *
+ * One row per order line, written when the order is paid and never recomputed.
+ * The share and every figure behind it are copied in, for the same reason
+ * `order_items` copies the price: a rate may be renegotiated, and last
+ * quarter's earnings must not move when it is.
+ *
+ * A refund does not edit the row it reverses — it writes a second, negative
+ * one. The ledger then reads as what happened rather than as what is currently
+ * true, which is what somebody disputing a payout needs to see.
+ */
+export const teacherEarnings = mysqlTable(
+  'teacher_earnings',
+  {
+    id: bigint('id', { mode: 'number', unsigned: true }).autoincrement().primaryKey(),
+    userId: bigint('user_id', { mode: 'number', unsigned: true })
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    orderId: bigint('order_id', { mode: 'number', unsigned: true })
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    orderItemId: bigint('order_item_id', { mode: 'number', unsigned: true }).references(
+      () => orderItems.id,
+      { onDelete: 'set null' },
+    ),
+    courseId: bigint('course_id', { mode: 'number', unsigned: true }).references(() => courses.id, {
+      onDelete: 'set null',
+    }),
+
+    kind: mysqlEnum('kind', EARNING_KINDS).default('royalty').notNull(),
+
+    /** Satang actually received for this line, after every discount. */
+    gross: int('gross').notNull(),
+    /** How much of that is VAT, which is collected for the Revenue Department
+     *  rather than earned, and so is not shared. */
+    vat: int('vat').default(0).notNull(),
+    /** `gross - vat`: what the share is taken from. */
+    base: int('base').notNull(),
+    sharePct: smallint('share_pct', { unsigned: true }).notNull(),
+    /** Satang owed to the teacher. Negative on a refund. */
+    amount: int('amount').notNull(),
+
+    status: mysqlEnum('status', EARNING_STATUSES).default('pending').notNull(),
+    /** When the refund window closes and this may be paid out. */
+    maturesAt: datetime('matures_at').notNull(),
+    paidAt: datetime('paid_at'),
+    /** Which payout run settled it. */
+    payoutRef: varchar('payout_ref', { length: 64 }),
+
+    /** The row this one reverses, on a refund. */
+    reversesId: bigint('reverses_id', { mode: 'number', unsigned: true }),
+
+    note: varchar('note', { length: 255 }),
+    createdAt: datetime('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
+    updatedAt: datetime('updated_at')
+      .default(sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (t) => [
+    // The webhook can arrive twice and the success page asks as well; without
+    // this, a double delivery pays twice.
+    uniqueIndex('teacher_earnings_line_unique').on(t.orderItemId, t.userId, t.kind),
+    index('teacher_earnings_user_idx').on(t.userId, t.status, t.maturesAt),
+    index('teacher_earnings_order_idx').on(t.orderId),
   ],
 )
 

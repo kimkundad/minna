@@ -1,0 +1,18 @@
+{
+  "id": {
+    "spoken": { "th": "ไทย", "en": "English", "jp": "日本語", "vn": "Tiếng Việt" },
+    "footer": { "email": "contact{'@'}minna.example", "phone": "02-XXX-XXXX" }
+  },
+  "zh": {
+    "spoken": { "th": "ไทย", "en": "English", "jp": "日本語", "vn": "Tiếng Việt" },
+    "footer": { "email": "contact{'@'}minna.example", "phone": "02-XXX-XXXX" }
+  },
+  "ko": {
+    "spoken": { "th": "ไทย", "en": "English", "jp": "日本語", "vn": "Tiếng Việt" },
+    "footer": { "email": "contact{'@'}minna.example", "phone": "02-XXX-XXXX" }
+  },
+  "tw": {
+    "spoken": { "th": "ไทย", "en": "English", "jp": "日本語", "vn": "Tiếng Việt" },
+    "footer": { "email": "contact{'@'}minna.example", "phone": "02-XXX-XXXX" }
+  }
+}

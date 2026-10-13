@@ -92,10 +92,21 @@ export async function list(opts: {
       active: coupons.active,
       createdAt: coupons.createdAt,
       status: statusSql(),
-      // What it has actually given away: the figure worth watching on a coupon
-      // that turned out more popular than planned.
+      /**
+       * What it has actually given away, in baht: the figure worth watching on
+       * a coupon that turned out more popular than planned.
+       *
+       * Converted through each order's own recorded rate rather than summed
+       * raw. A redemption is stored in the currency its order was charged in,
+       * so a code used once in Thailand and once in Japan would otherwise add
+       * satang to yen and report a number that is simply not an amount of
+       * anything. No column for it: the order already knows its rate, and a
+       * second stored figure is a second thing that can disagree.
+       */
       discountGiven: sql<number>`(
-        SELECT COALESCE(SUM(r.discount_amount), 0) FROM coupon_redemptions r
+        SELECT COALESCE(SUM(ROUND(r.discount_amount / COALESCE(NULLIF(o.fx_rate, 0), 1))), 0)
+        FROM coupon_redemptions r
+        JOIN orders o ON o.id = r.order_id
         WHERE r.coupon_id = ${outer(coupons.id)}
       )`,
     })

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { num } from '@/lib/format'
+import { num, money } from '@/lib/format'
 
 /**
  * The cart's three summary rows, shared by the sidebar card and the mobile
@@ -10,10 +10,12 @@ import { num } from '@/lib/format'
  * the muted `is-zero` style rather than being dropped, so the shape of the
  * summary does not jump as coupons and selections change.
  */
-const props = defineProps<{ count: number; normal: number; saving: number }>()
+const props = defineProps<{ count: number; normal: number; saving: number; currency?: string }>()
 
-const { t } = useI18n()
-const baht = (n: number) => t('commerce.baht', { n: num(n) })
+const { t, locale } = useI18n()
+/** The basket's currency, which every line in it shares — a basket that
+ *  mixed two could not be charged at all, so the server refuses one. */
+const asMoney = (n: number) => money(n, props.currency ?? 'THB', String(locale.value))
 </script>
 
 <template>
@@ -24,11 +26,11 @@ const baht = (n: number) => t('commerce.baht', { n: num(n) })
     </div>
     <div>
       <dt>{{ t('commerce.cart.normalTotal') }}</dt>
-      <dd>{{ baht(props.normal) }}</dd>
+      <dd>{{ asMoney(props.normal) }}</dd>
     </div>
     <div :class="props.saving ? 'is-disc' : 'is-zero'">
       <dt>{{ t('commerce.cart.normalDiscount') }}</dt>
-      <dd>{{ props.saving ? `−${baht(props.saving)}` : baht(0) }}</dd>
+      <dd>{{ props.saving ? `−${asMoney(props.saving)}` : asMoney(0) }}</dd>
     </div>
   </dl>
 </template>

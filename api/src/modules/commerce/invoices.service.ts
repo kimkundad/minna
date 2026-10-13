@@ -3,6 +3,7 @@ import { db } from '../../db/client'
 import { invoices, orders, users } from '../../db/schema/index'
 import { conflict, notFound, validationFailed } from '../../lib/errors'
 import { HEAD_OFFICE_CODE, isValidBranchCode, isValidTaxId, normaliseTaxId } from '../../lib/thai-tax'
+import { schoolMonthCompact } from '../../lib/time'
 
 /**
  * Full tax invoices.
@@ -142,7 +143,9 @@ export async function request(orderId: number, input: InvoiceInput) {
  * tries again with the number that is now free.
  */
 async function nextDocumentNo(when: Date): Promise<string> {
-  const prefix = `INV-${when.getFullYear()}${String(when.getMonth() + 1).padStart(2, '0')}-`
+  // The school's month, so a payment taken on the morning of the 1st is not
+  // numbered into the month that has just closed.
+  const prefix = `INV-${schoolMonthCompact(when)}-`
 
   const [row] = await db
     .select({ last: sql<string | null>`MAX(${invoices.documentNo})` })

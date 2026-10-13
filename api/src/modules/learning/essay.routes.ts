@@ -2,6 +2,8 @@ import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { audit } from '../../lib/audit'
 import { forbidden } from '../../lib/errors'
+import { env } from '../../config/env'
+import { essayReviewedMail } from '../../lib/email-templates'
 import { sendMail } from '../../lib/mailer'
 import * as schemas from './essay.schemas'
 import * as service from './essay.service'
@@ -57,18 +59,14 @@ export default async function essayRoutes(app: FastifyInstance) {
     const passed = body.result === 'passed'
     void sendMail(
       {
+        ...essayReviewedMail({
+          learnerName: after.learnerName,
+          courseTitle: after.courseTitle,
+          passed,
+          comment: body.comment,
+          url: `${env.APP_URL}/${after.learnerLocale ?? 'th'}/result/${after.courseSlug ?? after.courseId}`,
+        }),
         to: after.learnerEmail,
-        subject: passed
-          ? `Your answer for “${after.courseTitle}” has passed`
-          : `Your answer for “${after.courseTitle}” needs another look`,
-        text: `${after.learnerName},\n\n${
-          passed ? 'Your written answer has passed.' : 'Your instructor has asked for changes.'
-        }\n\n${body.comment}\n\n— Minna`,
-        html: `<p>${after.learnerName},</p><p>${
-          passed
-            ? 'Your written answer has passed.'
-            : 'Your instructor has asked for changes.'
-        }</p><blockquote>${body.comment}</blockquote><p>— Minna</p>`,
       },
       req.log,
     )

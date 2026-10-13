@@ -6,18 +6,12 @@
  *
  *   node scripts/flow-home.mjs [baseUrl]
  */
-import { existsSync } from 'node:fs'
-import puppeteer from 'puppeteer-core'
+import { launchBrowser } from './browser.mjs'
 
 const BASE = process.argv[2] ?? 'http://localhost:5174'
 const API = process.env.API ?? 'http://127.0.0.1:3000/api/v1'
 const SHOTS = process.env.SHOT_DIR ?? '.'
 
-const BROWSERS = [
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-]
 
 let failures = 0
 function check(name, ok, detail = '') {
@@ -26,11 +20,19 @@ function check(name, ok, detail = '') {
 }
 
 const get = async (p) => (await (await fetch(API + p)).json())
-const newest = await get('/courses?sort=newest&perPage=8')
-const cats = await get('/categories')
+/**
+ * Both asked in the language the page is read in.
+ *
+ * The catalogue shows a reader the courses taught in their own language plus
+ * the ones marked for every language, and the category counts follow the same
+ * rule — a card that counted across all eight would promise courses its own
+ * link does not return. Asking without the locale made this test compare two
+ * different questions and call the page wrong.
+ */
+const newest = await get('/courses?sort=newest&perPage=8&locales=th')
+const cats = await get('/categories?all=1&locale=th')
 
-const browser = await puppeteer.launch({
-  executablePath: BROWSERS.find((p) => existsSync(p)),
+const browser = await launchBrowser({
   headless: true,
   args: ['--no-sandbox', '--disable-gpu'],
 })
@@ -176,7 +178,11 @@ await page.goto(`${BASE}/en`, { waitUntil: 'networkidle2' })
 await page.waitForSelector('#new-courses .cc', { timeout: 8000 })
 const enText = await page.evaluate(() => document.body.innerText)
 check('the rails are translated', enText.includes('New courses') && enText.includes('Recommended'))
-check('and the prices read in THB', /THB/.test(enText))
+// Not "in THB" any more: a course is charged in the currency its teacher set,
+// so the English page shows THB, USD or whatever each card's own price is in.
+// What matters is that a price carries a currency at all rather than a bare
+// number somebody has to guess at.
+check('and every price names its currency', /฿|THB|US\$|\$|¥|€|£|₩/.test(enText))
 
 /* ---------------- 7. nothing broken ---------------- */
 

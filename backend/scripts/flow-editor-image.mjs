@@ -8,14 +8,9 @@
  * then stop, so an upload that appears to work proves nothing on its own — what
  * matters is the address written into the saved HTML.
  */
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
-import puppeteer from 'puppeteer-core'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { launchBrowser } from './browser.mjs'
 
-const BROWSERS = [
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-]
 const BASE = process.env.ADMIN_URL ?? 'http://localhost:5173'
 const SHOTS = 'C:/Users/brack/AppData/Local/Temp/shots'
 
@@ -30,8 +25,7 @@ const file = 'C:/Users/brack/AppData/Local/Temp/editor-test.png'
 mkdirSync(SHOTS, { recursive: true })
 writeFileSync(file, PNG)
 
-const browser = await puppeteer.launch({
-  executablePath: BROWSERS.find((p) => existsSync(p)),
+const browser = await launchBrowser({
   headless: true,
   args: ['--no-sandbox', '--disable-gpu'],
 })

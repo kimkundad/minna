@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import TablePager from '@/components/common/TablePager.vue'
-import { ApiError, api, type Category, type CategoryInput } from '@/lib/api'
+import { ApiError, api, type Category, type CategoryInput, type CategoryNames } from '@/lib/api'
 import { useConfirm } from '@/composables/useConfirm'
 
 /**
@@ -32,16 +32,55 @@ const q = ref('')
  *  rather than rows — the number people are actually scrolling through. */
 const PER_PAGE = 10
 
+/**
+ * The languages a name is translated into, and what to call each in the form.
+ *
+ * Thai is absent on purpose: that is the Name field itself. The public site
+ * falls back to it wherever one of these is blank, so leaving them empty is a
+ * valid state rather than an unfinished one.
+ */
+const TRANSLATIONS = [
+  { locale: 'en' as const, label: 'English' },
+  { locale: 'jp' as const, label: 'Japanese' },
+  { locale: 'vn' as const, label: 'Vietnamese' },
+  { locale: 'id' as const, label: 'Indonesian' },
+  { locale: 'zh' as const, label: 'Chinese (Simplified)' },
+  { locale: 'ko' as const, label: 'Korean' },
+  { locale: 'tw' as const, label: 'Chinese (Traditional)' },
+]
+
 /** The row being edited, or 'new'. Null means nothing is open. */
 const editing = ref<number | 'new' | null>(null)
-const form = ref<CategoryInput>(blank())
+/** `names` is filled in rather than optional, so the three inputs can bind to it. */
+const form = ref<CategoryInput & { names: CategoryNames }>(blank())
 const formError = ref('')
 const fieldErrors = ref<Record<string, string>>({})
 const saving = ref(false)
 const slugTouched = ref(false)
 
-function blank(): CategoryInput {
-  return { name: '', slug: '', parentId: null, icon: null, sortOrder: 0 }
+function blank(): CategoryInput & { names: CategoryNames } {
+  return {
+    name: '',
+    slug: '',
+    parentId: null,
+    icon: null,
+    sortOrder: 0,
+    names: emptyNames(),
+  }
+}
+
+/** One blank per language in TRANSLATIONS, so every input has something to
+ *  bind to and adding a language is one edit rather than three. */
+function emptyNames(): CategoryNames {
+  return Object.fromEntries(TRANSLATIONS.map((t) => [t.locale, ''])) as CategoryNames
+}
+
+/** The stored names, narrowed to the languages this form edits. Anything else
+ *  the API sends alongside them — the Thai name among it — is left out. */
+function namesFrom(stored: CategoryNames | undefined): CategoryNames {
+  return Object.fromEntries(
+    TRANSLATIONS.map((t) => [t.locale, stored?.[t.locale] ?? '']),
+  ) as CategoryNames
 }
 
 function slugify(text: string): string {
@@ -62,6 +101,19 @@ const ordered = computed(() => {
     ...rows.value.filter((c) => c.parentId === root.id).map((row) => ({ row, depth: 1 })),
   ])
 })
+
+/**
+ * The languages this category has no name in yet.
+ *
+ * Shown in the table because the alternative is opening eighteen rows one at a
+ * time to find out — and because a half-translated catalog is the normal state
+ * right after someone adds a category, not a fault to hide.
+ */
+function missingNames(row: Category): string[] {
+  return TRANSLATIONS.filter((t) => !row.names?.[t.locale]?.trim()).map((t) =>
+    t.locale.toUpperCase(),
+  )
+}
 
 /** Every top-level category, not only those on this page: a child can be
  *  moved under a parent that is paged out of sight. */
@@ -113,6 +165,13 @@ function openEdit(row: Category) {
     parentId: row.parentId,
     icon: row.icon,
     sortOrder: row.sortOrder,
+    // Blanks for the languages with no translation, so every input is there to
+    // type into rather than appearing once something is saved.
+    //
+    // Only the keys in TRANSLATIONS, never the whole of `row.names`: the API
+    // puts the canonical Thai name in there too, and sending `th` back is
+    // refused outright — that is the Name field, not a translation.
+    names: namesFrom(row.names),
   }
   // An existing slug is already in use somewhere; never regenerate it.
   slugTouched.value = true
@@ -226,7 +285,7 @@ onMounted(async () => {
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div>
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-              Name<span class="text-error-500">*</span>
+              Name (Thai)<span class="text-error-500">*</span>
             </label>
             <input
               v-model="form.name"
@@ -285,6 +344,35 @@ onMounted(async () => {
           </div>
         </div>
 
+        <!-- The other languages. Separated from the fields above because
+             they are optional in a way the rest are not: the site reads the
+             Thai name wherever one of these is blank, so a category works
+             untranslated and these can be filled in later. -->
+        <div class="mt-5 border-t border-gray-200 pt-5 dark:border-gray-800">
+          <p class="mb-3 text-sm font-medium text-gray-700 dark:text-gray-400">
+            Name in other languages
+            <span class="ml-1 font-normal text-gray-500 dark:text-gray-500">
+              — leave blank to show the Thai name
+            </span>
+          </p>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div v-for="tr in TRANSLATIONS" :key="tr.locale">
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                {{ tr.label }}
+              </label>
+              <input
+                v-model="form.names[tr.locale]"
+                maxlength="150"
+                :placeholder="form.name || '—'"
+                class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+            </div>
+          </div>
+          <p v-if="fieldErrors.names" class="mt-1 text-sm text-error-500">
+            {{ fieldErrors.names }}
+          </p>
+        </div>
+
         <p v-if="formError" role="alert" class="mt-3 text-sm text-error-500">{{ formError }}</p>
 
         <div class="mt-4 flex gap-3">
@@ -320,6 +408,7 @@ onMounted(async () => {
             <tr class="text-xs uppercase tracking-wide text-gray-400">
               <th class="px-5 py-3 font-medium sm:px-6">Name</th>
               <th class="px-5 py-3 font-medium">Slug</th>
+              <th class="px-5 py-3 font-medium">Languages</th>
               <th class="px-5 py-3 font-medium">Courses</th>
               <th class="px-5 py-3 font-medium">Order</th>
               <th class="px-5 py-3 font-medium sm:px-6"></th>
@@ -327,12 +416,12 @@ onMounted(async () => {
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
             <tr v-if="loading">
-              <td colspan="5" class="px-5 py-8 text-center text-sm text-gray-500 sm:px-6">
+              <td colspan="6" class="px-5 py-8 text-center text-sm text-gray-500 sm:px-6">
                 Loading…
               </td>
             </tr>
             <tr v-else-if="!rows.length">
-              <td colspan="5" class="px-5 py-8 text-center text-sm text-gray-500 sm:px-6">
+              <td colspan="6" class="px-5 py-8 text-center text-sm text-gray-500 sm:px-6">
                 No categories yet.
               </td>
             </tr>
@@ -348,6 +437,24 @@ onMounted(async () => {
               </td>
               <td class="px-5 py-3.5 font-mono text-xs text-gray-500 dark:text-gray-400">
                 {{ row.slug }}
+              </td>
+              <td class="px-5 py-3.5 text-sm">
+                <span
+                  v-if="!missingNames(row).length"
+                  class="text-xs font-medium text-success-600 dark:text-success-400"
+                >
+                  All languages
+                </span>
+                <span v-else class="flex flex-wrap gap-1">
+                  <span
+                    v-for="code in missingNames(row)"
+                    :key="code"
+                    class="rounded bg-warning-50 px-1.5 py-0.5 text-xs font-medium text-warning-600 dark:bg-warning-500/10 dark:text-warning-400"
+                    :title="`No ${code} name — the Thai one is shown instead`"
+                  >
+                    {{ code }}
+                  </span>
+                </span>
               </td>
               <td class="px-5 py-3.5 text-sm text-gray-500 dark:text-gray-400">
                 {{ row.courseCount ?? 0 }}

@@ -7,18 +7,11 @@
  * Needs the demo invoices in place (api/scripts/demo-invoices.mjs) and
  * SMOKE_ADMIN_EMAIL / SMOKE_ADMIN_PASSWORD.
  */
-import { existsSync } from 'node:fs'
-import puppeteer from 'puppeteer-core'
+import { launchBrowser } from './browser.mjs'
 
-const BROWSERS = [
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-]
 const BASE = process.env.ADMIN_URL ?? 'http://localhost:5173'
 
-const browser = await puppeteer.launch({
-  executablePath: BROWSERS.find((p) => existsSync(p)),
+const browser = await launchBrowser({
   headless: true,
   args: ['--no-sandbox', '--disable-gpu'],
 })

@@ -92,6 +92,14 @@ export interface CourseView {
   levelLabel: string
   spokenLabel: string
   price: number
+  /**
+   * The currency the price is in, as a three-letter code.
+   *
+   * It travels with the number rather than being assumed, because a course is
+   * charged in the currency its teacher set: a $100 course shown as ฿100 is a
+   * wrong price, not a formatting slip.
+   */
+  currency: string
   normalPrice: number | null
   isFree: boolean
   inPackage: boolean
@@ -123,14 +131,35 @@ export function baht(satang: number): number {
 }
 
 /**
+ * A category's name in one language.
+ *
+ * Falls back to the canonical name rather than to a blank or a key: an
+ * untranslated category reads as it always did, which is the behaviour that
+ * lets a translation be added one category at a time.
+ */
+export function categoryNameIn(cat: PublicCategory, locale: string): string {
+  return cat.names?.[locale] || cat.name
+}
+
+/**
  * A sub-category's own name is often only half of one — "สนทนา" is the name of
  * four different categories until its parent is named with it. The parent is
  * dropped for a top-level category, where it would just repeat itself.
+ *
+ * The locale is not optional. It used to be absent, which meant every label on
+ * the site read the canonical Thai name whatever language the page was in, and
+ * an optional argument would have left exactly that bug in place at whichever
+ * call site was forgotten.
  */
-export function categoryLabel(cat: PublicCategory, all: PublicCategory[]): string {
-  if (!cat.parentId) return cat.name
+export function categoryLabel(
+  cat: PublicCategory,
+  all: PublicCategory[],
+  locale: string,
+): string {
+  const own = categoryNameIn(cat, locale)
+  if (!cat.parentId) return own
   const parent = all.find((c) => c.id === cat.parentId)
-  return parent ? `${parent.name} · ${cat.name}` : cat.name
+  return parent ? `${categoryNameIn(parent, locale)} · ${own}` : own
 }
 
 /**
@@ -233,7 +262,7 @@ export function courseView(course: PublicCourse, ctx: ViewContext): CourseView {
       ? { src: mediaUrl(course.thumbnailPath), alt: course.title }
       : null,
     categoryName: cat
-      ? categoryLabel(cat, ctx.categories ?? [])
+      ? categoryLabel(cat, ctx.categories ?? [], ctx.locale)
       : (course.categoryName ?? ''),
     // The parent's icon when a sub-category has none of its own, which is the
     // usual case: "สนทนา" is not a thing with a glyph, "ภาษาญี่ปุ่น" is.
@@ -248,6 +277,9 @@ export function courseView(course: PublicCourse, ctx: ViewContext): CourseView {
     levelLabel: course.level ? t(`catalog.level${capitalise(course.level)}`) : '',
     spokenLabel: t(`spoken.${course.contentLocale}`),
     price: baht(course.price),
+    // Travels with the number: a course is charged in the currency its teacher
+    // set, and showing it under another currency name would be a wrong price.
+    currency: course.currency ?? 'THB',
     normalPrice: course.normalPrice === null ? null : baht(course.normalPrice),
     isFree: course.price === 0,
     inPackage: course.inPackage,

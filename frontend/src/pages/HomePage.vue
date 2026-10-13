@@ -8,11 +8,18 @@ import CourseCard from '@/components/course/CourseCard.vue'
 import CourseRail from '@/components/course/CourseRail.vue'
 import AdsSlot from '@/components/ui/AdsSlot.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import logoUrl from '@/assets/img/logo.png'
-import { api } from '@/lib/api'
-import type { ContentLocale, PublicCategory, PublicCourse, PublicPost } from '@/lib/api'
+import BrandLogo from '@/components/layout/BrandLogo.vue'
+import { api, journey as fetchJourney } from '@/lib/api'
+import type {
+  ContentLocale,
+  JourneyBand,
+  PublicCategory,
+  PublicCourse,
+  PublicPost,
+} from '@/lib/api'
 import { articleView } from '@/lib/article'
-import { categoryLabel, courseView } from '@/lib/course'
+import { categoryLabel, categoryNameIn, courseView } from '@/lib/course'
+import { useLearningStore } from '@/stores/learning'
 import { data } from '@/vendor'
 import { date } from '@/lib/format'
 
@@ -46,7 +53,7 @@ const RAIL = 8
 /** A rail stays out of the page until it has something in it, rather than
  *  drawing a heading over an empty track while the request is in flight. */
 onMounted(async () => {
-  const [cats, fresh, best, latest] = await Promise.all([
+  const [cats, fresh, best, latest, band, closingBand] = await Promise.all([
     api.categories().catch(() => null),
     api.courses({ sort: 'newest', perPage: RAIL }).catch(() => null),
     // Asked for wide, shown narrow: the newest courses are often also the
@@ -56,10 +63,18 @@ onMounted(async () => {
     // Three, because the band is a row of three. The site's own language, so a
     // reader of the English site is not shown a row of Thai articles.
     api.posts({ perPage: 3, locale: String(uiLocale.value) as ContentLocale }).catch(() => null),
+    // The band the school writes. Its own request rather than part of a page
+    // payload, so a language with nothing written costs one empty answer and
+    // not a broken home page.
+    fetchJourney(String(uiLocale.value)).catch(() => null),
+    // And the closing one, written the same way in the same place.
+    fetchJourney(String(uiLocale.value), 'cta').catch(() => null),
   ])
   allCategories.value = cats?.data ?? []
   newCourses.value = fresh?.data ?? []
   articles.value = latest?.data ?? []
+  journey.value = band?.data ?? null
+  closing.value = closingBand?.data ?? null
 
   const alreadyShown = new Set(newCourses.value.map((c) => c.id))
   const rest = (best?.data ?? []).filter((c) => !alreadyShown.has(c.id))
@@ -71,6 +86,34 @@ onMounted(async () => {
 const asCards = (list: PublicCourse[]) =>
   list.map((c) => courseView(c, { locale: locale.value, t, categories: allCategories.value }))
 
+/**
+ * The member's own courses, newest activity first.
+ *
+ * The store holds them sorted already — what they are working on, then what
+ * they have not started, then what is finished — so this takes the front of
+ * that rather than sorting again and risking a different answer from the
+ * account page's.
+ *
+ * Lapsed access is left out here: this rail is for carrying on, and a locked
+ * course on it is an invitation to a door that will not open. The account page
+ * still shows those, with the reason.
+ */
+const learning = useLearningStore()
+const mineCards = computed(() =>
+  learning.items
+    .filter((i) => i.blocked === null)
+    .slice(0, RAIL)
+    .map((i) => ({
+      ...courseView(i.course, { locale: locale.value, t, categories: allCategories.value }),
+      // What turns a catalog tile into a "carry on" one: the bar, how far along
+      // it is, and the lesson it stopped at.
+      showProgress: true,
+      progressPct: i.progress.pct,
+      resumeTitle: i.progress.resume?.title ?? '',
+      showPrice: false,
+    })),
+)
+
 const newCards = computed(() => asCards(newCourses.value))
 const featuredCards = computed(() => asCards(featured.value))
 
@@ -78,6 +121,11 @@ const featuredCards = computed(() => asCards(featured.value))
  * Filters as you type, over the name and the parent's — somebody looking for
  * "ญี่ปุ่น" should find "ภาษาญี่ปุ่น · คันจิ", whose own name does not contain
  * it.
+ *
+ * And over every language's name, not only the one on screen: "Japanese" and
+ * "ภาษาญี่ปุ่น" are the same category, so a Thai page that cannot find it by
+ * the English word is a search box that knows one word for a thing and not the
+ * other.
  */
 const categoryQuery = ref('')
 const categories = computed(() => {
@@ -85,23 +133,34 @@ const categories = computed(() => {
   return allCategories.value
     .map((c) => {
       const parent = c.parentId ? allCategories.value.find((p) => p.id === c.parentId) : null
+      const everyName = [...Object.values(c.names ?? {}), ...Object.values(parent?.names ?? {})]
       return {
         id: c.id,
-        name: c.name,
+        /** Only for the filter; never shown. */
+        haystack: [c.name, parent?.name ?? '', ...everyName].join(' ').toLowerCase(),
+        name: categoryNameIn(c, locale.value),
         /** The card's second line. Empty on a top-level category, where it
          *  would only repeat the first. */
-        parentName: parent?.name ?? '',
-        label: categoryLabel(c, allCategories.value),
+        parentName: parent ? categoryNameIn(parent, locale.value) : '',
+        label: categoryLabel(c, allCategories.value, locale.value),
         icon: c.icon ?? parent?.icon ?? 'book-open',
         count: c.totalCourseCount,
       }
     })
-    .filter((c) => !q || c.label.toLowerCase().includes(q))
+    .filter((c) => !q || c.haystack.includes(q))
 })
 
-const journey = computed(
-  () => (data.journey ?? []) as unknown as { icon: string; title: string; text: string }[],
-)
+/**
+ * The "how learning works here" band, as the school wrote it.
+ *
+ * Null until it loads, and null for good in a language nobody has written —
+ * the section is left out rather than falling back to another language, which
+ * would put one language's sentences under another's heading.
+ */
+const journey = ref<JourneyBand | null>(null)
+
+/** The closing band, written the same way and in the same place. */
+const closing = ref<JourneyBand | null>(null)
 const articleCards = computed(() =>
   articles.value.map((p) =>
     articleView(p, { locale: locale.value, categories: allCategories.value, formatDate: date }),
@@ -112,6 +171,23 @@ const articleCards = computed(() =>
 <template>
   <!-- 1. Hero -->
   <HeroCarousel />
+
+  <!-- 1b. The member's own courses, when there are any -->
+  <section v-if="mineCards.length" class="home-rail" id="my-courses">
+    <div class="container">
+      <CourseRail
+        id="mine"
+        eyebrow="Continue Learning"
+        :title="t('home.mineTitle')"
+        :sub="t('home.mineSub', { n: mineCards.length })"
+        :more-href="path('/account/learning')"
+        :more-label="t('home.mineMore')"
+        :count="mineCards.length"
+      >
+        <CourseCard v-for="c in mineCards" :key="c.id" :view="c" variant="continue" />
+      </CourseRail>
+    </div>
+  </section>
 
   <!-- 2. New courses -->
   <section v-if="newCards.length" class="home-rail" id="new-courses">
@@ -193,49 +269,89 @@ const articleCards = computed(() =>
     </div>
   </section>
 
-  <!-- 7. Learning journey -->
-  <section class="panel section home-journey" id="journey" aria-labelledby="journey-h">
+  <!--
+    7. Learning journey.
+
+    Written by the school, per language, from the admin. It used to be four
+    steps and a heading typed into this file in Thai — which every other
+    language also read in Thai, and which still described the reference
+    project's veterinary scheme: filtering by CE points, collecting a
+    certificate. Minna awards neither.
+
+    The whole band is left out when the language has nothing written yet. A
+    heading with no steps under it, or a fallback into another language, both
+    read as a fault; an absent section reads as a page that is simply shorter.
+  -->
+  <section
+    v-if="journey"
+    class="panel section home-journey"
+    id="journey"
+    aria-labelledby="journey-h"
+  >
     <div class="container">
       <div class="journey-top">
         <div>
-          <p class="eyebrow">Why Minna</p>
-          <h2 id="journey-h">เส้นทางการเรียนที่ออกแบบให้ใช้ได้จริง</h2>
+          <p v-if="journey.eyebrow" class="eyebrow">{{ journey.eyebrow }}</p>
+          <h2 id="journey-h">{{ journey.heading }}</h2>
         </div>
         <div class="journey-intro">
-          <p>
-            ตั้งแต่เลือกคอร์สจนถึงทำแบบทดสอบ ทุกขั้นตอนอยู่ในระบบเดียว
-            ติดตามความคืบหน้าได้ตลอดเวลาจากทุกอุปกรณ์
-          </p>
-          <RouterLink class="btn btn--primary" :to="path('/courses')">เริ่มต้นเลือกคอร์ส</RouterLink>
+          <p v-if="journey.intro">{{ journey.intro }}</p>
+          <RouterLink
+            v-if="journey.ctaLabel"
+            class="btn btn--primary"
+            :to="journey.ctaHref || path('/courses')"
+          >
+            {{ journey.ctaLabel }}
+          </RouterLink>
         </div>
       </div>
       <ol class="journey-steps" id="journey-steps" role="list">
-        <li v-for="(j, i) in journey" :key="j.title">
+        <li v-for="(j, i) in journey.steps" :key="j.id">
           <span class="js-num" aria-hidden="true">{{ String(i + 1).padStart(2, '0') }}</span>
           <div>
             <h3><AppIcon :name="j.icon" />{{ j.title }}</h3>
-            <p>{{ j.text }}</p>
+            <p v-if="j.text">{{ j.text }}</p>
           </div>
         </li>
       </ol>
     </div>
   </section>
 
-  <!-- 8. Package -->
-  <section class="section home-package" id="package-cta" aria-labelledby="pkg-h">
+  <!--
+    8. The closing call to action.
+
+    It used to sell a membership package. Packages are not on sale — the API
+    refuses to put one in a basket — so it now says what the school actually
+    does: courses are bought one at a time, and everything that comes with one
+    is included rather than sold again on top.
+
+    No photograph: every picture bundled with this project is from the
+    veterinary prototype, and a stock clinic behind "เรียนภาษาญี่ปุ่น" says
+    something untrue. The brand gradient carries it on its own.
+  -->
+  <section
+    v-if="closing"
+    class="section home-package"
+    id="start-cta"
+    aria-labelledby="cta-h"
+  >
     <div class="container">
       <div class="pkg-cta">
-        <img class="pc-logo" :src="logoUrl" width="85" height="35" alt="" decoding="async" />
-        <p class="eyebrow eyebrow--light">Membership Package</p>
-        <h2 id="pkg-h">แพ็กเกจสมาชิก เรียนได้ทุกคอร์สในแพ็กเกจ</h2>
-        <p>เลือกแพ็กเกจรายปีที่เหมาะกับคุณ เรียนคอร์สที่รวมในแพ็กเกจได้ไม่จำกัดตลอดอายุสมาชิก</p>
-        <div class="pc-benefits">
-          <span><AppIcon name="book-open" />คอร์สที่รวมในแพ็กเกจ</span>
-          <span><AppIcon name="file-text" />เอกสารประกอบครบทุกบท</span>
-          <span><AppIcon name="message" />ถาม–ตอบกับผู้สอน</span>
+        <BrandLogo class="pc-logo" />
+        <p v-if="closing.eyebrow" class="eyebrow eyebrow--light">{{ closing.eyebrow }}</p>
+        <h2 id="cta-h">{{ closing.heading }}</h2>
+        <p v-if="closing.intro">{{ closing.intro }}</p>
+        <div v-if="closing.steps.length" class="pc-benefits">
+          <span v-for="chip in closing.steps" :key="chip.id">
+            <AppIcon :name="chip.icon" />{{ chip.title }}
+          </span>
         </div>
-        <RouterLink class="btn btn--white btn--lg" :to="path('/packages')">
-          ดูแพ็กเกจสมาชิก<AppIcon name="arrow-right" />
+        <RouterLink
+          v-if="closing.ctaLabel"
+          class="btn btn--white btn--lg"
+          :to="closing.ctaHref || path('/courses')"
+        >
+          {{ closing.ctaLabel }}<AppIcon name="arrow-right" />
         </RouterLink>
       </div>
     </div>

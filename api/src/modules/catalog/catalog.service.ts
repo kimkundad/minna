@@ -1,8 +1,11 @@
 import type { SQL } from 'drizzle-orm'
 import { and, asc, count, desc, eq, inArray, like, ne, or, sql } from 'drizzle-orm'
 import { db } from '../../db/client'
+import { LOCALES } from '../../db/schema/auth'
 import {
   categories,
+  categoryTranslations,
+  courseDocuments,
   courseInstructors,
   courseModules,
   courses,
@@ -13,6 +16,7 @@ import {
 import { conflict, notFound } from '../../lib/errors'
 import { removeOrphanedMedia, removeOrphanedPath } from '../../lib/media'
 import { outer } from '../../lib/sql'
+import * as notify from '../people/notify.service'
 
 /**
  * Catalog reads and writes.
@@ -50,19 +54,22 @@ export async function listCategoriesPaged(opts: { page: number; perPage: number;
   const all = await listCategories()
   const match = opts.q?.trim().toLowerCase()
 
+  /**
+   * Matches the slug and the name in any language, not only the canonical one.
+   * An admin looking for the category they know as "Japanese" should find it
+   * whether or not Thai is the language they filed it under.
+   */
+  const hit = (c: (typeof all)[number]) =>
+    !match ||
+    c.slug.toLowerCase().includes(match) ||
+    Object.values(c.names).some((n) => n.toLowerCase().includes(match))
+
   const roots = all.filter(
     (c) =>
       c.parentId === null &&
-      (!match ||
-        c.name.toLowerCase().includes(match) ||
-        c.slug.toLowerCase().includes(match) ||
-        // A parent stays in the list when one of its children matches, or the
-        // child would have nowhere to appear.
-        all.some(
-          (k) =>
-            k.parentId === c.id &&
-            (k.name.toLowerCase().includes(match) || k.slug.toLowerCase().includes(match)),
-        )),
+      // A parent stays in the list when one of its children matches, or the
+      // child would have nowhere to appear.
+      (hit(c) || all.some((k) => k.parentId === c.id && hit(k))),
   )
 
   const page = roots.slice((opts.page - 1) * opts.perPage, opts.page * opts.perPage)
@@ -72,8 +79,8 @@ export async function listCategoriesPaged(opts: { page: number; perPage: number;
   return paged(data, roots.length, opts.page, opts.perPage)
 }
 
-export async function listCategories() {
-  const rows = await categoryRows()
+export async function listCategories(locale?: string) {
+  const rows = await categoryRows(locale)
 
   /**
    * Two counts, because two callers mean different things by "how many".
@@ -83,11 +90,16 @@ export async function listCategories() {
    * beneath it, which is what a visitor means by "ภาษาญี่ปุ่น" — nothing is
    * filed on a parent, so its own count is always zero and showing that would
    * say a language with six courses has none.
+   *
+   * The subtree is built from the published count, not the raw one. Only the
+   * public site reads `totalCourseCount`, and it puts the number on a card
+   * that links to the catalogue — so a draft counted here is a card promising
+   * a course the link does not return.
    */
   const parentOf = new Map(rows.map((c) => [c.id, c.parentId]))
   const totals = new Map<number, number>()
   for (const row of rows) {
-    const n = Number(row.courseCount)
+    const n = Number(row.publishedCount)
     if (!n) continue
     let at: number | null | undefined = row.id
     const seen = new Set<number>()
@@ -98,14 +110,70 @@ export async function listCategories() {
     }
   }
 
+  const names = await translatedNames(rows.map((r) => r.id))
+
   return rows.map((r) => ({
     ...r,
     courseCount: Number(r.courseCount),
     totalCourseCount: totals.get(r.id) ?? 0,
+    /**
+     * Every language at once, rather than the reader's.
+     *
+     * There are eighteen of these and the list is fetched whole and cached, so
+     * four short names each is nothing on the wire — and it saves teaching the
+     * ten other queries that read a category name which language to answer in,
+     * and saves a join on the catalog query, which is the hot one.
+     *
+     * The canonical name is written last, so a stray row claiming to be `th`
+     * cannot disagree with the column the admin actually edits.
+     */
+    names: { ...names.get(r.id), [CANONICAL_LOCALE]: r.name },
   }))
 }
 
-async function categoryRows() {
+/** The language the name on the category itself is written in. */
+const CANONICAL_LOCALE = 'th'
+
+/** One query for the whole list, rather than one per category. */
+async function translatedNames(ids: number[]): Promise<Map<number, Record<string, string>>> {
+  const out = new Map<number, Record<string, string>>()
+  if (!ids.length) return out
+
+  const rows = await db
+    .select({
+      categoryId: categoryTranslations.categoryId,
+      locale: categoryTranslations.locale,
+      name: categoryTranslations.name,
+    })
+    .from(categoryTranslations)
+    .where(inArray(categoryTranslations.categoryId, ids))
+
+  for (const row of rows) {
+    const bag = out.get(row.categoryId) ?? {}
+    bag[row.locale] = row.name
+    out.set(row.categoryId, bag)
+  }
+  return out
+}
+
+/**
+ * Every category with its two counts.
+ *
+ * `locale` narrows the published count to courses a reader of that language
+ * can actually take — the ones taught in it, plus the ones marked as suiting
+ * every language. Without it the count is every published course, which is
+ * what the admin wants.
+ *
+ * It matters because the number sits on a card that links to the catalogue:
+ * once the catalogue shows only the reader's language, a count taken across
+ * all of them is a card promising fifteen courses behind a link that returns
+ * none.
+ */
+async function categoryRows(locale?: string) {
+  const inLanguage = locale
+    ? sql`AND ${courses.contentLocale} IN (${locale}, 'all')`
+    : sql`AND 1 = 1`
+
   // A join rather than a correlated subquery: inside a raw `sql` fragment
   // drizzle renders a column unqualified, so `c.category_id = ${categories.id}`
   // became `c.category_id = c.id` and every count came back zero.
@@ -117,8 +185,19 @@ async function categoryRows() {
       slug: categories.slug,
       icon: categories.icon,
       sortOrder: categories.sortOrder,
-      // What the admin list wants to know before deleting one.
+      // What the admin list wants to know before deleting one: everything
+      // filed here, drafts included, because deleting the category orphans
+      // those too.
       courseCount: sql<number>`CAST(COUNT(${courses.id}) AS SIGNED)`,
+      /**
+       * Only what a visitor can actually open.
+       *
+       * The two differ, and the difference was visible: the Japanese card
+       * promised eleven courses and the catalogue returned ten, because one of
+       * them was still a draft. A count on a public card is a promise about
+       * what is behind the link.
+       */
+      publishedCount: sql<number>`CAST(SUM(${courses.status} = 'approved' ${inLanguage}) AS SIGNED)`,
     })
     .from(categories)
     .leftJoin(courses, eq(courses.categoryId, categories.id))
@@ -136,7 +215,48 @@ async function categoryRows() {
 export async function getCategory(id: number) {
   const [row] = await db.select().from(categories).where(eq(categories.id, id)).limit(1)
   if (!row) throw notFound('That category does not exist.')
-  return row
+  /**
+   * The translations only — no canonical name folded in, unlike the list.
+   *
+   * The list is read by the site, which wants one bag it can look any language
+   * up in. This is read by the admin form, where the canonical name is already
+   * its own field; a copy of it in here would be a second place to type the
+   * same thing, and would make every save look like a change in the audit log.
+   */
+  const names = await translatedNames([id])
+  return { ...row, names: names.get(id) ?? {} }
+}
+
+/**
+ * Writes the translations of one category.
+ *
+ * A name that arrives blank is a deletion, not a blank translation: the
+ * fallback to the canonical name is the behaviour wanted for a category nobody
+ * has translated, and an empty row would defeat it by looking like an answer.
+ *
+ * Locales absent from `names` are left alone, so a caller may send one
+ * language without wiping the other two.
+ */
+async function saveNames(categoryId: number, names: Record<string, string>): Promise<void> {
+  for (const [locale, raw] of Object.entries(names)) {
+    if (locale === CANONICAL_LOCALE) continue
+    const name = raw.trim()
+    if (!name) {
+      await db
+        .delete(categoryTranslations)
+        .where(
+          and(
+            eq(categoryTranslations.categoryId, categoryId),
+            eq(categoryTranslations.locale, locale),
+          ),
+        )
+      continue
+    }
+    await db
+      .insert(categoryTranslations)
+      .values({ categoryId, locale, name })
+      .onDuplicateKeyUpdate({ set: { name } })
+  }
 }
 
 async function assertSlugFree(slug: string, exceptId?: number) {
@@ -154,6 +274,7 @@ export async function createCategory(input: {
   parentId?: number | null | undefined
   icon?: string | null | undefined
   sortOrder: number
+  names?: Record<string, string> | undefined
 }) {
   await assertSlugFree(input.slug)
   await db.insert(categories).values({
@@ -164,7 +285,8 @@ export async function createCategory(input: {
     sortOrder: input.sortOrder,
   })
   const [created] = await db.select().from(categories).where(eq(categories.slug, input.slug)).limit(1)
-  return created!
+  if (input.names) await saveNames(created!.id, input.names)
+  return getCategory(created!.id)
 }
 
 export async function updateCategory(
@@ -175,6 +297,7 @@ export async function updateCategory(
     parentId: number | null
     icon: string | null
     sortOrder: number
+    names: Record<string, string>
   }>,
 ) {
   const before = await getCategory(id)
@@ -184,7 +307,14 @@ export async function updateCategory(
     throw conflict('A category cannot be its own parent.', { parentId: 'Pick another category.' })
   }
 
-  await db.update(categories).set(input).where(eq(categories.id, id))
+  // The translations live in their own table, so they cannot go into the same
+  // `set` as the rest without drizzle trying to write a column that is not there.
+  const { names, ...columns } = input
+  if (Object.keys(columns).length) {
+    await db.update(categories).set(columns).where(eq(categories.id, id))
+  }
+  if (names) await saveNames(id, names)
+
   return { before, after: await getCategory(id) }
 }
 
@@ -228,7 +358,7 @@ export interface CourseListOptions {
    */
   categoryIds?: number[] | undefined
   levels?: ('beginner' | 'intermediate' | 'advanced')[] | undefined
-  locales?: ('th' | 'en' | 'jp' | 'vn')[] | undefined
+  locales?: ('th' | 'en' | 'jp' | 'vn' | 'id' | 'zh' | 'ko' | 'tw')[] | undefined
   /** Bands rather than numbers, because that is what the panel offers. */
   durations?: ('le1' | '1-3' | '3-6' | 'gt6')[] | undefined
   prices?: ('free' | 'lt1000' | '1000-2000' | 'gt2000')[] | undefined
@@ -371,7 +501,11 @@ function courseWhere(opts: CourseListOptions, skip?: FacetGroup) {
     skip === 'locale'
       ? undefined
       : opts.locales?.length
-        ? inArray(courses.contentLocale, opts.locales)
+        ? // A course marked 'all' belongs to every language, so it answers
+          // whichever one was asked for. Without this, narrowing the catalogue
+          // to Japanese would hide exactly the courses that said they suit
+          // everybody.
+          inArray(courses.contentLocale, [...new Set([...opts.locales, 'all' as const])])
         : undefined,
     skip === 'duration'
       ? undefined
@@ -451,6 +585,10 @@ export async function listCourses(input: CourseListOptions): Promise<Paged<unkno
       thumbnailPath: courses.thumbnailPath,
       level: courses.level,
       price: courses.price,
+      // Without this a card falls back to baht and writes "฿100" over a price
+      // of $100 — the right number under the wrong currency, which is the one
+      // mistake a price must never make.
+      currency: courses.currency,
       normalPrice: courses.normalPrice,
       status: courses.status,
       sellable: courses.sellable,
@@ -471,6 +609,22 @@ export async function listCourses(input: CourseListOptions): Promise<Paged<unkno
       lessonCount: sql<number>`(
         SELECT COUNT(*) FROM lessons l WHERE l.course_id = ${outer(courses.id)}
       )`,
+      /**
+       * How many people may study this course today.
+       *
+       * Entitlements rather than orders, so a free enrolment and an access
+       * granted by hand count the same as a sale — the question a teacher asks
+       * is how many people are in their class, not how many receipts exist.
+       *
+       * Revoked access is left out, and so is access whose date has passed:
+       * both are people who are no longer in the room.
+       */
+      enrolmentCount: sql<number>`(
+        SELECT COUNT(*) FROM entitlements e
+        WHERE e.course_id = ${outer(courses.id)}
+          AND e.status = 'active'
+          AND (e.expires_at IS NULL OR e.expires_at > NOW())
+      )`,
       inPackage: sql<boolean>`EXISTS (
         SELECT 1 FROM package_courses pc WHERE pc.course_id = ${outer(courses.id)}
       )`,
@@ -489,6 +643,7 @@ export async function listCourses(input: CourseListOptions): Promise<Paged<unkno
     rows.map((r) => ({
       ...r,
       lessonCount: Number(r.lessonCount),
+      enrolmentCount: Number(r.enrolmentCount),
       inPackage: Boolean(r.inPackage),
       instructors: byCourse.get(r.id) ?? [],
     })),
@@ -553,6 +708,27 @@ export interface CourseFacets {
  * built from a second, similar clause is a count that disagrees with the list
  * it sits next to.
  */
+/**
+ * What the language filter should say each of its options would give you.
+ *
+ * Grouping by the column alone answers a different question: it would offer
+ * "All languages (4)" as a fifth choice beside Japanese and English, while a
+ * visitor filtering to Japanese silently got those four as well — so every
+ * count on the list was wrong by the number of courses that suit everybody.
+ *
+ * A count beside a filter is a promise about what clicking it does. These are
+ * the four languages, each counting the courses that answer to it, and no
+ * separate row for 'all', because a course marked 'all' is already in all four.
+ */
+function spreadAllOverLanguages(counts: Record<string, number>): Record<string, number> {
+  const { all = 0, ...named } = counts
+  if (!all) return named
+
+  const out: Record<string, number> = { ...named }
+  for (const locale of LOCALES) out[locale] = (out[locale] ?? 0) + all
+  return out
+}
+
 export async function courseFacets(input: CourseListOptions): Promise<CourseFacets> {
   const opts = await withCategoryTree(input)
 
@@ -600,7 +776,7 @@ export async function courseFacets(input: CourseListOptions): Promise<CourseFace
       .then(([r]) => Number(r?.value ?? 0)),
     tally('category', courses.categoryId),
     tally('level', courses.level),
-    tally('locale', courses.contentLocale),
+    tally('locale', courses.contentLocale).then(spreadAllOverLanguages),
     tally('duration', durationKey),
     tally('price', priceKey),
     accessRow.then(([r]) => ({
@@ -737,8 +913,32 @@ export async function getCourse(id: number, includeUnpublished: boolean) {
     .where(eq(courses.id, id))
     .limit(1)
 
+  /**
+   * What the school pays the teacher is nobody else's business.
+   *
+   * This route is the public course page as well as the admin form, and the
+   * row was being spread whole — so the rate agreed with each teacher was
+   * readable by anyone who opened the page in a browser's network tab. It
+   * mattered less while every course sat on the same figure; now that each
+   * carries its own, it is a commercial term between two parties, visible
+   * side by side for every teacher on the site.
+   *
+   * `includeUnpublished` is already the "may see this course's workings"
+   * signal — an admin, or the teacher whose course it is, both of whom should
+   * know the figure.
+   */
+  /**
+   * The share is no longer a property of a course.
+   *
+   * It is agreed with the teacher and read from their record, so the column
+   * here is a leftover that explains old `teacher_earnings` rows and nothing
+   * else. Returning it would offer a second answer to a question that now has
+   * one, which is how a payout argument starts.
+   */
+  const { revenueSharePct: _retired, ...publicFields } = row
+
   return {
-    ...row,
+    ...publicFields,
     categoryName: extra?.categoryName ?? null,
     lessonCount: Number(extra?.lessonCount ?? 0),
     inPackage: Boolean(extra?.inPackage),
@@ -778,6 +978,7 @@ export async function createCourse(input: CourseInput, createdBy: number) {
   const { instructorIds, ...fields } = input
   // The zod schema already shaped these; drizzle only needs to be told so.
   const values = { ...fields, createdBy } as typeof courses.$inferInsert
+
   await db.insert(courses).values(values)
 
   const [created] = await db.select().from(courses).where(eq(courses.slug, input.slug)).limit(1)
@@ -787,7 +988,85 @@ export async function createCourse(input: CourseInput, createdBy: number) {
   return created
 }
 
-export async function updateCourse(id: number, input: Partial<CourseInput>) {
+/**
+ * Telling the people a review concerns that it happened.
+ *
+ * Three moves matter and the rest do not. A teacher sending a course in needs
+ * an administrator to know it is waiting; an administrator approving or
+ * refusing one needs the teacher to know which, and if refused, why. A course
+ * moved from draft to draft, or ended years later, is nobody's news.
+ *
+ * Failures are swallowed. The decision is already recorded; a mail server
+ * being down is not a reason to refuse the save that already happened.
+ */
+async function announceReview(
+  course: typeof courses.$inferSelect,
+  was: string,
+  actorId: number | null,
+) {
+  try {
+    const teachers = (
+      await db
+        .select({ userId: courseInstructors.userId })
+        .from(courseInstructors)
+        .where(eq(courseInstructors.courseId, course.id))
+    ).map((r) => r.userId)
+
+    if (course.status === 'pending' && was !== 'pending') {
+      await notify.notifyAdmins({
+        type: 'course_submitted',
+        title: 'A course is waiting for review',
+        body: course.title,
+        link: `/courses/${course.id}`,
+        subject: { type: 'course', id: course.id },
+      })
+      return
+    }
+
+    // Both verdicts go to whoever teaches it — which is who did the work, and
+    // who can act on the answer. The person who pressed the button is left out
+    // of their own news.
+    const audience = teachers.filter((t) => t !== actorId)
+    if (!audience.length) return
+
+    if (course.status === 'approved') {
+      for (const userId of audience) {
+        await notify.notify({
+          userId,
+          surface: 'admin',
+          type: 'course_approved',
+          title: 'Your course is live',
+          body: course.title,
+          link: `/courses/${course.id}`,
+          subject: { type: 'course', id: course.id },
+        })
+      }
+    } else if (course.status === 'rejected') {
+      for (const userId of audience) {
+        await notify.notify({
+          userId,
+          surface: 'admin',
+          type: 'course_rejected',
+          title: 'Your course needs changes',
+          // The reason, where the teacher will actually meet it. Without this
+          // the notice says only that something is wrong.
+          body: course.reviewNote ? `${course.title} — ${course.reviewNote}` : course.title,
+          link: `/courses/${course.id}`,
+          subject: { type: 'course', id: course.id },
+        })
+      }
+    }
+  } catch {
+    // Nothing above changes what is stored.
+  }
+}
+
+export async function updateCourse(
+  id: number,
+  input: Partial<CourseInput>,
+  /** Who is making the change, for the approval stamp and the notices. */
+  actor?: { sub: number } | undefined,
+) {
   const [row] = await db.select().from(courses).where(eq(courses.id, id)).limit(1)
   if (!row) throw notFound('That course does not exist.')
 
@@ -816,12 +1095,29 @@ export async function updateCourse(id: number, input: Partial<CourseInput>) {
     const patch = {
       ...fields,
       ...(publishing ? { publishedAt: new Date() } : {}),
+      // Who decided, and when. Written here rather than by the caller so that
+      // every route through approval records it, including the next one.
+      ...(publishing
+        ? { approvedAt: new Date(), approvedBy: actor?.sub ?? null, reviewNote: null }
+        : {}),
+      // A course going back for work keeps the note; one going anywhere else
+      // loses it, because it described a verdict that no longer applies.
+      ...(fields.status && fields.status !== 'rejected' && !publishing
+        ? { reviewNote: null }
+        : {}),
     } as Partial<typeof courses.$inferInsert>
     await db.update(courses).set(patch).where(eq(courses.id, id))
   }
   if (instructorIds) await setInstructors(id, instructorIds)
 
   const [after] = await db.select().from(courses).where(eq(courses.id, id)).limit(1)
+
+  // After the write, and not awaited into the response: a course that saved
+  // has saved, and a notice that fails to send is not a reason to tell the
+  // person it did not.
+  if (fields.status && fields.status !== row.status) {
+    void announceReview(after!, row.status, actor?.sub ?? null)
+  }
   // After the write: whether a picture is still in use is answered by what is
   // now stored, including by other courses and articles.
   await removeOrphanedMedia(row.description, after!.description)
@@ -951,6 +1247,79 @@ async function refreshCourseDuration(courseId: number) {
     .where(eq(courses.id, courseId))
 }
 
+/* ---------------- the course's own handouts ---------------- */
+
+/**
+ * Files that belong to the course rather than to one lesson — a handbook, a
+ * sheet of exercises, a glossary. They show in the learning room's documents
+ * tab under every lesson, which is the point: a reference is wanted wherever
+ * you are, not only on the page it was uploaded to.
+ *
+ * Stored by path like everything else, and served through a signed URL that
+ * expires. The name is the school's to choose; a reader sees it and nothing of
+ * where the file lives.
+ */
+export async function listDocuments(courseId: number) {
+  return db
+    .select({
+      id: courseDocuments.id,
+      fileName: courseDocuments.fileName,
+      filePath: courseDocuments.filePath,
+      sizeBytes: courseDocuments.sizeBytes,
+      createdAt: courseDocuments.createdAt,
+    })
+    .from(courseDocuments)
+    .where(eq(courseDocuments.courseId, courseId))
+    .orderBy(asc(courseDocuments.id))
+}
+
+export async function addDocument(
+  courseId: number,
+  input: { fileName: string; filePath: string; sizeBytes?: number | null },
+) {
+  const [res] = await db.insert(courseDocuments).values({
+    courseId,
+    fileName: input.fileName,
+    filePath: input.filePath,
+    sizeBytes: input.sizeBytes ?? null,
+  })
+  const [row] = await db
+    .select()
+    .from(courseDocuments)
+    .where(eq(courseDocuments.id, Number(res.insertId)))
+    .limit(1)
+  return row!
+}
+
+/** Only the name. Replacing the file is removing one and adding another, so
+ *  that a link somebody has open does not quietly become a different document. */
+export async function renameDocument(courseId: number, documentId: number, fileName: string) {
+  const [row] = await db
+    .select()
+    .from(courseDocuments)
+    .where(and(eq(courseDocuments.id, documentId), eq(courseDocuments.courseId, courseId)))
+    .limit(1)
+  if (!row) throw notFound('No such document on this course.')
+
+  await db.update(courseDocuments).set({ fileName }).where(eq(courseDocuments.id, documentId))
+  return { ...row, fileName }
+}
+
+export async function deleteDocument(courseId: number, documentId: number) {
+  const [row] = await db
+    .select()
+    .from(courseDocuments)
+    .where(and(eq(courseDocuments.id, documentId), eq(courseDocuments.courseId, courseId)))
+    .limit(1)
+  if (!row) throw notFound('No such document on this course.')
+
+  await db.delete(courseDocuments).where(eq(courseDocuments.id, documentId))
+  // The file itself is left in the store on purpose: several courses may share
+  // one handout, and a delete that took the bytes with it would empty the
+  // others. Tidying the store is its own job, done knowingly.
+  return row
+}
+
 export async function createModule(courseId: number, input: { title: string; sortOrder: number }) {
   await db.insert(courseModules).values({ courseId, ...input })
   const [created] = await db
@@ -995,7 +1364,35 @@ export async function deleteModule(courseId: number, moduleId: number) {
   return row
 }
 
+/**
+ * A course has one quiz, or none.
+ *
+ * `quizzes` already carries a unique index on the course, so a second set of
+ * questions could never be stored — but nothing stopped a second quiz *lesson*
+ * being added, which left two rows in the curriculum pointing at one quiz and
+ * no way to say which was which. Results are counted per course, so two is not
+ * a richer course, it is an ambiguous one.
+ *
+ * Refused here rather than only hidden in the admin: a screen can be out of
+ * date, and this is the rule.
+ */
+async function assertOneQuiz(courseId: number, exceptLessonId?: number) {
+  const [existing] = await db
+    .select({ id: lessons.id, title: lessons.title })
+    .from(lessons)
+    .where(and(eq(lessons.courseId, courseId), eq(lessons.type, 'quiz')))
+    .limit(2)
+
+  if (existing && existing.id !== exceptLessonId) {
+    throw conflict(
+      `This course already has a quiz — "${existing.title}". Edit that one, or delete it first.`,
+    )
+  }
+}
+
 export async function createLesson(courseId: number, input: Record<string, unknown>) {
+  if (input.type === 'quiz') await assertOneQuiz(courseId)
+
   const values = { ...input, courseId } as typeof lessons.$inferInsert
   await db.insert(lessons).values(values)
 
@@ -1021,6 +1418,11 @@ export async function updateLesson(
     .where(and(eq(lessons.id, lessonId), eq(lessons.courseId, courseId)))
     .limit(1)
   if (!before) throw notFound('That lesson does not exist on this course.')
+
+  // Turning an ordinary lesson into the quiz counts as adding one.
+  if (input.type === 'quiz' && before.type !== 'quiz') {
+    await assertOneQuiz(courseId, lessonId)
+  }
 
   if (Object.keys(input).length) {
     await db

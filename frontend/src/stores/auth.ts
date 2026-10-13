@@ -1,4 +1,5 @@
 import { useCartStore } from './cart'
+import { useLearningStore } from './learning'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
@@ -110,6 +111,19 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * Signs out everywhere, this browser included — which is what "everywhere"
+   * means, and why it tears the session down locally exactly as `logout` does.
+   */
+  async function logoutEverywhere(): Promise<void> {
+    try {
+      await api.logoutAll()
+    } catch {
+      // Same reasoning as below: the local session goes either way.
+    }
+    await logout()
+  }
+
   async function logout(): Promise<void> {
     busy.value = true
     try {
@@ -123,6 +137,9 @@ export const useAuthStore = defineStore('auth', () => {
       // The basket belongs to the account that just left. Leaving it in the
       // badge would show the next person at this browser somebody else's.
       useCartStore().clear()
+      // Same reason: the cards would otherwise go on saying "เริ่มเรียน" over
+      // courses the person now at this browser has never bought.
+      useLearningStore().clear()
       syncFixtures(false)
       busy.value = false
     }
@@ -141,6 +158,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     logout,
+    logoutEverywhere,
   }
 })
 

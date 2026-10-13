@@ -109,11 +109,13 @@
    ones used to be.
    -------------------------------------------------------------------------- */
 
-/* Three tiles, not five: the package takes the full width it already needed
-   for its meter, and the two course counts share the row below it. */
-.acct-stats .acct-stat--pkg { grid-column: 1 / -1; }
-.acct-stats .acct-stat--sm { grid-column: span 3; }
+/* Three tiles, not five, and all three the same width: the shelf summary and
+   the two course counts. There is no package tile — packages are not on sale,
+   so nobody has one to show. */
+.acct-stats .acct-stat--third,
+.acct-stats .acct-stat--sm { grid-column: span 2; }
 @container acct (max-width: 640px) {
+  .acct-stats .acct-stat--third { grid-column: 1 / -1; }
   .acct-stats .acct-stat--sm { grid-column: span 3; }
 }
 
@@ -124,6 +126,9 @@
   .acct-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .acct-fact:nth-child(3) { grid-column: 1 / -1; }
 }
+/* A course with no test has two facts, not three. Left at three the row ends in
+   an empty grey cell, which reads as something that failed to load. */
+.acct-facts--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 /* --------------------------------------------------------------------------
    Learning — the compact header, and what Minna does not issue

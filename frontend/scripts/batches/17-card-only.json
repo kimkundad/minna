@@ -1,0 +1,10 @@
+{
+  "th": { "commerce": { "pay": { "cardOnly": "คอร์สนี้ตั้งราคาเป็น {currency} จ่ายผ่านบัตรได้อย่างเดียว — PromptPay รับเฉพาะเงินบาท" } } },
+  "en": { "commerce": { "pay": { "cardOnly": "This basket is priced in {currency}, so card is the only way to pay it — PromptPay takes baht only." } } },
+  "jp": { "commerce": { "pay": { "cardOnly": "このご注文は {currency} 建てのため、お支払いはカードのみです。PromptPay はタイバーツのみ対応しています。" } } },
+  "vn": { "commerce": { "pay": { "cardOnly": "Giỏ hàng này tính bằng {currency} nên chỉ có thể trả bằng thẻ — PromptPay chỉ nhận baht." } } },
+  "id": { "commerce": { "pay": { "cardOnly": "Pesanan ini dihargai dalam {currency}, jadi hanya bisa dibayar dengan kartu — PromptPay hanya menerima baht." } } },
+  "zh": { "commerce": { "pay": { "cardOnly": "这笔订单以 {currency} 计价，只能刷卡付款 — PromptPay 仅接受泰铢。" } } },
+  "ko": { "commerce": { "pay": { "cardOnly": "이 주문은 {currency}로 책정되어 카드로만 결제할 수 있습니다 — PromptPay는 바트만 받습니다." } } },
+  "tw": { "commerce": { "pay": { "cardOnly": "這筆訂單以 {currency} 計價，只能刷卡付款 — PromptPay 僅接受泰銖。" } } }
+}

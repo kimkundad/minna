@@ -11,6 +11,7 @@ import { ApiError, api } from '@/lib/api'
 import type { ContentLocale, PublicCategory, PublicPostDetail } from '@/lib/api'
 import { articleView, readingMinutes, withHeadings, type Heading } from '@/lib/article'
 import { date } from '@/lib/format'
+import ShareRow from '@/components/ui/ShareRow.vue'
 
 /**
  * One article.
@@ -158,38 +159,6 @@ onMounted(async () => {
 })
 onBeforeUnmount(() => spy?.disconnect())
 
-/* ---------------- sharing ---------------- */
-
-const shareUrl = computed(() =>
-  typeof window === 'undefined' ? '' : window.location.href,
-)
-const copied = ref(false)
-let copyTimer: ReturnType<typeof setTimeout> | undefined
-
-const shareLinks = computed(() => {
-  const url = encodeURIComponent(shareUrl.value)
-  const text = encodeURIComponent(post.value?.title ?? '')
-  return [
-    // LINE first: it is how most of this site's readers pass a link along.
-    { key: 'line', label: 'LINE', icon: 'message', href: `https://social-plugins.line.me/lineit/share?url=${url}` },
-    { key: 'facebook', label: 'Facebook', icon: 'facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${url}` },
-    { key: 'x', label: 'X', icon: 'share', href: `https://x.com/intent/post?url=${url}&text=${text}` },
-  ]
-})
-
-async function copyLink(): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(shareUrl.value)
-    copied.value = true
-    clearTimeout(copyTimer)
-    copyTimer = setTimeout(() => (copied.value = false), 2000)
-  } catch {
-    // Denied, or no clipboard at all. The address bar still has the link, and
-    // saying "could not copy" helps nobody do anything about it.
-  }
-}
-
-onBeforeUnmount(() => clearTimeout(copyTimer))
 </script>
 
 <template>
@@ -317,35 +286,7 @@ onBeforeUnmount(() => clearTimeout(copyTimer))
             <!-- eslint-disable-next-line vue/no-v-html -->
             <div class="bl-prose" v-html="prepared.html" />
 
-            <div class="bl-share">
-              <span class="bl-share-label">{{ t('blog.share') }}</span>
-              <ul class="bl-share-list" role="list">
-                <li v-for="s in shareLinks" :key="s.key">
-                  <a
-                    class="bl-share-btn"
-                    :href="s.href"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    :data-share="s.key"
-                  >
-                    <AppIcon :name="s.icon" />{{ s.label }}
-                  </a>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    class="bl-share-btn"
-                    :class="{ 'is-done': copied }"
-                    data-share="copy"
-                    @click="copyLink"
-                  >
-                    <AppIcon :name="copied ? 'check' : 'link'" />{{
-                      copied ? t('blog.copied') : t('blog.copyLink')
-                    }}
-                  </button>
-                </li>
-              </ul>
-            </div>
+            <ShareRow :title="post?.title" :label="t('blog.share')" />
 
             <div v-if="view.authorName" class="bl-author">
               <AppAvatar
@@ -360,7 +301,11 @@ onBeforeUnmount(() => clearTimeout(copyTimer))
                 <span v-if="view.authorHeadline" class="badge badge--info">
                   <AppIcon name="briefcase" />{{ view.authorHeadline }}
                 </span>
-                <p v-if="view.authorBio">{{ view.authorBio }}</p>
+                <!-- HTML, for the same reason as the course page's copy of
+                     this card: it is written in the rich text editor and
+                     cleaned by the API before it is stored. -->
+                <!-- eslint-disable-next-line vue/no-v-html -->
+                <div v-if="view.authorBio" class="bl-author-bio" v-html="view.authorBio" />
               </div>
             </div>
           </div>

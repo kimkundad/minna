@@ -276,6 +276,8 @@
 .cat-tile:hover small, .cat-tile:focus-visible small { color: rgba(255, 255, 255, .85); }
 .cat-tile .ct-count { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--ink-secondary); }
 .cat-tile:hover .ct-count { color: #fff; }
+/* One line each, so every tile in the grid is the same height. */
+.cat-tile b, .cat-tile small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------- Search overlay ---------- */
 .search-layer { position: fixed; inset: 0; z-index: var(--z-drawer); }
@@ -949,3 +951,23 @@ body.is-locked .proto { display: none; }
 .search-field > .sf-ico svg, .search-field > .cat-search-ico svg { width: 22px; height: 22px; }
 .drawer-nav .dn-item[aria-expanded] > span:last-child svg { transition: transform .2s; }
 .drawer-nav .dn-item[aria-expanded="true"] > span:last-child svg { transform: rotate(180deg); }
+
+/* reCAPTCHA v2 renders a fixed 304x78 iframe. It sits in the row above the
+   send button and wraps to its own line on a narrow screen rather than pushing
+   the button off the edge. */
+.captcha-box { display: grid; gap: 6px; }
+.captcha-widget { min-height: 78px; }
+@media (max-width: 420px) {
+  /* Google's own widget is not responsive below 304px, so it is scaled rather
+     than allowed to overflow the card. */
+  .captcha-widget { transform: scale(.86); transform-origin: 0 50%; }
+}
+
+/* The way out of the bell and into the full list. */
+.notif-all {
+  display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px;
+  border-top: 1px solid var(--border-default); font-size: 14px; font-weight: 600;
+  color: var(--brand-primary-dark); background: var(--surface-soft);
+}
+.notif-all:hover { background: var(--brand-primary-soft); }
+.notif-all svg { width: 15px; height: 15px; }

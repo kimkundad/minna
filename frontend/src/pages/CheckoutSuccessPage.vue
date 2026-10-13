@@ -11,7 +11,8 @@ import { openAuth } from '@/components/auth/authChannel'
 import { ApiError, api, mediaUrl } from '@/lib/api'
 import type { PublicCategory, PublicCourse, PublicOrder } from '@/lib/api'
 import { baht as toBaht } from '@/lib/checkout'
-import { dateTime, num } from '@/lib/format'
+import { categoryLabel } from '@/lib/course'
+import { dateTime, num, money } from '@/lib/format'
 import { useAuthStore } from '@/stores/auth'
 
 /**
@@ -31,9 +32,12 @@ const route = useRoute()
 const { t } = useI18n()
 const auth = useAuthStore()
 
+/** The locale in the address, which is what every link on this page keeps. */
 const locale = computed(() => String(route.params.locale ?? 'th'))
 const path = (p: string) => `/${locale.value}${p}`
-const baht = (n: number) => t('commerce.baht', { n: num(n) })
+/** The basket's own currency. A basket cannot mix two — the server refuses
+ *  one that does — so a single answer covers every figure on the page. */
+const baht = (n: number) => money(n, order.value?.currency ?? 'THB', String(locale.value))
 
 const METHOD_ICON: Record<string, string> = {
   promptpay: 'qr',
@@ -171,13 +175,18 @@ const lines = computed<SuccessLine[]>(() =>
     const cat = course?.categoryId
       ? categories.value.find((c) => c.id === course.categoryId)
       : undefined
+    // Only for the fallback glyph: a sub-category rarely has one of its own.
     const parent = cat?.parentId ? categories.value.find((c) => c.id === cat.parentId) : undefined
 
     return {
       id: item.id,
       title: item.titleSnapshot,
-      href: course ? `/${locale.value}/courses/${course.slug}` : null,
-      category: cat ? (parent ? `${parent.name} · ${cat.name}` : cat.name) : '',
+      // Into the room. They have just paid for it; sending them back to the
+      // page that sold it would be the one thing they no longer need.
+      href: course ? `/${locale.value}/learn/${course.slug}` : null,
+      // The same helper the cards use, rather than a second copy of the
+      // parent-and-child rule that would not know about the other languages.
+      category: cat ? categoryLabel(cat, categories.value, locale.value) : '',
       image: course?.thumbnailPath
         ? { src: mediaUrl(course.thumbnailPath), alt: item.titleSnapshot }
         : null,

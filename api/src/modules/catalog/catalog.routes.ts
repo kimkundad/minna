@@ -1,8 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { audit, diff } from '../../lib/audit'
-import { forbidden } from '../../lib/errors'
+import { AppError, forbidden } from '../../lib/errors'
 import { isStorageConfigured, signedUrl } from '../../lib/storage'
+import { LOCALES } from '../../db/schema/auth'
 import * as schemas from './catalog.schemas'
 import * as service from './catalog.service'
 import * as quizSchemas from './quiz.schemas'
@@ -42,6 +43,25 @@ async function assertMayEditCourse(req: FastifyRequest, courseId: number) {
   throw forbidden('You are not an instructor on this course.')
 }
 
+/**
+ * Whether this reader may see a course that is not published yet.
+ *
+ * An admin may; so may the teacher who teaches it. Everybody else — including
+ * a teacher with a course of their own elsewhere — sees what a visitor sees.
+ *
+ * This used to ask only whether the reader was staff, which made every draft
+ * in the school readable by any teacher who tried an id: the list was already
+ * narrowed to their own courses, so the front door was shut while this window
+ * stood open. Nothing was editable through it and the quiz answer keys have
+ * their own guard, but somebody's unfinished course and its price are still
+ * theirs until they publish it.
+ */
+async function maySeeUnpublished(req: FastifyRequest, courseId: number): Promise<boolean> {
+  if (isAdmin(req)) return true
+  if (!(req.user?.roles ?? []).includes('teacher')) return false
+  return service.isCourseInstructor(courseId, req.user.sub)
+}
+
 export default async function catalogRoutes(app: FastifyInstance) {
   const staffOnly = { preHandler: app.requireRole('admin', 'teacher') }
   const adminOnly = { preHandler: app.requireRole('admin') }
@@ -52,7 +72,20 @@ export default async function catalogRoutes(app: FastifyInstance) {
     const query = schemas.listQuery.parse(req.query)
     // The public site and every select box want the whole list; the admin
     // table wants a page of it. `all=1` is which.
-    if ((req.query as { all?: string }).all) return { data: await service.listCategories() }
+    if ((req.query as { all?: string }).all) {
+      /**
+       * `locale` narrows the course counts to what a reader of that language
+       * can take. The public site sends it; the admin's select boxes do not,
+       * and get the counts across every language.
+       *
+       * Validated against the known list rather than passed through: it lands
+       * in a SQL comparison, and an unknown value would silently count nothing
+       * instead of everything.
+       */
+      const asked = (req.query as { locale?: string }).locale
+      const locale = asked && (LOCALES as readonly string[]).includes(asked) ? asked : undefined
+      return { data: await service.listCategories(locale) }
+    }
     return service.listCategoriesPaged(query)
   })
 
@@ -121,20 +154,44 @@ export default async function catalogRoutes(app: FastifyInstance) {
   // `resolveCourseRef` for why both are allowed.
   app.get('/courses/:id', { preHandler: app.optionalAuth }, async (req) => {
     const { id } = refParam.parse(req.params)
-    return { data: await service.getCourse(await service.resolveCourseRef(id), staff(req)) }
+    const courseId = await service.resolveCourseRef(id)
+    return { data: await service.getCourse(courseId, await maySeeUnpublished(req, courseId)) }
   })
 
   app.post('/courses', staffOnly, async (req, reply) => {
     const body = schemas.courseBody.parse(req.body)
 
-    // A teacher who leaves themselves off their own course cannot open it
-    // again, so they are added when they did not say otherwise. An admin has
-    // to pick somebody; the schema already refused an empty list.
-    const instructorIds = body.instructorIds?.length
-      ? body.instructorIds
-      : [req.user.sub]
+    /**
+     * Whose course this is.
+     *
+     * A teacher's is their own, and they do not get to say otherwise: putting
+     * it under somebody else's name would make a course they cannot open and
+     * hand work to a colleague who never agreed to it. The picker they would
+     * choose from is an admin-only list anyway.
+     *
+     * An admin has to name somebody. There is no sensible default — an admin
+     * creating a course is rarely the one who will teach it.
+     */
+    let instructorIds: number[]
+    if (isAdmin(req)) {
+      if (!body.instructorIds?.length) {
+        throw new AppError(422, 'validation_failed', 'Some fields need fixing.', {
+          instructorIds: 'Choose who teaches this course.',
+        })
+      }
+      instructorIds = body.instructorIds
+    } else {
+      instructorIds = [req.user.sub]
+    }
 
-    const created = await service.createCourse({ ...body, instructorIds }, req.user.sub)
+    // Same rule as on the patch: the share is not the teacher's to name. Here
+    // it is dropped rather than refused, because a teacher's form never offers
+    // the field — a value arriving from one is a stale client or a hand-made
+    // request, and neither is worth failing a course they have just written.
+    const created = await service.createCourse(
+      { ...body, instructorIds },
+      req.user.sub,
+    )
 
     audit(req, {
       action: 'course.created',
@@ -157,12 +214,29 @@ export default async function catalogRoutes(app: FastifyInstance) {
       throw forbidden('Only an administrator can approve or end a course.')
     }
 
-    const { before, after } = await service.updateCourse(id, body)
+    // The note is the reviewer's verdict on the work, so it is not the
+    // author's to write — a teacher could otherwise answer their own review,
+    // and the next administrator to open the course would read it as theirs.
+    if (body.reviewNote !== undefined && !isAdmin(req)) {
+      throw forbidden('Only an administrator can write a review note.')
+    }
+
+    // Who teaches it is an admin's decision too. A teacher handing their course
+    // to somebody else locks themselves out of it in the same request, and
+    // taking somebody else's course is not theirs to do either.
+    if (body.instructorIds && !isAdmin(req)) {
+      throw forbidden('Only an administrator can change who teaches a course.')
+    }
+
+    const { before, after } = await service.updateCourse(id, body, { sub: req.user.sub })
     const changes = diff(before as never, body as never)
 
     audit(req, {
-      // Price and status changes are the ones people come looking for, so they
-      // get their own action rather than hiding inside 'course.updated'.
+      // Price, share and status changes are the ones people come looking for,
+      // so they get their own action rather than hiding inside
+      // 'course.updated'. The share is named ahead of the price because it is
+      // what a payout dispute is argued over, and the full diff is recorded
+      // either way.
       action:
         changes && 'status' in changes
           ? 'course.status_changed'
@@ -239,8 +313,91 @@ export default async function catalogRoutes(app: FastifyInstance) {
   app.get('/courses/:id/curriculum', { preHandler: app.optionalAuth }, async (req) => {
     const { id } = refParam.parse(req.params)
     const courseId = await service.resolveCourseRef(id)
-    await service.getCourse(courseId, staff(req))
+    // Read for the side effect: it is what refuses a course this reader may
+    // not see, before its lessons are handed over.
+    await service.getCourse(courseId, await maySeeUnpublished(req, courseId))
     return { data: await service.getCurriculum(courseId) }
+  })
+
+  /* ---------------- the course's own handouts ---------------- */
+
+  /**
+   * Files that belong to the course rather than to one lesson.
+   *
+   * They appear in the learning room's documents tab under every lesson, so a
+   * handbook is to hand wherever the reader is. Listing is staff-only here; the
+   * student's copy of this list comes with the curriculum, where the
+   * entitlement has already been checked.
+   */
+  app.get('/courses/:id/documents', staffOnly, async (req) => {
+    const { id } = idParam.parse(req.params)
+    await assertMayEditCourse(req, id)
+    return { data: await service.listDocuments(id) }
+  })
+
+  app.post('/courses/:id/documents', staffOnly, async (req, reply) => {
+    const { id } = idParam.parse(req.params)
+    await assertMayEditCourse(req, id)
+    const body = z
+      .object({
+        fileName: z.string().trim().min(1, 'Give the file a name.').max(255),
+        /** What the upload returned. A path, never a URL: a URL expires. */
+        filePath: z.string().trim().min(1).max(512),
+        sizeBytes: z.coerce.number().int().min(0).nullish(),
+      })
+      .parse(req.body)
+
+    const created = await service.addDocument(id, body)
+    audit(req, {
+      action: 'course_document.added',
+      subjectType: 'course',
+      subjectId: id,
+      summary: created.fileName,
+    })
+    return reply.status(201).send({ data: created })
+  })
+
+  /** The name only. Swapping the file means removing one and adding another,
+   *  so that a link somebody already has does not become another document. */
+  app.patch('/courses/:id/documents/:documentId', staffOnly, async (req) => {
+    const { id, documentId } = z
+      .object({
+        id: z.coerce.number().int().positive(),
+        documentId: z.coerce.number().int().positive(),
+      })
+      .parse(req.params)
+    await assertMayEditCourse(req, id)
+    const { fileName } = z
+      .object({ fileName: z.string().trim().min(1, 'Give the file a name.').max(255) })
+      .parse(req.body)
+
+    const row = await service.renameDocument(id, documentId, fileName)
+    audit(req, {
+      action: 'course_document.renamed',
+      subjectType: 'course',
+      subjectId: id,
+      summary: fileName,
+    })
+    return { data: row }
+  })
+
+  app.delete('/courses/:id/documents/:documentId', staffOnly, async (req, reply) => {
+    const { id, documentId } = z
+      .object({
+        id: z.coerce.number().int().positive(),
+        documentId: z.coerce.number().int().positive(),
+      })
+      .parse(req.params)
+    await assertMayEditCourse(req, id)
+
+    const row = await service.deleteDocument(id, documentId)
+    audit(req, {
+      action: 'course_document.removed',
+      subjectType: 'course',
+      subjectId: id,
+      summary: row.fileName,
+    })
+    return reply.status(204).send()
   })
 
   app.post('/courses/:id/modules', staffOnly, async (req, reply) => {

@@ -469,11 +469,11 @@ const startRow = computed(() => (page.value - 1) * perPage)
 const endRow = computed(() => page.value * perPage)
 
 const paginatedRows = computed(() => {
-  let sorted = [...rows.value]
+  const sorted = [...rows.value]
   if (sort.value.column) {
     sorted.sort((a, b) => {
-      let valA = a[sort.value.column]
-      let valB = b[sort.value.column]
+      const valA = a[sort.value.column]
+      const valB = b[sort.value.column]
       if (sort.value.column === 'arrival') {
         return (new Date(valA) - new Date(valB)) * (sort.value.asc ? 1 : -1)
       }

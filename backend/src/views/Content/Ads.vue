@@ -48,6 +48,10 @@ const LOCALES = [
   { value: 'en', label: 'English' },
   { value: 'jp', label: '日本語' },
   { value: 'vn', label: 'Tiếng Việt' },
+  { value: 'id', label: 'Bahasa Indonesia' },
+  { value: 'zh', label: '简体中文' },
+  { value: 'ko', label: '한국어' },
+  { value: 'tw', label: '繁體中文' },
 ] as const
 
 /** The sizes the artwork has to be, stated where it is uploaded rather than

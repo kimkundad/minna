@@ -3,6 +3,9 @@ import { defineStore } from 'pinia'
 import { ApiError, api } from '@/lib/api'
 import type { PublicCourse, Quote } from '@/lib/api'
 import { useAuthStore } from './auth'
+import { i18n } from '@/locales'
+import router from '@/router'
+import { toast } from '@/components/commerce/useCommerce'
 
 /**
  * The basket.
@@ -29,6 +32,8 @@ export interface CartRow {
 export const useCartStore = defineStore('cart', () => {
   const items = ref<CartRow[]>([])
   const quote = ref<Quote | null>(null)
+  /** Why the basket has no total, when it should have one. */
+  const problem = ref<string | null>(null)
   const owned = ref<number[]>([])
   /** The courses behind the rows, for their titles and pictures. */
   const courses = ref<PublicCourse[]>([])
@@ -67,9 +72,15 @@ export const useCartStore = defineStore('cart', () => {
     ]
   }
 
-  function apply(data: { items: CartRow[]; quote: Quote | null; alreadyOwned: number[] }): void {
+  function apply(data: {
+    items: CartRow[]
+    quote: Quote | null
+    problem?: string | null
+    alreadyOwned: number[]
+  }): void {
     items.value = data.items
     quote.value = data.quote
+    problem.value = data.problem ?? null
     owned.value = data.alreadyOwned
   }
 
@@ -95,6 +106,29 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   /**
+   * Says so, briefly.
+   *
+   * Short on purpose: it confirms a click, it is not news. The cart itself is
+   * one tap away for anyone who wants to check, which is cheaper than a dialog
+   * they have to dismiss before carrying on shopping.
+   */
+  function announce(courseId: number): void {
+    const t = i18n.global.t
+    const title = courseFor(courseId)?.title ?? ''
+    toast(t('commerce.cart.added', { title }), {
+      type: 'success',
+      timeout: 2600,
+      action: {
+        label: t('commerce.cart.viewCart'),
+        onClick: () => {
+          const locale = String(router.currentRoute.value.params.locale ?? 'th')
+          void router.push(`/${locale}/cart`)
+        },
+      },
+    })
+  }
+
+  /**
    * Adds a course. Returns false when nobody is signed in, so the caller can
    * ask them to — the store does not open dialogs.
    */
@@ -106,9 +140,28 @@ export const useCartStore = defineStore('cart', () => {
     try {
       apply((await api.addToCart(courseId)).data)
       await syncCourses()
+      announce(courseId)
       return true
     } catch (err) {
-      if (err instanceof ApiError) throw err
+      /**
+       * A refusal the buyer can act on is shown, not thrown.
+       *
+       * The server turns away a course priced in a currency the basket does
+       * not already use, because one payment cannot be made in two. That
+       * reached the browser as an unhandled rejection: the console had the
+       * sentence explaining what to do, and the person clicking the button saw
+       * a button that simply did nothing.
+       *
+       * Rethrown only when there is no message worth reading — a sign-in
+       * prompt is the caller's job, and it keys off `false`.
+       */
+      if (err instanceof ApiError) {
+        if (err.status === 409) {
+          toast(err.message, { type: 'error', timeout: 7000 })
+          return true
+        }
+        throw err
+      }
       return false
     } finally {
       busy.value = null
@@ -153,6 +206,7 @@ export const useCartStore = defineStore('cart', () => {
   return {
     items,
     quote,
+    problem,
     owned,
     courses,
     loading,

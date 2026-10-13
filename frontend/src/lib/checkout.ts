@@ -41,6 +41,9 @@ export interface CheckoutTotals {
   total: number
   /** Everything on the order is free, so there is nothing to pay. */
   allFree: boolean
+  /** What the basket is priced in. The server refuses a basket that mixes
+   *  two currencies, so one answer covers every line. */
+  currency: string
 }
 
 /** Satang to baht, at the last moment and nowhere else. */
@@ -173,6 +176,7 @@ export function mapQuote(
     vatInclusive: quote.vatInclusive,
     total: baht(quote.total),
     allFree: quote.total === 0,
+    currency: quote.currency ?? 'THB',
   }
 }
 

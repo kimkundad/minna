@@ -16,7 +16,7 @@ import {
 } from '../../db/schema/index'
 import { notFound } from '../../lib/errors'
 import { validateInvoice, type InvoiceInput } from '../commerce/invoices.service'
-import { outer } from '../../lib/sql'
+import { instant, outer } from '../../lib/sql'
 
 /**
  * Everything the admin's student page shows, behind its tabs.
@@ -77,6 +77,7 @@ export async function courseAccess(userId: number) {
     ...r,
     lessonsDone: Number(r.lessonsDone),
     lessonsTotal: Number(r.lessonsTotal),
+    lastWatchedAt: instant(r.lastWatchedAt),
     // Expiry is a date in a column; whether it has passed is what a person
     // reading the screen actually wants to know.
     expired: Boolean(r.expiresAt && new Date(r.expiresAt) < new Date()),
@@ -261,7 +262,7 @@ export async function summary(userId: number) {
         SELECT COUNT(*) FROM orders o WHERE o.user_id = ${userId} AND o.status = 'paid'
       )`,
       lifetimeSpend: sql<number>`(
-        SELECT COALESCE(SUM(o.total), 0) FROM orders o
+        SELECT COALESCE(SUM(o.total_thb), 0) FROM orders o
         WHERE o.user_id = ${userId} AND o.status = 'paid'
       )`,
       essaysWaiting: sql<number>`(
@@ -308,5 +309,64 @@ export async function revokeAccess(userId: number, entitlementId: number) {
     courseTitle: course?.title ?? 'a course',
     was: row.status,
     now: row.status === 'revoked' ? 'active' : 'revoked',
+  }
+}
+
+/**
+ * Moving when somebody's access runs out.
+ *
+ * The ordinary reason is a few more days: somebody was ill, or a course went
+ * up late, and the fair thing is to hand back the time rather than to argue
+ * about it. The unusual reasons — making it lifetime, or pulling it in — are
+ * the same operation and are allowed for the same reason, with the audit log
+ * recording who decided and what it was before.
+ *
+ * A date rather than a number of days, even though the screen offers buttons
+ * that add days: the stored fact is when access ends, and working that out in
+ * the browser means the person approving it can see the date before they
+ * agree to it.
+ *
+ * An expired record comes back to life. That is the point — a date in the
+ * future and a status of `expired` would be a contradiction, and the nightly
+ * sweep that expires them would only disagree with the admin who just decided
+ * otherwise. A revoked one stays revoked: ending somebody's access is a
+ * separate decision, and silently undoing it here would hide it.
+ */
+export async function setAccessExpiry(
+  userId: number,
+  entitlementId: number,
+  expiresAt: Date | null,
+) {
+  const [row] = await db
+    .select({
+      id: entitlements.id,
+      courseId: entitlements.courseId,
+      status: entitlements.status,
+      expiresAt: entitlements.expiresAt,
+    })
+    .from(entitlements)
+    .where(and(eq(entitlements.id, entitlementId), eq(entitlements.userId, userId)))
+    .limit(1)
+  if (!row) throw notFound('That access record is not theirs.')
+
+  const ongoing = expiresAt === null || expiresAt.getTime() > Date.now()
+  const status = row.status === 'revoked' ? 'revoked' : ongoing ? 'active' : 'expired'
+
+  await db
+    .update(entitlements)
+    .set({ expiresAt, status })
+    .where(eq(entitlements.id, entitlementId))
+
+  const [course] = await db
+    .select({ title: courses.title })
+    .from(courses)
+    .where(eq(courses.id, row.courseId))
+    .limit(1)
+
+  return {
+    courseTitle: course?.title ?? 'a course',
+    was: instant(row.expiresAt),
+    now: expiresAt ? expiresAt.toISOString() : null,
+    status,
   }
 }

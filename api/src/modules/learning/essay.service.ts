@@ -94,6 +94,8 @@ export async function listQueue(opts: QueueOptions): Promise<Paged<unknown>> {
       learnerId: users.id,
       learnerName: sql<string>`CONCAT(${users.firstName}, ' ', ${users.lastName})`,
       learnerEmail: users.email,
+      learnerLocale: users.locale,
+      courseSlug: courses.slug,
     })
     .from(essaySubmissions)
     .innerJoin(quizzes, eq(quizzes.id, essaySubmissions.quizId))
@@ -127,6 +129,8 @@ export async function getSubmission(id: number) {
       learnerId: users.id,
       learnerName: sql<string>`CONCAT(${users.firstName}, ' ', ${users.lastName})`,
       learnerEmail: users.email,
+      learnerLocale: users.locale,
+      courseSlug: courses.slug,
     })
     .from(essaySubmissions)
     .innerJoin(quizzes, eq(quizzes.id, essaySubmissions.quizId))

@@ -3,9 +3,8 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import logoUrl from '@/assets/img/logo.png'
-import { call } from './learning'
-import type { Course, Lesson, LessonState } from './types'
+import BrandLogo from '@/components/layout/BrandLogo.vue'
+import type { Course, Lesson } from './types'
 
 /**
  * The document lesson: a cover that opens into a four-page mock reader.
@@ -20,9 +19,19 @@ const props = defineProps<{
   lesson: Lesson
   /** Signed in with access: only then is progress worth recording. */
   canTrack: boolean
+  /** The signed PDF, or null while it is being fetched. Without one the reader
+   *  draws the design's own blank sheets, which is all the prototype ever had. */
+  src: string | null
+  /** Whether the server already counts this lesson as read. */
+  read?: boolean
 }>()
 
-const emit = defineEmits<{ done: [] }>()
+const emit = defineEmits<{
+  done: []
+  /** Opened for long enough to count. The page tells the API; this component
+   *  does not decide what finished means. */
+  read: []
+}>()
 
 const { t } = useI18n()
 
@@ -38,7 +47,7 @@ const openButton = ref<HTMLElement | null>(null)
 const open = ref(false)
 const page = ref(1)
 const fullscreen = ref(false)
-const done = ref(call<LessonState>('lessonState', props.course.id, props.lesson.id).done)
+const done = ref(props.read ?? false)
 /** '' · 'saving' · 'done' · 'preview' — the little status in the reader bar. */
 const status = ref<'' | 'saving' | 'done' | 'preview'>('')
 
@@ -82,11 +91,14 @@ function openDoc() {
   }
   status.value = 'saving'
   clearTimeout(timer)
+  // Three seconds of having it open. A document has no running time, so there
+  // is nothing to measure — this is the smallest gesture that is not an
+  // accidental click.
   timer = window.setTimeout(() => {
-    const r = call<{ justDone: boolean }>('trackLesson', props.course.id, props.lesson.id, 1, 0)
     done.value = true
     status.value = 'done'
-    if (r?.justDone) emit('done')
+    emit('read')
+    emit('done')
   }, 3000)
 }
 
@@ -152,7 +164,14 @@ onBeforeUnmount(() => {
           >
             <AppIcon name="book-open" />{{ t('learning.doc.open') }}
           </button>
-          <a class="btn btn--outline-light" href="#download-lesson-pdf" data-proto-link>
+          <a
+            v-if="props.src"
+            class="btn btn--outline-light"
+            :href="props.src"
+            target="_blank"
+            rel="noopener"
+            download
+          >
             <AppIcon name="download" />{{ t('learning.doc.download') }}
           </a>
         </div>
@@ -171,7 +190,7 @@ onBeforeUnmount(() => {
     <div class="lp-doc-reader" :hidden="!open">
       <div class="lp-doc-bar">
         <b class="lp-doc-bar-title">{{ props.lesson.title }}</b>
-        <span class="lp-doc-page" data-lp-page>
+        <span v-if="!props.src" class="lp-doc-page" data-lp-page>
           {{ t('learning.doc.pageOf', { n: page, total: PAGES }) }}
         </span>
         <span class="lp-doc-state" data-lp-docstate role="status">
@@ -213,7 +232,18 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
+      <!-- The file itself, read in the browser's own PDF viewer. The chrome
+           around it stays: the bar, the close button and the full-screen
+           toggle are this design's, and the viewer only has to show pages. -->
+      <iframe
+        v-if="props.src"
+        class="lp-doc-file"
+        :src="`${props.src}#toolbar=0&navpanes=0`"
+        :title="t('learning.doc.content', { title: props.lesson.title })"
+      />
+
       <div
+        v-else
         ref="scroller"
         class="lp-doc-scroll"
         tabindex="0"
@@ -228,7 +258,7 @@ onBeforeUnmount(() => {
           :aria-label="t('learning.doc.page', { n: p.n })"
         >
           <div class="lp-sheet-head">
-            <img class="lp-sheet-logo" :src="logoUrl" width="85" height="35" alt="" decoding="async" />
+            <BrandLogo class="lp-sheet-logo" />
             <span class="lp-sheet-pg">{{ t('learning.doc.pageOf', { n: p.n, total: PAGES }) }}</span>
           </div>
 

@@ -18,10 +18,18 @@ dist/
 .env
 .env.*
 !.env.example
+!.env.prod.example
 
 # ---- api ----
 /api/drizzle/meta/_journal.json.bak
 /api/uploads/
+
+# The managed database's CA certificate. Not a secret — it is the public half
+# used to check that the server is who it says — but it belongs to whichever
+# database this checkout is pointed at, not to the code. On the server it is
+# mounted from /srv/minna/certs instead.
+/api/certs/
+/certs/
 
 # ---- legacy laravel ----
 /_legacy/vendor/
@@ -58,3 +66,10 @@ dist/
 
 # Scratch pages used to seed the prototype session for screenshots. Dev only.
 /frontend/public/__seed*.html
+
+# Screenshots the browser flow tests leave behind. `SHOT_DIR` defaults to the
+# package it is run from, so a run drops a dozen PNGs next to package.json —
+# evidence from one run on one machine, nine megabytes of it, and stale the
+# moment anything changes. Point SHOT_DIR somewhere else to keep them.
+/frontend/*.png
+/backend/*.png

@@ -57,14 +57,30 @@
 @media (max-width: 767px) {
   .hero { margin: 0 var(--outer); border-radius: 0 0 var(--r-section) var(--r-section); }
   .hero-slide { flex-direction: column; align-items: stretch; min-height: 0; }
-  .hero-media { position: relative; width: auto; aspect-ratio: 16 / 10; margin: 70px 14px 0; border-radius: 18px; -webkit-mask-image: none; mask-image: none; }
+  /* 16/9 rather than 16/10: at 16/10 one slide filled a phone screen on its
+     own, so nothing below the hero was visible without scrolling.
+
+     The top margin clears the header, which floats over the slide and is 80px
+     tall here — at less than that the picture ran underneath the logo. */
+  .hero-media { position: relative; width: auto; aspect-ratio: 16 / 9; margin: 92px 14px 0; border-radius: 18px; -webkit-mask-image: none; mask-image: none; }
   .hero-media::after { display: none; }
-  .hero-inner { padding: 20px 20px 78px; }
-  .hero-copy h1, .hero-copy .h1 { font-size: 24.5px; line-height: 1.35; margin-bottom: 12px; }
-  .hero-copy p { font-size: 15.5px; margin-bottom: 20px; }
-  .hero-ctas { flex-direction: column; }
-  .hero-ctas .btn { width: 100%; }
-  .hero-controls { bottom: 22px; }
+  /* The bottom padding is the dots' and the pause button's room: they are
+     absolutely placed over the slide, so anything less and the pause circle
+     sits on the buttons. */
+  .hero-inner { padding: 16px 20px 72px; }
+  .hero-copy h1, .hero-copy .h1 { font-size: 24.5px; line-height: 1.32; margin-bottom: 10px; }
+  .hero-copy p { font-size: 15.5px; line-height: 1.6; margin-bottom: 18px; }
+  /* Side by side while they fit, stacked when they do not. The two buttons on
+     one row are most of what the hero saves in height, and a language with
+     longer labels than Thai gets the stack back rather than two cramped
+     buttons with the text wrapped inside them. */
+  .hero-ctas { flex-direction: row; flex-wrap: wrap; gap: 10px; }
+  /* Smaller than the 56px the hero uses elsewhere, but not below the 44px a
+     finger needs. The side padding is a floor rather than the look: both
+     buttons grow to share the row, so they still read as full-width pills. It
+     is cut from 34px only so two Thai labels fit on one line at 360px. */
+  .hero-ctas .btn { flex: 1 1 140px; width: auto; min-height: 46px; padding: 0 12px; font-size: 14.5px; }
+  .hero-controls { bottom: 16px; }
   .hero-arrows { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -139,12 +155,13 @@
 .home-package { padding-bottom: 0; }
 .pkg-cta {
   position: relative; overflow: hidden; border-radius: var(--r-section); padding: var(--s-80) var(--s-48) var(--s-64); text-align: center; color: #fff;
-  /* ภาพคลินิก + scrim โทนแบรนด์ให้ตัวอักษรขาวอ่านได้ (deep teal → cyan) */
+  /* โทนแบรนด์ล้วน (deep teal → cyan) ไม่ใช้ภาพพื้นหลัง — ภาพที่มีในโปรเจกต์
+     ทั้งหมดเป็นของ prototype สัตวแพทย์ ไม่ตรงกับเนื้อหาของเว็บนี้
+     ไล่สีแน่นพอจะให้ตัวอักษรขาวอ่านได้เองโดยไม่ต้องมี scrim ทับภาพ */
   background:
-    radial-gradient(40% 70% at 12% 100%, rgba(239, 227, 202, .28) 0%, rgba(239, 227, 202, 0) 70%),
-    radial-gradient(45% 80% at 95% 0%, rgba(0, 194, 214, .45) 0%, rgba(0, 194, 214, 0) 70%),
-    linear-gradient(135deg, rgba(0, 85, 96, .92) 0%, rgba(0, 110, 122, .86) 45%, rgba(0, 194, 214, .74) 100%),
-    url("../img/readvpn-section.png") center / cover no-repeat var(--brand-primary-deep);
+    radial-gradient(40% 70% at 12% 100%, rgba(239, 227, 202, .22) 0%, rgba(239, 227, 202, 0) 70%),
+    radial-gradient(55% 90% at 92% 0%, rgba(0, 194, 214, .55) 0%, rgba(0, 194, 214, 0) 72%),
+    linear-gradient(135deg, var(--brand-primary-deep) 0%, #006E7A 48%, #00A7BE 100%);
 }
 .pkg-cta::before, .pkg-cta::after { content: ""; position: absolute; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .16); pointer-events: none; }
 .pkg-cta::before { width: 420px; height: 420px; left: -140px; top: -180px; }

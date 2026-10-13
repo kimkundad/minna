@@ -6,14 +6,8 @@
  * Reads the API itself first, then the page, and compares the two — a carousel
  * that renders something is not proof it rendered the right thing.
  */
-import { existsSync } from 'node:fs'
-import puppeteer from 'puppeteer-core'
+import { launchBrowser } from './browser.mjs'
 
-const BROWSERS = [
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-]
 const SITE = process.env.SITE_URL ?? 'http://localhost:5174'
 const API = process.env.API_URL ?? 'http://127.0.0.1:3000'
 const SHOTS = 'C:/Users/brack/AppData/Local/Temp/shots'
@@ -33,8 +27,7 @@ function check(label, ok, detail = '') {
 const expected = (await (await fetch(`${API}/api/v1/hero-slides/public?locale=th`)).json()).data
 console.log(`  the admin has published ${expected.length} Thai slide(s)\n`)
 
-const browser = await puppeteer.launch({
-  executablePath: BROWSERS.find((p) => existsSync(p)),
+const browser = await launchBrowser({
   headless: true,
   args: ['--no-sandbox', '--disable-gpu'],
 })
@@ -132,16 +125,27 @@ check(
 )
 await page.screenshot({ path: `${SHOTS}/fe-hero-third.png` })
 
-/* ---- a language with nothing published ---- */
+/* ---- the carousel follows what each language actually has ---- */
 
-await page.goto(`${SITE}/en`, { waitUntil: 'networkidle2' })
-await new Promise((r) => setTimeout(r, 1800))
-const onEnglish = await page.evaluate(() => Boolean(document.querySelector('.hero')))
-check(
-  'a language with no slides shows no carousel rather than an empty band',
-  onEnglish === false,
-  String(onEnglish),
-)
+/**
+ * A band with nothing in it is the failure worth catching, and the test used
+ * to catch it by assuming English had no slides. English has had its own
+ * slides since they were translated, so the assumption went stale and the
+ * check failed on correct behaviour. Asked of the API per language instead:
+ * slides means a carousel, none means none, whichever language that is.
+ */
+for (const locale of ['en', 'jp', 'vn']) {
+  const slides = (await (await fetch(`${API}/api/v1/hero-slides/public?locale=${locale}`)).json())
+    .data
+  await page.goto(`${SITE}/${locale}`, { waitUntil: 'networkidle2' })
+  await new Promise((r) => setTimeout(r, 1800))
+  const drawn = await page.evaluate(() => document.querySelectorAll('.hero-slide').length)
+  check(
+    `${locale}: the carousel shows the ${slides.length} slide(s) published for it`,
+    drawn === slides.length,
+    `api ${slides.length}, page ${drawn}`,
+  )
+}
 await page.screenshot({ path: `${SHOTS}/fe-hero-en.png` })
 
 if (problems.length) console.log('\nproblems:', problems)

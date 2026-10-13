@@ -10,6 +10,7 @@ import auditRoutes from './modules/audit/audit.routes'
 import contentRoutes from './modules/content/content.routes'
 import cartRoutes from './modules/commerce/cart.routes'
 import heroRoutes from './modules/content/hero.routes'
+import journeyRoutes from './modules/content/journey.routes'
 import adRoutes from './modules/content/ads.routes'
 import dashboardRoutes from './modules/dashboard/dashboard.routes'
 import authRoutes from './modules/auth/auth.routes'
@@ -25,6 +26,9 @@ import commerceRoutes from './modules/commerce/commerce.routes'
 import couponRoutes from './modules/commerce/coupons.routes'
 import invoiceRoutes from './modules/commerce/invoices.routes'
 import settingsRoutes from './modules/settings/settings.routes'
+import studyRoutes from './modules/learning/study.routes'
+import chatRoutes from './modules/chat/chat.routes'
+import ogRoutes from './modules/content/og.routes'
 import webhookRoutes from './modules/commerce/webhooks.routes'
 
 export async function buildApp() {
@@ -65,7 +69,10 @@ export async function buildApp() {
   await app.register(auditRoutes, { prefix: '/api/v1' })
   await app.register(dashboardRoutes, { prefix: '/api/v1' })
   await app.register(contentRoutes, { prefix: '/api/v1' })
+  // No prefix: these are pages a crawler fetches, not part of the API.
+  await app.register(ogRoutes)
   await app.register(heroRoutes, { prefix: '/api/v1' })
+  await app.register(journeyRoutes, { prefix: '/api/v1' })
   await app.register(adRoutes, { prefix: '/api/v1' })
   await app.register(catalogRoutes, { prefix: '/api/v1' })
   await app.register(uploadRoutes, { prefix: '/api/v1' })
@@ -74,6 +81,8 @@ export async function buildApp() {
   await app.register(peopleRoutes, { prefix: '/api/v1' })
   await app.register(memberDetailRoutes, { prefix: '/api/v1' })
   await app.register(meRoutes, { prefix: '/api/v1' })
+  await app.register(studyRoutes, { prefix: '/api/v1' })
+  await app.register(chatRoutes, { prefix: '/api/v1' })
   await app.register(essayRoutes, { prefix: '/api/v1' })
   await app.register(insightsRoutes, { prefix: '/api/v1' })
   await app.register(couponRoutes, { prefix: '/api/v1' })

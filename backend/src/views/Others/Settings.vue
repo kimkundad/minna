@@ -4,7 +4,9 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useAuthStore } from '@/stores/auth'
-import { ApiError, settings as settingsApi, type SiteSetting, type VatPreview } from '@/lib/api'
+import { ApiError, mediaUrl, settings as settingsApi, type SiteSetting, type VatPreview } from '@/lib/api'
+import { UploadError, uploadFile } from '@/lib/upload'
+import { useBrandingStore } from '@/stores/branding'
 import { formatBaht } from '@/lib/money'
 
 /**
@@ -38,9 +40,12 @@ const EXAMPLE = 169000
 const preview = ref<VatPreview | null>(null)
 
 const byGroup = computed(() => ({
+  branding: rows.value.filter((r) => r.group === 'branding'),
   billing: rows.value.filter((r) => r.group === 'billing'),
+  seller: rows.value.filter((r) => r.group === 'seller'),
   contact: rows.value.filter((r) => r.group === 'contact'),
   social: rows.value.filter((r) => r.group === 'social'),
+  sharing: rows.value.filter((r) => r.group === 'sharing'),
 }))
 
 /** Only what actually changed, so a save never writes a field nobody touched. */
@@ -94,6 +99,44 @@ const vatChanged = computed(
   () => 'vat_percent' in changed.value || 'vat_inclusive' in changed.value,
 )
 
+const brand = useBrandingStore()
+
+/** Which logo field is uploading, so only that box shows a spinner. */
+const uploading = ref<string | null>(null)
+
+/**
+ * Puts the file in the store and the path in the form — not in the settings.
+ *
+ * Saving is still the Save button's job. Uploading on its own would change the
+ * logo on every page the moment a file was picked, with no chance to look at it
+ * first and no Discard to undo it.
+ */
+async function pickLogo(key: string, event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+
+  uploading.value = key
+  fieldErrors.value = { ...fieldErrors.value, [key]: '' }
+  try {
+    const { path } = await uploadFile(file, { purpose: 'site-logo' })
+    form.value[key] = path
+  } catch (err) {
+    fieldErrors.value = {
+      ...fieldErrors.value,
+      [key]: err instanceof UploadError || err instanceof ApiError ? err.message : 'Could not upload that file.',
+    }
+  } finally {
+    uploading.value = null
+  }
+}
+
+/** Back to the built-in logo. Empty is a real value here, not a blank field. */
+function clearLogo(key: string): void {
+  form.value[key] = ''
+}
+
 async function save() {
   if (!dirty.value) return
 
@@ -125,6 +168,11 @@ async function save() {
     rows.value = res.data
     form.value = Object.fromEntries(res.data.map((r) => [r.key, r.value]))
     preview.value = (await settingsApi.vatPreview(EXAMPLE)).data
+    brand.set({
+      logoPath: form.value.logo_path || null,
+      logoIconPath: form.value.logo_icon_path || null,
+      faviconPath: form.value.favicon_path || null,
+    })
     saved.value = true
   } catch (err) {
     if (err instanceof ApiError) {
@@ -167,6 +215,70 @@ onMounted(load)
         These are shown so you know what they are. Only a superadmin can change them.
       </p>
 
+      <!-- Branding. First, because it is the one setting whose effect you can
+           see on this very page: the menu beside the form uses it. -->
+      <section
+        v-if="!loading"
+        class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"
+      >
+        <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-800 sm:px-6">
+          <h3 class="text-base font-medium text-gray-800 dark:text-white/90">Logo</h3>
+          <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+            Used on the public site and in here. Saving changes both at once.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6 px-5 py-5 sm:grid-cols-2 sm:px-6">
+          <div v-for="row in byGroup.branding" :key="row.key">
+            <p class="mb-1.5 text-sm font-medium text-gray-700 dark:text-gray-400">
+              {{ row.label }}
+            </p>
+
+            <!-- A checkerboard, because most logos have a transparent
+                 background and white on white looks like nothing uploaded. -->
+            <div
+              class="flex h-24 items-center justify-center rounded-lg border border-gray-200 bg-[length:16px_16px] bg-[linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%),linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%)] bg-[position:0_0,8px_8px] dark:border-gray-800"
+            >
+              <img
+                v-if="form[row.key]"
+                :src="mediaUrl(form[row.key]!)"
+                alt=""
+                class="max-h-16 max-w-full object-contain px-3"
+              />
+              <span v-else class="text-xs text-gray-400">Using the built-in logo</span>
+            </div>
+
+            <div v-if="canSave" class="mt-2 flex items-center gap-3">
+              <label
+                class="cursor-pointer rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+              >
+                {{ uploading === row.key ? 'Uploading…' : form[row.key] ? 'Replace' : 'Upload' }}
+                <input
+                  type="file"
+                  class="sr-only"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  :disabled="uploading !== null"
+                  @change="pickLogo(row.key, $event)"
+                />
+              </label>
+              <button
+                v-if="form[row.key]"
+                type="button"
+                class="text-sm text-gray-500 underline-offset-2 hover:underline dark:text-gray-400"
+                @click="clearLogo(row.key)"
+              >
+                Use the built-in one
+              </button>
+            </div>
+
+            <p v-if="row.help" class="mt-1 text-xs text-gray-400">{{ row.help }}</p>
+            <p v-if="fieldErrors[row.key]" class="mt-1 text-sm text-error-500">
+              {{ fieldErrors[row.key] }}
+            </p>
+          </div>
+        </div>
+      </section>
+
       <!-- Billing -->
       <section
         class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"
@@ -200,7 +312,7 @@ onMounted(load)
                 :value="form[row.key]"
                 type="number"
                 min="0"
-                max="30"
+                :max="row.max ?? 30"
                 step="1"
                 :disabled="!canSave"
                 @input="form[row.key] = ($event.target as HTMLInputElement).value"
@@ -272,6 +384,60 @@ onMounted(load)
         </div>
       </section>
 
+      <!-- Who the receipt is from. Until the name is filled in, a buyer's
+           receipt prints without an issuer block rather than with an empty
+           one, so the screen says what is riding on this. -->
+      <section
+        v-if="!loading"
+        class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"
+      >
+        <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-800 sm:px-6">
+          <h3 class="text-base font-medium text-gray-800 dark:text-white/90">Seller details</h3>
+          <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+            Printed at the top of every receipt and tax invoice. Leave the registered name blank
+            and receipts go out without an issuer block at all.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 px-5 py-5 sm:grid-cols-2 sm:px-6">
+          <div
+            v-for="row in byGroup.seller"
+            :key="row.key"
+            :class="row.type === 'multiline' ? 'sm:col-span-2' : undefined"
+          >
+            <label
+              :for="`set-${row.key}`"
+              class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
+            >
+              {{ row.label }}
+            </label>
+            <textarea
+              v-if="row.type === 'multiline'"
+              :id="`set-${row.key}`"
+              v-model="form[row.key]"
+              :disabled="!canSave"
+              rows="3"
+              class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            ></textarea>
+            <input
+              v-else
+              :id="`set-${row.key}`"
+              v-model="form[row.key]"
+              type="text"
+              :inputmode="row.type === 'taxid' ? 'numeric' : undefined"
+              :disabled="!canSave"
+              class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            />
+            <p v-if="row.help" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {{ row.help }}
+            </p>
+            <p v-if="fieldErrors[row.key]" class="mt-1 text-sm text-error-500">
+              {{ fieldErrors[row.key] }}
+            </p>
+          </div>
+        </div>
+      </section>
+
       <!-- Contact and social. Stored, but nothing shows them yet, and the
            screen says so rather than letting someone fill in a dead box. -->
       <section
@@ -311,6 +477,46 @@ onMounted(load)
         </div>
       </section>
 
+      <!-- What a link looks like when somebody passes it on. Four languages,
+           because the home page and the catalog render in all four and a link
+           to /en that previews in Thai shows the wrong page to the person
+           deciding whether to open it. -->
+      <section
+        v-if="byGroup.sharing.length"
+        class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"
+      >
+        <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-800 sm:px-6">
+          <h3 class="text-base font-medium text-gray-800 dark:text-white/90">Sharing</h3>
+          <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+            The preview card for pages that have none of their own — the home page, the catalog,
+            about. A course or an article shares as its own title, description and cover, and each
+            has its own override if the shared wording should differ.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 px-5 py-5 sm:px-6">
+          <div v-for="row in byGroup.sharing" :key="row.key">
+            <label
+              :for="`set-${row.key}`"
+              class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
+            >
+              {{ row.label }}
+            </label>
+            <input
+              :id="`set-${row.key}`"
+              v-model="form[row.key]"
+              type="text"
+              :disabled="!canSave"
+              class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            />
+            <p v-if="row.help" class="mt-1 text-xs text-gray-400">{{ row.help }}</p>
+            <p v-if="fieldErrors[row.key]" class="mt-1 text-sm text-error-500">
+              {{ fieldErrors[row.key] }}
+            </p>
+          </div>
+        </div>
+      </section>
+
       <div v-if="!loading && canSave" class="flex items-center gap-3">
         <button
           type="button"
@@ -329,7 +535,7 @@ onMounted(load)
           Discard
         </button>
         <p v-if="saved && !dirty" class="text-sm text-success-600 dark:text-success-400">
-          Saved. Checkout is using it now.
+          Saved, and in use now.
         </p>
       </div>
     </div>

@@ -5,18 +5,12 @@
  *
  *   node scripts/flow-course.mjs [baseUrl]
  */
-import { existsSync } from 'node:fs'
-import puppeteer from 'puppeteer-core'
+import { launchBrowser } from './browser.mjs'
 
 const BASE = process.argv[2] ?? 'http://localhost:5174'
 const API = process.env.API ?? 'http://127.0.0.1:3000/api/v1'
 const SHOTS = process.env.SHOT_DIR ?? '.'
 
-const BROWSERS = [
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-]
 
 let failures = 0
 function check(name, ok, detail = '') {
@@ -30,8 +24,7 @@ const pick = list.data.find((c) => c.lessonCount > 0 && c.instructors.length > 0
 const detail = (await (await fetch(`${API}/courses/${pick.slug}`)).json()).data
 const curriculum = (await (await fetch(`${API}/courses/${pick.slug}/curriculum`)).json()).data
 
-const browser = await puppeteer.launch({
-  executablePath: BROWSERS.find((p) => existsSync(p)),
+const browser = await launchBrowser({
   headless: true,
   args: ['--no-sandbox', '--disable-gpu'],
 })
@@ -187,7 +180,13 @@ check(
 const body = await text()
 for (const i of detail.instructors) {
   check(`the instructor section names ${i.short}`, body.includes(i.name), i.name)
-  if (i.bio) check('  and carries their biography', body.includes(i.bio.slice(0, 40)))
+  // The biography is stored as HTML and rendered as HTML, so the page's text
+  // holds its words and not its tags. Comparing against the raw value matched
+  // nothing the moment the page stopped printing `<p>` at the reader.
+  const bioWords = (i.bio ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  if (bioWords) {
+    check('  and carries their biography', body.includes(bioWords.slice(0, 40)), bioWords.slice(0, 40))
+  }
   if (i.credentials) check('  and their credentials', body.includes(i.credentials.slice(0, 30)))
 }
 

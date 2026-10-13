@@ -7,11 +7,14 @@ import AppAvatar from '@/components/ui/AppAvatar.vue'
 import SiteDrawer from '@/components/layout/SiteDrawer.vue'
 import SearchOverlay from '@/components/layout/SearchOverlay.vue'
 import LocaleSwitcher from '@/components/layout/LocaleSwitcher.vue'
-import { data, store } from '@/vendor'
+import { mediaUrl } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 import { openAuth } from '@/components/auth/authChannel'
 import { useCartStore } from '@/stores/cart'
-import logoUrl from '@/assets/img/logo.png'
+import { useCategoriesStore } from '@/stores/categories'
+import { useNotificationsStore } from '@/stores/notifications'
+import { relative } from '@/lib/format'
+import BrandLogo from './BrandLogo.vue'
 
 /**
  * Markup mirrors the prototype's `U.renderHeader` solid variant exactly —
@@ -38,28 +41,18 @@ const props = withDefaults(
   { variant: 'solid', active: null },
 )
 
-interface FixtureUser {
-  loggedIn: boolean
-  name: string
-  initials: string
-}
-
 const auth = useAuthStore()
 
-/**
- * Identity comes from our own API; the avatar and the notification count still
- * come from the fixture store, which is where that data lives until the API
- * serves it. Signing in flips both, so the two never disagree about whether
- * anyone is here.
- */
-const fixtureUser = computed(
-  () => (store as unknown as { user: () => FixtureUser }).user(),
-)
+/** Whoever is actually signed in. Initials stand in until they upload a
+ *  picture, which is what every other avatar on the site does. */
 const isLoggedIn = computed(() => auth.isLoggedIn)
-const user = computed(() => ({
-  name: auth.displayName || fixtureUser.value.name,
-  initials: fixtureUser.value.initials,
-}))
+const user = computed(() => {
+  const u = auth.user
+  return {
+    name: auth.displayName,
+    initials: `${u?.firstName?.[0] ?? ''}${u?.lastName?.[0] ?? ''}`.trim(),
+  }
+})
 
 const accountMenuOpen = ref(false)
 
@@ -68,16 +61,36 @@ async function signOut() {
   await auth.logout()
 }
 
-/** Guests have no notifications to count, so the badge never shows for them. */
-const unread = computed(() =>
-  isLoggedIn.value ? (store as unknown as { unreadCount: () => number }).unreadCount() : 0,
-)
+/* ---------------- what happened while they were away ---------------- */
 
-const memberPhoto = computed(() => {
-  const photo = data.memberPhoto
-  if (!photo) return null
-  return photo.startsWith('assets/') ? `/${photo}` : photo
-})
+const notifs = useNotificationsStore()
+const unread = computed(() => notifs.unread)
+const bellOpen = ref(false)
+
+/** Opening it is when the list is worth having, so that is when it is asked for. */
+function toggleBell() {
+  bellOpen.value = !bellOpen.value
+  if (bellOpen.value) void notifs.load()
+}
+
+/** A click on a row is usually a navigation as well, so the panel goes with it. */
+function onNotification(id: number) {
+  bellOpen.value = false
+  void notifs.markRead(id)
+}
+
+const NOTIF_LOOK: Record<string, { icon: string; tone: string }> = {
+  'order.paid': { icon: 'check-circle', tone: 'success' },
+  'order.failed': { icon: 'x-circle', tone: 'danger' },
+  'essay.reviewed': { icon: 'file-text', tone: 'cyan' },
+  'entitlement.expiring': { icon: 'hourglass', tone: 'warning' },
+}
+const notifIcon = (type: string) => NOTIF_LOOK[type]?.icon ?? 'bell'
+const notifTone = (type: string) => NOTIF_LOOK[type]?.tone ?? 'cyan'
+
+const memberPhoto = computed(() =>
+  auth.user?.avatarPath ? mediaUrl(auth.user.avatarPath) : null,
+)
 
 const { t } = useI18n()
 const route = useRoute()
@@ -89,15 +102,10 @@ const drawerOpen = ref(false)
 const searchOpen = ref(false)
 const stuck = ref(false)
 
-/** Each tile shows how many published courses sit in that category, which is
- *  why this reads the catalog rather than the raw category list. */
-const categories = computed(() => {
-  const published = (store as unknown as { catalog: () => { category: string }[] }).catalog()
-  return data.categories.map((c) => ({
-    ...c,
-    count: published.filter((x) => x.category === c.id).length,
-  }))
-})
+/** The categories the admin keeps, with the count of published courses behind
+ *  each. Shared with the drawer, so the two menus cannot disagree. */
+const categoryStore = useCategoriesStore()
+const categories = computed(() => categoryStore.tiles)
 
 /** The real basket, so the badge and the cart page cannot disagree. */
 const cart = useCartStore()
@@ -122,13 +130,20 @@ function onDocumentClick(e: MouseEvent) {
 }
 
 function onDocumentClickAccount(e: MouseEvent) {
-  if (!accountMenuOpen.value) return
-  if ((e.target as HTMLElement | null)?.closest('.menu-anchor')) return
+  // One handler for both drop-downs: a click inside either leaves both alone,
+  // a click anywhere else closes both.
+  const inside = (e.target as HTMLElement | null)?.closest('.menu-anchor')
+  if (inside) return
   accountMenuOpen.value = false
+  bellOpen.value = false
 }
 
 function onKeydown(e: KeyboardEvent) {
-  if (e.key !== 'Escape' || !megaOpen.value) return
+  if (e.key !== 'Escape') return
+  // Escape shuts whatever is open, which is what people expect of it.
+  bellOpen.value = false
+  accountMenuOpen.value = false
+  if (!megaOpen.value) return
   megaOpen.value = false
   megaTrigger.value?.focus()
 }
@@ -138,9 +153,18 @@ const megaTrigger = ref<HTMLButtonElement | null>(null)
 watch(() => route.fullPath, () => {
   megaOpen.value = false
   accountMenuOpen.value = false
+  bellOpen.value = false
 })
 
+// The badge is worth having before the bell is opened; the list is not.
+watch(
+  () => auth.isLoggedIn,
+  (now) => (now ? void notifs.load() : notifs.clear()),
+  { immediate: true },
+)
+
 onMounted(() => {
+  void categoryStore.load()
   onScroll()
   window.addEventListener('scroll', onScroll, { passive: true })
   document.addEventListener('click', onDocumentClick)
@@ -175,7 +199,7 @@ onBeforeUnmount(() => {
         </button>
 
         <RouterLink class="brand" :to="path('')" :aria-label="t('header.brandHome')">
-          <img class="brand-logo" :src="logoUrl" width="85" height="35" alt="" decoding="async" />
+          <BrandLogo class="brand-logo" />
         </RouterLink>
 
         <nav class="nav-pill" :aria-label="t('header.mainMenu')">
@@ -243,16 +267,74 @@ onBeforeUnmount(() => {
               type="button"
               class="icon-btn"
               aria-haspopup="true"
-              aria-expanded="false"
+              :aria-expanded="bellOpen"
               :aria-label="
                 unread ? t('header.notificationsUnread', { count: unread }) : t('common.notifications')
               "
+              @click="toggleBell"
             >
               <AppIcon name="bell" />
               <span v-if="unread" class="count-badge">{{ unread }}</span>
             </button>
-          </div>
 
+            <div v-if="bellOpen" class="menu notif-panel" role="dialog" :aria-label="t('common.notifications')">
+              <div class="notif-head">
+                <h2>{{ t('common.notifications') }}</h2>
+                <button
+                  v-if="unread"
+                  type="button"
+                  class="link"
+                  style="font-size: 13.5px; font-weight: 600"
+                  @click="notifs.markAllRead()"
+                >
+                  {{ t('notifications.readAll') }}
+                </button>
+              </div>
+
+              <div v-if="notifs.loading && !notifs.loaded" class="notif-item">
+                <div class="notif-body"><p class="notif-desc">{{ t('notifications.loading') }}</p></div>
+              </div>
+
+              <div v-else-if="!notifs.newest.length" class="notif-item">
+                <span class="notif-ico" aria-hidden="true"><AppIcon name="bell" /></span>
+                <div class="notif-body">
+                  <p class="notif-title">{{ t('notifications.emptyTitle') }}</p>
+                  <p class="notif-desc">{{ t('notifications.emptyText') }}</p>
+                </div>
+              </div>
+
+              <div v-else class="notif-list">
+                <component
+                  :is="n.link ? RouterLink : 'div'"
+                  v-for="n in notifs.newest"
+                  :key="n.id"
+                  class="notif-item"
+                  :class="{ 'is-unread': !n.readAt }"
+                  :to="n.link ? path(n.link.replace(/^\/[a-z]{2}(?=\/)/, '')) : undefined"
+                  @click="onNotification(n.id)"
+                >
+                  <span class="notif-ico" :class="`notif-ico--${notifTone(n.type)}`" aria-hidden="true">
+                    <AppIcon :name="notifIcon(n.type)" />
+                  </span>
+                  <div class="notif-body">
+                    <p class="notif-title">{{ n.title }}</p>
+                    <p v-if="n.body" class="notif-desc">{{ n.body }}</p>
+                    <p class="notif-meta"><span>{{ relative(n.createdAt) }}</span></p>
+                  </div>
+                </component>
+              </div>
+
+              <!-- Eight fit in a panel; the rest live on a page of their own. -->
+              <RouterLink
+                v-if="notifs.items.length"
+                class="notif-all"
+                :to="path('/account/notifications')"
+                @click="bellOpen = false"
+              >
+                {{ t('notifications.seeAll') }}<AppIcon name="arrow-right" />
+              </RouterLink>
+            </div>
+          </div>
           <div v-if="isLoggedIn" class="menu-anchor">
             <button
               type="button"
@@ -352,7 +434,9 @@ onBeforeUnmount(() => {
                 <span class="ct-ico"><AppIcon :name="c.icon" /></span>
                 <span style="min-width: 0">
                   <b>{{ c.name }}</b>
-                  <small>{{ c.th }}</small>
+                  <small>{{
+                    c.parentName ?? t('header.categoryCount', { count: c.childCount })
+                  }}</small>
                 </span>
                 <span v-if="c.count" class="ct-count">{{ c.count }}</span>
               </RouterLink>

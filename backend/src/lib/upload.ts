@@ -27,6 +27,20 @@ export async function uploadFile(
   opts: {
     purpose: UploadPurpose
     courseId?: number
+    /** For `chat-file`: which conversation the file is going into. */
+    threadId?: number
+    /**
+     * Whose file, when it is not the uploader's own — an administrator setting
+     * somebody's photo, or putting up an identity document for a teacher who
+     * sent it by message.
+     *
+     * The API decides whether that is allowed and hands back a folder; this
+     * only asks. Left out of this list once already, which was not a quiet
+     * failure: the ticket came back for the administrator's own folder and the
+     * save refused the file as belonging to somebody else, which is exactly
+     * what it should say when a path really is somebody else's.
+     */
+    userId?: number
     /** 0 to 1. Called often enough for a progress bar to look alive. */
     onProgress?: (fraction: number) => void
     signal?: AbortSignal
@@ -36,6 +50,8 @@ export async function uploadFile(
     await api.uploadTicket({
       purpose: opts.purpose,
       ...(opts.courseId ? { courseId: opts.courseId } : {}),
+      ...(opts.threadId ? { threadId: opts.threadId } : {}),
+      ...(opts.userId ? { userId: opts.userId } : {}),
     })
   ).data
 

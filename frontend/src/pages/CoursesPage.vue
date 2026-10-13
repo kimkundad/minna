@@ -7,6 +7,7 @@ import CourseCard from '@/components/course/CourseCard.vue'
 import FilterGroups, { type FilterGroup } from '@/components/discovery/FilterGroups.vue'
 import SkeletonCards from '@/components/discovery/SkeletonCards.vue'
 import { api } from '@/lib/api'
+import { LOCALES } from '@/locales'
 import type { CourseFacets, CourseQuery, CourseSort, PublicCategory, PublicCourse } from '@/lib/api'
 import { categoryLabel, courseView } from '@/lib/course'
 import { num } from '@/lib/format'
@@ -52,15 +53,13 @@ const categories = ref<PublicCategory[]>([])
  * sub-category carries its parent's name: four categories are called "สนทนา"
  * and the list would read as four identical checkboxes without it.
  */
-const categoryOpts = computed<[string, string][]>(() =>
-  categories.value
+const categoryOpts = computed<[string, string][]>(() => {
+  const label = (c: PublicCategory) => categoryLabel(c, categories.value, locale.value)
+  return categories.value
     .slice()
-    .sort(
-      (a, b) =>
-        b.totalCourseCount - a.totalCourseCount || categoryLabel(a, categories.value).localeCompare(categoryLabel(b, categories.value)),
-    )
-    .map((c) => [String(c.id), categoryLabel(c, categories.value)] as [string, string]),
-)
+    .sort((a, b) => b.totalCourseCount - a.totalCourseCount || label(a).localeCompare(label(b)))
+    .map((c) => [String(c.id), label(c)] as [string, string])
+})
 
 const groups = computed<FilterGroup[]>(() => [
   { key: 'category', label: t('catalog.groupCategory'), opts: categoryOpts.value },
@@ -71,18 +70,6 @@ const groups = computed<FilterGroup[]>(() => [
       ['beginner', t('catalog.levelBeginner')],
       ['intermediate', t('catalog.levelIntermediate')],
       ['advanced', t('catalog.levelAdvanced')],
-    ],
-  },
-  // What the teaching is delivered in. Minna teaches four languages and a
-  // beginner wants the explanation in one they already have.
-  {
-    key: 'locale',
-    label: t('catalog.groupSpoken'),
-    opts: [
-      ['th', t('spoken.th')],
-      ['en', t('spoken.en')],
-      ['jp', t('spoken.jp')],
-      ['vn', t('spoken.vn')],
     ],
   },
   {
@@ -121,7 +108,16 @@ const groups = computed<FilterGroup[]>(() => [
  * continuing-education units a vet collects — and Minna awards none, so there
  * is nothing to filter on and no column to filter it by.
  */
-const GROUP_KEYS = ['category', 'level', 'locale', 'duration', 'access', 'price'] as const
+/**
+ * No language group either, since the catalogue follows the site's language.
+ *
+ * A reader is shown the courses taught in the language they are reading the
+ * site in, plus the courses marked as suiting every language. That is the
+ * school's rule rather than a preference, so offering it as a tick-box would
+ * be offering to break it — and seven of the eight options would read zero.
+ * `anyLanguage` is the one way past it, and only the empty state offers it.
+ */
+const GROUP_KEYS = ['category', 'level', 'duration', 'access', 'price'] as const
 type GroupKey = (typeof GROUP_KEYS)[number]
 
 /** The sort names the URL uses, and what each one means to the API. */
@@ -145,7 +141,7 @@ const SORT_LABEL: Record<SortKey, string> = {
 /* ---------------- state, read from the URL ---------------- */
 
 function emptyFilters(): Record<GroupKey, string[]> {
-  return { category: [], level: [], locale: [], duration: [], access: [], price: [] }
+  return { category: [], level: [], duration: [], access: [], price: [] }
 }
 
 const VIEW_KEY = 'rv:v1:ui:catalogView'
@@ -167,6 +163,14 @@ const view = ref<'grid' | 'list'>('grid')
 const loading = ref(true)
 const failed = ref(false)
 const catOpen = ref(false)
+/**
+ * Whether the reader has asked for every language.
+ *
+ * Off by default and not in the filter panel: the catalogue follows the site's
+ * language, and this exists so an empty catalogue is not a dead end. It lives
+ * in the address so the wider view survives a reload and can be linked.
+ */
+const anyLanguage = ref(false)
 const pinned = ref<Record<string, boolean>>({})
 
 const results = ref<PublicCourse[]>([])
@@ -205,6 +209,8 @@ function readUrl(): void {
   }
   filters.value = next
 
+  anyLanguage.value = one('lang') === 'all'
+
   const sk = one('sort') as SortKey | undefined
   sort.value = sk && sk in SORTS ? sk : 'recommended'
 
@@ -221,6 +227,7 @@ function writeUrl(): void {
   const q: Record<string, string> = {}
   if (query.value) q.q = query.value
   for (const key of GROUP_KEYS) if (filters.value[key].length) q[key] = filters.value[key].join(',')
+  if (anyLanguage.value) q.lang = 'all'
   if (sort.value !== 'recommended') q.sort = sort.value
   if (view.value === 'list') q.view = 'list'
   void router.replace({ query: q })
@@ -237,7 +244,9 @@ function params(page = 1): CourseQuery {
     q: query.value || undefined,
     categoryIds: f.category.map(Number).filter(Number.isFinite),
     levels: f.level as CourseQuery['levels'],
-    locales: f.locale as CourseQuery['locales'],
+    // Left out so the API client fills in the language being read. Naming
+    // every language is how "show me all of them" is said.
+    locales: anyLanguage.value ? ([...LOCALES] as CourseQuery['locales']) : undefined,
     durations: f.duration as CourseQuery['durations'],
     prices: f.price as CourseQuery['prices'],
     access: f.access as CourseQuery['access'],
@@ -368,6 +377,22 @@ const filterCount = computed(() =>
 
 const sortNote = computed(() => t(SORT_LABEL[sort.value]))
 
+/** The language being read, named in its own words. */
+const languageName = computed(() => t(`spoken.${locale.value}`))
+
+/**
+ * Whether the catalogue is empty only because nothing is taught in this
+ * language — nothing searched for, nothing filtered, and the wider view not
+ * asked for.
+ *
+ * Worth telling apart from an ordinary empty result: 'no courses match those
+ * conditions' is wrong when the reader set no conditions, and leaves them
+ * with nothing to do.
+ */
+const emptyForLanguage = computed(
+  () => !anyLanguage.value && !query.value && !filterCount.value && !results.value.length,
+)
+
 /* ---------------- interactions ---------------- */
 
 function onFilterChange(key: string, value: string, checked: boolean): void {
@@ -410,6 +435,18 @@ function clearEverything(): void {
 function showAll(): void {
   sort.value = 'recommended'
   clearEverything()
+}
+
+/** Widen past the site's language, and back. The address carries it, so the
+ *  wider view survives a reload and can be passed to somebody. */
+function showEveryLanguage(): void {
+  anyLanguage.value = true
+  refresh()
+}
+
+function showOneLanguage(): void {
+  anyLanguage.value = false
+  refresh()
 }
 
 function removeChip(key: string, value: string): void {
@@ -685,6 +722,17 @@ const cardVariant = computed(() => (view.value === 'list' ? 'list' : 'grid'))
             </div>
           </div>
 
+          <!-- Said plainly while it is on, with the way back: a reader who
+               widened the catalogue once should not be left wondering why it
+               is showing courses taught in languages they do not read. -->
+          <p v-if="anyLanguage" class="cat-anylang">
+            <AppIcon name="globe" />
+            <span>{{ t('catalog.showingEveryLanguage', { language: languageName }) }}</span>
+            <button type="button" class="link" data-action="cat-one-language" @click="showOneLanguage">
+              {{ t('catalog.backToMyLanguage', { language: languageName }) }}
+            </button>
+          </p>
+
           <div class="cat-active" id="cat-active" :hidden="!chips.length">
             <template v-if="chips.length">
               <ul class="cat-chips" role="list" :aria-label="t('catalog.activeFilters')">
@@ -743,21 +791,36 @@ const cardVariant = computed(() => (view.value === 'list' ? 'list' : 'grid'))
             </div>
             <h3>
               {{
-                onlyEmptyCategories
-                  ? t('catalog.emptyComingTitle', { names: emptyCategoryNames })
-                  : t('catalog.emptyTitle')
+                emptyForLanguage
+                  ? t('catalog.emptyLanguageTitle', { language: languageName })
+                  : onlyEmptyCategories
+                    ? t('catalog.emptyComingTitle', { names: emptyCategoryNames })
+                    : t('catalog.emptyTitle')
               }}
             </h3>
             <p>
               {{
-                onlyEmptyCategories
-                  ? t('catalog.emptyComingText')
-                  : t('catalog.emptyText', { count: categories.length })
+                emptyForLanguage
+                  ? t('catalog.emptyLanguageText')
+                  : onlyEmptyCategories
+                    ? t('catalog.emptyComingText')
+                    : t('catalog.emptyText', { count: categories.length })
               }}
             </p>
             <div class="state-actions">
+              <!-- The one way past the language rule, offered where it is the
+                   reason there is nothing to show and nowhere else. -->
               <button
-                v-if="filterCount"
+                v-if="emptyForLanguage"
+                type="button"
+                class="btn btn--primary"
+                data-action="cat-any-language"
+                @click="showEveryLanguage"
+              >
+                <AppIcon name="globe" />{{ t('catalog.showEveryLanguage') }}
+              </button>
+              <button
+                v-else-if="filterCount"
                 type="button"
                 class="btn btn--primary"
                 data-action="cat-clear-filters"
