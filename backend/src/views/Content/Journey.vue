@@ -247,6 +247,22 @@ watch(locale, () => {
   void load()
 })
 
+/**
+ * The band changes without the page being rebuilt.
+ *
+ * Both menu entries open this same component, so going from one to the other
+ * is a route change Vue answers by keeping the instance it already has:
+ * `onMounted` does not run again. Without this, clicking "Home closing band"
+ * changed the address and left the journey's heading and steps on screen —
+ * two menu items that looked like the same screen, because they were.
+ */
+watch(band, () => {
+  closeStep()
+  savedAt.value = ''
+  error.value = ''
+  void Promise.all([load(), loadSummary()])
+})
+
 onMounted(async () => {
   await Promise.all([load(), loadSummary(), loadIcons()])
 })

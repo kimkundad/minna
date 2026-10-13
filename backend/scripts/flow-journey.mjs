@@ -194,8 +194,23 @@ try {
 
   /* ---------------- 6. and the same screen writes the closing band ------- */
 
-  await page.goto(`${BASE}/journey/cta`, { waitUntil: 'networkidle2' })
-  await wait(1500)
+  /**
+   * Reached by clicking the menu, not by loading the address.
+   *
+   * Both entries open the same component, so Vue keeps the instance it already
+   * has and `onMounted` does not run again — which left the journey's heading
+   * and steps on screen under the closing band's address, two menu items that
+   * looked like one screen. Loading the URL directly builds the page from
+   * scratch and looks right, which is why checking it that way found nothing.
+   */
+  for (const link of await page.$$('aside a, nav a')) {
+    if ((await link.evaluate((e) => e.getAttribute('href'))) === '/journey/cta') {
+      await link.click()
+      break
+    }
+  }
+  await wait(1800)
+  check('the menu reaches the closing band', page.url().endsWith('/journey/cta'), page.url())
   const closing = await page.evaluate(() => ({
     heading: document.querySelector('[data-field="heading"]')?.value ?? '',
     rows: document.querySelectorAll('ul.divide-y > li').length,
