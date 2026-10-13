@@ -510,7 +510,7 @@ onMounted(async () => {
               <option value="id">Indonesian</option>
               <option value="zh">Chinese (Simplified)</option>
               <option value="ko">Korean</option>
-              <option value="tw">Chinese (Traditional)</option>
+              <option value="tw">Taiwan</option>
               <option value="all">All languages</option>
             </select>
             <p class="mt-1 text-xs text-gray-400">

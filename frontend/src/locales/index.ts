@@ -20,7 +20,10 @@ export const LOCALE_META: Record<AppLocale, { name: string; native: string; flag
   id: { name: 'Indonesian', native: 'Bahasa Indonesia', flag: '🇮🇩' },
   zh: { name: 'Chinese', native: '简体中文', flag: '🇨🇳' },
   ko: { name: 'Korean', native: '한국어', flag: '🇰🇷' },
-  tw: { name: 'Chinese (Taiwan)', native: '繁體中文', flag: '🇹🇼' },
+  // "Taiwan" rather than "Chinese (Taiwan)", as the customer asked. The native
+  // name under it already says 繁體中文, so the picker still tells a reader
+  // which of the two Chinese entries writes which script.
+  tw: { name: 'Taiwan', native: '繁體中文', flag: '🇹🇼' },
 }
 
 const STORAGE_KEY = 'minna:locale'

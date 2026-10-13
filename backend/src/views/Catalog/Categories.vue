@@ -46,7 +46,7 @@ const TRANSLATIONS = [
   { locale: 'id' as const, label: 'Indonesian' },
   { locale: 'zh' as const, label: 'Chinese (Simplified)' },
   { locale: 'ko' as const, label: 'Korean' },
-  { locale: 'tw' as const, label: 'Chinese (Traditional)' },
+  { locale: 'tw' as const, label: 'Taiwan' },
 ]
 
 /** The row being edited, or 'new'. Null means nothing is open. */
