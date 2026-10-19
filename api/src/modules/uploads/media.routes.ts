@@ -32,10 +32,21 @@ import { AppError, forbidden, notFound } from '../../lib/errors'
  */
 const PUBLIC_FOLDER = 'content'
 
-/** How long the signed URL this redirects to lasts. Long enough that a browser
- *  following the redirect never races it, short enough that the signed link, if
- *  it is copied out of the network tab, stops working the same day. */
-const SIGN_TTL = 3600
+/**
+ * How long the signed URL this redirects to lasts: seven days, the most
+ * space-kim accepts.
+ *
+ * A browser keeps the address it was redirected to and asks for it again
+ * directly — when a page left open re-renders its pictures, or when its cache
+ * revalidates. Any of that after the signature expires is a 403 and a broken
+ * picture, so a short lifetime here meant broken images for anyone who kept a
+ * tab open for more than an hour.
+ *
+ * A long one costs nothing: this route is public and its address is permanent,
+ * so a signed link copied out of the network tab gives no access that the
+ * route itself does not already give to everyone.
+ */
+const SIGN_TTL = 7 * 24 * 3600
 
 /** Browsers and any CDN in front of this may hold the redirect this long. The
  *  file at a given path never changes — a new upload gets a new name — so this
