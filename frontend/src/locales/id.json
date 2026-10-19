@@ -597,7 +597,16 @@
       "checking": "Memeriksa…",
       "applied": "Kupon {code} dipakai — potongan {amount}",
       "removed": "Kupon {code} dihapus",
-      "notValid": "Kupon itu tidak berlaku. Periksa kodenya dan syaratnya."
+      "notValid": "Kupon itu tidak berlaku. Periksa kodenya dan syaratnya.",
+      "clear": "Hapus",
+      "problem": {
+        "unknown": "Kupon tidak ditemukan, atau sudah kedaluwarsa atau habis terpakai.",
+        "orderOnly": "Kupon ini untuk seluruh keranjang — masukkan di kotak di bawah ringkasan.",
+        "otherCourse": "Kupon ini untuk kursus lain.",
+        "courseOnly": "Kupon ini untuk satu kursus — masukkan di kotak kursus tersebut.",
+        "belowMinimum": "Total belum mencapai minimum kupon ini.",
+        "nothingOff": "Kupon ini tidak mengurangi total ini."
+      }
     },
     "totals": {
       "courses": "Harga kursus",

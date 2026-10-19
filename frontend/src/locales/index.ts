@@ -18,12 +18,13 @@ export const LOCALE_META: Record<AppLocale, { name: string; native: string; flag
   jp: { name: 'Japanese', native: '日本語', flag: '🇯🇵' },
   vn: { name: 'Vietnamese', native: 'Tiếng Việt', flag: '🇻🇳' },
   id: { name: 'Indonesian', native: 'Bahasa Indonesia', flag: '🇮🇩' },
-  zh: { name: 'Chinese', native: '简体中文', flag: '🇨🇳' },
+  zh: { name: 'Chinese (Simp.)', native: '简体中文', flag: '🇨🇳' },
   ko: { name: 'Korean', native: '한국어', flag: '🇰🇷' },
-  // "Taiwan" rather than "Chinese (Taiwan)", as the customer asked. The native
-  // name under it already says 繁體中文, so the picker still tells a reader
-  // which of the two Chinese entries writes which script.
-  tw: { name: 'Taiwan', native: '繁體中文', flag: '🇹🇼' },
+  // The two Chinese entries are named by their script rather than by a place,
+  // as the customer asked: "Chinese" and "Taiwan" side by side read as a
+  // language next to a country, which says nothing about which of them is
+  // written in which script.
+  tw: { name: 'Chinese (Trad.)', native: '繁體中文', flag: '🇹🇼' },
 }
 
 const STORAGE_KEY = 'minna:locale'

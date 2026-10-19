@@ -14,7 +14,7 @@ import CoTaxPanel from '@/components/commerce/CoTaxPanel.vue'
 import CoTotalsRows from '@/components/commerce/CoTotalsRows.vue'
 import type { CheckoutErrors, CheckoutForm, Coupon } from '@/components/commerce/types'
 import { ApiError, api } from '@/lib/api'
-import type { InvoiceRequest, PublicCategory } from '@/lib/api'
+import type { CouponNote, CouponProblem, InvoiceRequest, PublicCategory } from '@/lib/api'
 import {
   asContentLocale,
   mapQuote,
@@ -65,6 +65,17 @@ const loadError = ref('')
 const courseCoupons = ref<Record<string, string>>({})
 const orderCouponCode = ref<string | null>(null)
 
+/**
+ * Why each code that was typed came to nothing, as the server sees it.
+ *
+ * The page used to decide for itself, by watching whether the bill went down.
+ * That cannot tell a code that does not exist from one typed in the wrong
+ * box, so every failure read "that coupon does not apply" — including a
+ * perfectly good basket code sitting in a course's box, which is exactly the
+ * mistake somebody needs to be told about.
+ */
+const couponNotes = ref<CouponNote[]>([])
+
 const couponDrafts = ref<Record<string, string>>({})
 const couponErrors = ref<Record<string, string>>({})
 const couponBusy = ref<string | null>(null)
@@ -95,6 +106,7 @@ async function reprice(): Promise<void> {
   )
   const { data } = await api.quote(lines, orderCouponCode.value ?? undefined)
   if (mine !== seq) return
+  couponNotes.value = data.couponNotes ?? []
   totals.value = mapQuote(
     data,
     items.value.map((i) => ({ ...i, couponCode: courseCoupons.value[i.course.slug] })),
@@ -141,38 +153,48 @@ watch(isLoggedIn, (now) => {
 
 /* ---------------- coupons ---------------- */
 
+/** The server's reason for a code, in this reader's language. */
+const PROBLEM_KEY: Record<CouponProblem, string> = {
+  unknown: 'commerce.coupon.problem.unknown',
+  order_only: 'commerce.coupon.problem.orderOnly',
+  other_course: 'commerce.coupon.problem.otherCourse',
+  course_only: 'commerce.coupon.problem.courseOnly',
+  below_minimum: 'commerce.coupon.problem.belowMinimum',
+  nothing_off: 'commerce.coupon.problem.nothingOff',
+}
+
+/** The note for one box: a course id, or null for the basket's own. */
+function problemFor(lineId: number | null): string {
+  const note = couponNotes.value.find((n) => n.lineId === lineId)
+  return note ? t(PROBLEM_KEY[note.problem]) : ''
+}
+
 /**
  * Applying a coupon is asking for a new quote with it.
  *
- * If the server prices the line no lower, the code did not apply — to these
- * courses, at this moment, or at all — and saying so is more honest than
- * repeating the server's reason, which it does not give one of.
+ * Whether it worked is the server's answer, not the bill's: the page used to
+ * watch whether the total went down, which says nothing about why it did not.
+ * A code is kept in the box only when it earned something; otherwise it is
+ * taken back out and the reason is shown, so the box is never left holding a
+ * code that is doing nothing and cannot be removed.
  */
 async function applyCourseCoupon(slug: string, code: string): Promise<void> {
   const clean = code.trim().toUpperCase()
   if (!clean) return
+  const courseId = items.value.find((i) => i.course.slug === slug)?.course.id ?? null
   couponBusy.value = slug
   couponErrors.value = { ...couponErrors.value, [slug]: '' }
 
-  /**
-   * Whether a coupon worked is whether the bill went down.
-   *
-   * This used to ask whether *this line* got cheaper, which is only true of a
-   * coupon for this course. A basket coupon typed into a course's box takes
-   * its discount off the order instead — the line is untouched — so a code
-   * that had just worked perfectly was reported back as invalid and undone.
-   */
-  const before = totals.value?.total ?? 0
   const previous = courseCoupons.value[slug]
   courseCoupons.value = { ...courseCoupons.value, [slug]: clean }
   try {
     await reprice()
-    const after = totals.value?.total ?? 0
-    if (after >= before) {
+    const problem = problemFor(courseId)
+    if (problem) {
       courseCoupons.value = { ...courseCoupons.value, [slug]: previous ?? '' }
       if (!previous) delete courseCoupons.value[slug]
       await reprice()
-      couponErrors.value = { ...couponErrors.value, [slug]: t('commerce.coupon.notValid') }
+      couponErrors.value = { ...couponErrors.value, [slug]: problem }
     } else {
       couponDrafts.value = { ...couponDrafts.value, [slug]: '' }
     }
@@ -187,10 +209,13 @@ async function applyCourseCoupon(slug: string, code: string): Promise<void> {
   }
 }
 
+/** Takes the code out of one course's box, and the error with it. */
 async function removeCourseCoupon(slug: string): Promise<void> {
   const next = { ...courseCoupons.value }
   delete next[slug]
   courseCoupons.value = next
+  couponDrafts.value = { ...couponDrafts.value, [slug]: '' }
+  couponErrors.value = { ...couponErrors.value, [slug]: '' }
   await reprice()
 }
 
@@ -199,17 +224,16 @@ async function applyOrderCoupon(code: string): Promise<void> {
   if (!clean) return
   orderCouponBusy.value = true
   orderCouponError.value = ''
-  // The bill, for the same reason as above: one test that holds for every
-  // kind of coupon, rather than one per kind that has to be kept in step.
-  const before = totals.value?.total ?? 0
+  // The server's reason, for the same reason as above.
   const previous = orderCouponCode.value
   orderCouponCode.value = clean
   try {
     await reprice()
-    if ((totals.value?.total ?? 0) >= before) {
+    const problem = problemFor(null)
+    if (problem) {
       orderCouponCode.value = previous
       await reprice()
-      orderCouponError.value = t('commerce.coupon.notValid')
+      orderCouponError.value = problem
     } else {
       orderCouponDraft.value = ''
     }
@@ -223,6 +247,8 @@ async function applyOrderCoupon(code: string): Promise<void> {
 
 async function removeOrderCoupon(): Promise<void> {
   orderCouponCode.value = null
+  orderCouponDraft.value = ''
+  orderCouponError.value = ''
   await reprice()
 }
 

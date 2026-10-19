@@ -135,11 +135,18 @@ try {
     const l = [...document.querySelectorAll('label')].find((x) => x.innerText.trim() === 'Pay me in')
     return l ? l.parentElement.querySelector('select').options.length : 0
   })
-  check('the payout currency offers all 18, plus no preference', currencyCount === 19, String(currencyCount))
+  // The payout list is the school's own, not the eighteen Stripe will take
+  // a payment in: where a teacher banks has nothing to do with what a
+  // course is priced in.
+  check(
+    'the payout currency offers the whole payout list, plus no preference',
+    currencyCount > 90,
+    String(currencyCount),
+  )
 
   await page.evaluate(fillByLabel('Bank', 'กสิกรไทย'))
   await page.evaluate(fillByLabel('Account name', 'ธนา รักดี'))
-  await page.evaluate(fillByLabel('Account number', '123-4-56789-0'))
+  await page.evaluate(fillByLabel('Account Number / IBAN', '123-4-56789-0'))
   await page.evaluate(fillByLabel('Pay me in', 'JPY'))
 
   await page.evaluate(() => {
@@ -164,7 +171,7 @@ try {
     return {
       bank: read('Bank'),
       name: read('Account name'),
-      number: read('Account number'),
+      number: read('Account Number / IBAN'),
       currency: read('Pay me in'),
     }
   })

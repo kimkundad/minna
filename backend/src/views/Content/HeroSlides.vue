@@ -13,6 +13,7 @@ import {
   type HeroSlideInput,
   type HeroState,
 } from '@/lib/api'
+import { withEvery } from '@/lib/locales'
 
 /**
  * The slideshow on the home page.
@@ -47,20 +48,10 @@ const IMAGE = {
  * Most slides are not that. A headline is language-specific, which is why the
  * list opens on Thai rather than on 'all'.
  */
-const LOCALES = [
-  // Not "every language" any more: that is what the picker above the list
-  // calls showing all the slides, and one phrase cannot mean both the view and
-  // the setting. This is the setting — where the slide appears.
-  { value: 'all', label: 'ขึ้นทุกภาษา · appears on every language' },
-  { value: 'th', label: 'ไทย' },
-  { value: 'en', label: 'English' },
-  { value: 'jp', label: '日本語' },
-  { value: 'vn', label: 'Tiếng Việt' },
-  { value: 'id', label: 'Bahasa Indonesia' },
-  { value: 'zh', label: '简体中文' },
-  { value: 'ko', label: '한국어' },
-  { value: 'tw', label: '繁體中文' },
-] as const
+// Not "every language" here: that is what the picker above the list calls
+// showing all the slides, and one phrase cannot mean both the view and the
+// setting. This is the setting — where the slide appears.
+const LOCALES = withEvery('ขึ้นทุกภาษา · appears on every language')
 
 /**
  * Which slides the list is showing — a view, not a slide's own setting.

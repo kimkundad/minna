@@ -207,6 +207,21 @@ function submit() {
               </template>
               <template v-else>{{ t('commerce.coupon.use') }}</template>
             </button>
+            <!--
+              Emptying the box by hand is a selection and eight keystrokes, and
+              the one moment somebody wants it is the moment they have just
+              been told the code is wrong.
+            -->
+            <button
+              v-if="draftCode || error"
+              type="button"
+              class="btn btn--ghost"
+              :data-cp-clear="cid"
+              :aria-label="t('commerce.coupon.removeAria', { code: draftCode })"
+              @click="emit('remove-coupon', cid)"
+            >
+              {{ t('commerce.coupon.clear') }}
+            </button>
           </div>
           <p v-if="error" class="field-error" :id="`cp-err-${cid}`">
             <AppIcon name="alert-circle" /><span>{{ error }}</span>

@@ -100,6 +100,55 @@ fi
 
 echo
 $COMPOSE ps
+
+# ---------------------------------------------------------------------------
+# Old releases, cleared out.
+#
+# Each tag keeps about 62 MB of layers of its own — the rest is shared with
+# every other tag — so they are cheap but not free, and nothing was ever
+# removing them. Sixteen had piled up by the time anybody looked.
+#
+# Only minna-api and minna-web, and only by exact tag. `docker image prune -a`
+# is not an option here: this server also runs jaga, plusexploration, a PHP
+# site and redis, and their rollback tags are nobody's to delete from a script
+# that was asked to deploy something else.
+#
+# KEEP releases stay, newest first, and the tag just deployed always stays
+# whatever its age. Five is three more than a rollback has ever needed.
+# `KEEP=0 bash deploy.sh …` turns the whole thing off.
+KEEP="${KEEP:-5}"
+if [[ "$KEEP" -gt 0 ]]; then
+  echo
+  echo "Keeping the newest $KEEP releases"
+  for repo in "$API_IMAGE" "$WEB_IMAGE"; do
+    # Newest first, by when the image was created rather than by tag, so a
+    # rebuild of an older date does not sort itself into the past.
+    mapfile -t tags < <(
+      docker images "$repo" --format '{{.CreatedAt}}\t{{.Tag}}' |
+        sort -r |
+        cut -f2 |
+        grep -v '^<none>$' || true
+    )
+    # Guarded, because slicing an empty array trips `set -u` on older bash.
+    (( ${#tags[@]} > KEEP )) || continue
+    for old in "${tags[@]:$KEEP}"; do
+      [[ "$old" == "$TAG" ]] && continue
+      # A tag still in use by a container cannot be removed, and docker says
+      # so rather than doing it. That is the right answer, so it is not an
+      # error here — this is tidying, and the deploy has already succeeded.
+      if docker rmi "$repo:$old" >/dev/null 2>&1; then
+        echo "  removed $repo:$old"
+      else
+        echo "  kept    $repo:$old (in use)"
+      fi
+    done
+  done
+  # Layers no longer referenced by any tag. Untagged and dangling only, which
+  # is what the removals above leave behind; it cannot touch another
+  # project's tagged images.
+  docker image prune -f >/dev/null 2>&1 || true
+fi
+
 echo
 echo "Deployed $TAG"
 echo "  https://minna.learnsbuy.com"

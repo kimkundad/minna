@@ -578,8 +578,30 @@ export interface QuotedLine {
   accessDurationDays: number | null
 }
 
+/**
+ * Why a code the buyer typed came to nothing.
+ *
+ * The server decides this; the page only has to find the words. A code that
+ * worked is not reported — the discount beside it says so.
+ */
+export type CouponProblem =
+  | 'unknown'
+  | 'order_only'
+  | 'other_course'
+  | 'course_only'
+  | 'below_minimum'
+  | 'nothing_off'
+
+export interface CouponNote {
+  /** The course it was typed against, or null for the basket's own box. */
+  lineId: number | null
+  code: string
+  problem: CouponProblem
+}
+
 export interface Quote {
   lines: QuotedLine[]
+  couponNotes: CouponNote[]
   subtotal: number
   courseDiscount: number
   orderDiscount: number

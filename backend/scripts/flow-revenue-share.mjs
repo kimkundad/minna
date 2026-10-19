@@ -6,14 +6,24 @@
  * The API rules are proved in `api/scripts/smoke-revenue-share.mts`. What that
  * cannot say is whether anybody can reach them: the share spent its whole life
  * as a column with a default because no form ever offered it. So this opens
- * the settings page and a course, types in both boxes, saves, and reads the
+ * the settings page and a teacher, types in both boxes, saves, and reads the
  * numbers back out of a fresh page load.
+ *
+ * The second screen used to be the course form. The share is the teacher's,
+ * not the course's — a rate agreed with a person, applying to everything they
+ * teach — so the course form no longer offers it and this follows it to where
+ * it went.
+ *
+ * On the teacher's page it also stands outside the bank details. It used to be
+ * inside them, under the same condition, so until a teacher had typed an
+ * account number the rate the school had agreed with them was not on the page
+ * at all and could not be set.
  *
  * It also checks the box's own limit. The percent input was written for VAT
  * and capped at 30, which would have refused most of the shares anybody would
  * actually agree.
  *
- * Puts the site default back to what it found.
+ * Puts the site default and the teacher's share back to what it found.
  */
 import { launchBrowser } from './browser.mjs'
 
@@ -60,14 +70,15 @@ const wasDefault = shareRow?.value ?? '25'
 check('the share is a setting the admin API offers', Boolean(shareRow), JSON.stringify(shareRow?.value))
 check('  with a ceiling above a VAT rate', shareRow?.max === 100, String(shareRow?.max))
 
-// A course to type into. Its own share is put back at the end.
-const courses = await call('GET', '/api/v1/courses?perPage=1&status=approved')
-const courseId = courses.body?.data?.[0]?.id
-if (!courseId) {
-  console.error('No course to edit.')
+// A teacher to type against. Their share is put back at the end.
+const teachers = await call('GET', '/api/v1/teachers')
+const teacherId = teachers.body?.data?.[0]?.id
+if (!teacherId) {
+  console.error('No teacher to set a share for.')
   process.exit(1)
 }
-const wasCourseShare = (await call('GET', `/api/v1/courses/${courseId}`)).body?.data?.revenueSharePct
+const wasTeacherShare = (await call('GET', `/api/v1/members/${teacherId}/payout-details`)).body?.data
+  ?.revenueSharePct ?? null
 
 const browser = await launchBrowser({ headless: true, args: ['--no-sandbox', '--disable-gpu'] })
 const problems = []
@@ -115,50 +126,64 @@ try {
   const saved = await page.$eval('#set-revenue_share_pct', (el) => el.value)
   check('45% saves and comes back', saved === '45', saved)
 
-  /* ---------------- the course form ---------------- */
+  /* ---------------- one teacher's own share ---------------- */
 
-  await page.goto(`${ADMIN}/courses/${courseId}`, { waitUntil: 'networkidle2' })
+  /** What the share box on the teacher's page currently holds. */
+  const shareBoxValue = () =>
+    page.evaluate(() => {
+      const head = [...document.querySelectorAll('p')].find(
+        (p) => /^share of a sale$/i.test(p.innerText.trim()),
+      )
+      return head?.parentElement.querySelector('input')?.value ?? null
+    })
+
+  await page.goto(`${ADMIN}/teachers/${teacherId}`, { waitUntil: 'networkidle2' })
+  // Without opening the bank form first. That is the point: an agreed rate is
+  // not a correction to a bank account, and a teacher who has given no
+  // account number still has a rate.
   await page.waitForFunction(
-    () => [...document.querySelectorAll('label')].some((l) => /Teacher's share/i.test(l.innerText)),
+    () =>
+      [...document.querySelectorAll('p')].some((p) => /^share of a sale$/i.test(p.innerText.trim())),
     { timeout: 20000 },
   )
-  check('the course form shows the share field', true)
+  check('the teacher page offers the share without opening the bank form', true)
 
   await page.evaluate(() => {
-    const label = [...document.querySelectorAll('label')].find((l) =>
-      /Teacher's share/i.test(l.innerText),
+    const head = [...document.querySelectorAll('p')].find(
+      (p) => /^share of a sale$/i.test(p.innerText.trim()),
     )
-    const input = label.parentElement.querySelector('input')
+    const input = head.parentElement.querySelector('input')
     input.value = '55'
     input.dispatchEvent(new Event('input', { bubbles: true }))
   })
-
-  const courseSave = await page.evaluateHandle(() =>
-    [...document.querySelectorAll('button')].find((b) => /save|บันทึก/i.test(b.innerText)),
-  )
-  await courseSave.asElement()?.click()
+  await page.evaluate(() => {
+    const btn = [...document.querySelectorAll('button')].find((b) =>
+      /Save the share/i.test(b.innerText),
+    )
+    btn.click()
+  })
   await new Promise((r) => setTimeout(r, 3000))
 
-  const stored = (await call('GET', `/api/v1/courses/${courseId}`)).body?.data?.revenueSharePct
-  check('typing 55 on the course form stores 55', stored === 55, String(stored))
+  const stored = (await call('GET', `/api/v1/members/${teacherId}/payout-details`)).body?.data
+    ?.revenueSharePct
+  check('typing 55 against the teacher stores 55', stored === 55, String(stored))
 
-  await page.goto(`${ADMIN}/courses/${courseId}`, { waitUntil: 'networkidle2' })
-  await new Promise((r) => setTimeout(r, 2000))
-  const shown = await page.evaluate(() => {
-    const label = [...document.querySelectorAll('label')].find((l) =>
-      /Teacher's share/i.test(l.innerText),
-    )
-    return label?.parentElement.querySelector('input')?.value ?? null
-  })
-  check('  and the form shows it again on reload', shown === '55', String(shown))
+  await page.goto(`${ADMIN}/teachers/${teacherId}`, { waitUntil: 'networkidle2' })
+  await new Promise((r) => setTimeout(r, 2500))
+  const shown = await shareBoxValue()
+  check('  and the page shows it again on reload', shown === '55', String(shown))
 
+  // The other half of the rule, which the API owns: a teacher saving their own
+  // details cannot carry a share with them, because that route has no such
+  // field. Proved in `api/scripts/smoke-revenue-share.mts`; named here so
+  // nobody reads this file and thinks the admin screen is the only guard.
   check('no page errors or unresolved components', problems.length === 0, problems.join(' | '))
 } finally {
   await browser.close()
   await call('PUT', '/api/v1/settings', { revenue_share_pct: wasDefault })
-  if (wasCourseShare !== undefined) {
-    await call('PATCH', `/api/v1/courses/${courseId}`, { revenueSharePct: wasCourseShare })
-  }
+  await call('PATCH', `/api/v1/members/${teacherId}/payout-details`, {
+    revenueSharePct: wasTeacherShare,
+  })
 }
 
 console.log(failed ? `\n  ${failed} failing\n` : '\n  all good\n')

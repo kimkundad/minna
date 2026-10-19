@@ -115,7 +115,10 @@ try {
 
   /* ---- the course list ---- */
 
-  const list = await (await call('/courses?perPage=100', T.token)).json()
+  // scope=manage, because this is the admin list — a teacher's own courses,
+  // drafts included. Without it the endpoint answers with the public
+  // catalogue, which is the same for everybody and carries no counts.
+  const list = await (await call('/courses?perPage=100&scope=manage', T.token)).json()
   const rows = list.data as { id: number; enrolmentCount: number }[]
   const a = rows.find((r) => r.id === mine1)
   const b = rows.find((r) => r.id === mine2)

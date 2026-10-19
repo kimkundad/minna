@@ -18,6 +18,7 @@ import {
   type PostLocale,
   type TeacherOption,
 } from '@/lib/api'
+import { withEvery } from '@/lib/locales'
 
 /**
  * Articles.
@@ -53,17 +54,7 @@ const locale = ref<'' | PostLocale>('')
  * Most articles are not that, which is why the form opens on Thai. In the
  * filter above the table it means "only the ones set to every language".
  */
-const LOCALES = [
-  { value: 'all', label: 'ทุกภาษา · every language' },
-  { value: 'th', label: 'ไทย' },
-  { value: 'en', label: 'English' },
-  { value: 'jp', label: '日本語' },
-  { value: 'vn', label: 'Tiếng Việt' },
-  { value: 'id', label: 'Bahasa Indonesia' },
-  { value: 'zh', label: '简体中文' },
-  { value: 'ko', label: '한국어' },
-  { value: 'tw', label: '繁體中文' },
-] as const
+const LOCALES = withEvery('ทุกภาษา · every language')
 
 /* ---------------- the form ---------------- */
 

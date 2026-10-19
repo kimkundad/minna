@@ -4,8 +4,14 @@ import { desc, eq } from 'drizzle-orm'
 import { db } from '../../db/client'
 import { teacherApplications, teacherPayoutDetails, users } from '../../db/schema/index'
 import { audit, diff } from '../../lib/audit'
-import { PAYOUT_COUNTRIES, THAI_BANKS, isPayoutCountry, isSwift } from '../../lib/banks'
-import { CURRENCIES, isCurrencyCode } from '../../lib/currencies'
+import {
+  PAYOUT_COUNTRIES,
+  PAYOUT_CURRENCIES,
+  THAI_BANKS,
+  isPayoutCountry,
+  isPayoutCurrency,
+  isSwift,
+} from '../../lib/banks'
 import { getDefaultRevenueSharePct } from '../../lib/settings'
 import { forbidden, notFound } from '../../lib/errors'
 import { signedUrl, storageRoot } from '../../lib/storage'
@@ -71,7 +77,7 @@ const payoutBody = z.object({
     .string()
     .trim()
     .toUpperCase()
-    .refine((c) => isCurrencyCode(c), 'That is not a currency we pay in.')
+    .refine((c) => isPayoutCurrency(c), 'That is not a currency we pay in.')
     .nullish(),
   /**
    * What this teacher keeps of what the school receives.
@@ -193,7 +199,7 @@ export default async function memberDetailRoutes(app: FastifyInstance) {
          * teacher had chosen. A select can only hold a value it was given an
          * option for.
          */
-        currencies: CURRENCIES.map((c) => ({ code: c.code, name: c.name })),
+        currencies: PAYOUT_CURRENCIES,
         /** What an empty share falls back to, so the form can say so rather than
          *  leaving the reader to guess what blank means. */
         houseSharePct: await getDefaultRevenueSharePct(),

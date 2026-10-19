@@ -16,6 +16,7 @@ import {
   type TaughtLanguage,
   type TeacherProfile,
 } from '@/lib/api'
+import { UI_LOCALES } from '@/lib/locales'
 
 /**
  * Your own account.
@@ -49,16 +50,7 @@ const savingProfile = ref(false)
 const profileSaved = ref(false)
 const profileErrors = ref<Record<string, string>>({})
 
-const LOCALES: { value: MyProfileInput['locale']; label: string }[] = [
-  { value: 'th', label: 'ไทย' },
-  { value: 'en', label: 'English' },
-  { value: 'jp', label: '日本語' },
-  { value: 'vn', label: 'Tiếng Việt' },
-  { value: 'id', label: 'Bahasa Indonesia' },
-  { value: 'zh', label: '简体中文' },
-  { value: 'ko', label: '한국어' },
-  { value: 'tw', label: '繁體中文' },
-]
+const LOCALES: { value: MyProfileInput['locale']; label: string }[] = UI_LOCALES
 
 /**
  * What a teacher may say they teach — a different list from the one above.
@@ -697,7 +689,7 @@ onMounted(async () => {
               <input v-model="payoutForm.accountName" maxlength="150" :class="inputClass" />
             </div>
             <div>
-              <label :class="labelClass">Account number</label>
+              <label :class="labelClass">Account Number / IBAN</label>
               <input v-model="payoutForm.accountNumber" maxlength="64" :class="inputClass" />
             </div>
             <div>
@@ -714,7 +706,7 @@ onMounted(async () => {
               <select v-model="payoutForm.payoutCurrency" :class="inputClass">
                 <option :value="null">No preference</option>
                 <option v-for="c in currencies" :key="c.code" :value="c.code">
-                  {{ c.code }} — {{ c.name.en }}
+                  {{ c.code }} — {{ c.name }}
                 </option>
               </select>
             </div>

@@ -32,12 +32,16 @@ export interface CurrencyDef {
 
 export const CURRENCIES: CurrencyDef[] = [
   { code: 'THB', symbol: '฿', exponent: 2, step: 1, name: { en: 'Thai baht', th: 'บาท' } },
-  { code: 'USD', symbol: '$', exponent: 2, step: 1, name: { en: 'US dollar', th: 'ดอลลาร์สหรัฐ' } },
+  // Prefixed, like the six other dollars below. Six of the seven share one
+  // "$" once a formatter narrows them, so a price marked only "$" says which
+  // country only to whoever already knew.
+  { code: 'USD', symbol: 'US$', exponent: 2, step: 1, name: { en: 'US dollar', th: 'ดอลลาร์สหรัฐ' } },
   { code: 'EUR', symbol: '€', exponent: 2, step: 1, name: { en: 'Euro', th: 'ยูโร' } },
   { code: 'GBP', symbol: '£', exponent: 2, step: 1, name: { en: 'Pound sterling', th: 'ปอนด์' } },
   { code: 'JPY', symbol: '¥', exponent: 0, step: 100, name: { en: 'Japanese yen', th: 'เยน' } },
   { code: 'KRW', symbol: '₩', exponent: 0, step: 100, name: { en: 'Korean won', th: 'วอน' } },
-  { code: 'CNY', symbol: '¥', exponent: 2, step: 10, name: { en: 'Chinese yuan', th: 'หยวน' } },
+  // Yuan and yen both write ¥, and this school sells courses in both.
+  { code: 'CNY', symbol: 'CN¥', exponent: 2, step: 10, name: { en: 'Chinese yuan', th: 'หยวน' } },
   {
     code: 'HKD',
     symbol: 'HK$',

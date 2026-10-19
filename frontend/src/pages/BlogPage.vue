@@ -296,7 +296,7 @@ const cards = computed(() =>
       <h2 class="cat-count" id="bl-count" tabindex="-1">
         <template v-if="failed">{{ t('blog.errorTitle') }}</template>
         <template v-else-if="loading">{{ t('catalog.countLoading') }}</template>
-        <template v-else>{{ t('blog.countFound', { count: num(total) }) }}</template>
+        <template v-else>{{ t('blog.countFound', { count: num(total) }, total) }}</template>
       </h2>
 
       <!-- Error -->

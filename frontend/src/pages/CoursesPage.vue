@@ -671,7 +671,7 @@ const cardVariant = computed(() => (view.value === 'list' ? 'list' : 'grid'))
               <template v-if="failed">{{ t('catalog.countError') }}</template>
               <template v-else-if="loading">{{ t('catalog.countLoading') }}</template>
               <template v-else
-                >{{ t('catalog.countFound', { count: num(total) })
+                >{{ t('catalog.countFound', { count: num(total) }, total)
                 }}<small v-if="query">{{
                   ` ${t('catalog.countFor', { q: query })}`
                 }}</small

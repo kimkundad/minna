@@ -845,7 +845,7 @@ onMounted(async () => {
           <div v-if="others.length" class="acct-dev-all">
             <div class="acct-row-txt">
               <b>{{ t('account.profile.signOutAllTitle') }}</b>
-              <p>{{ t('account.profile.signOutAllText') }}</p>
+              <p>{{ t('account.profile.signOutAllText', { count: others.length }) }}</p>
             </div>
             <button type="button" class="btn btn--danger btn--sm" @click="confirmAll = true">
               <AppIcon name="log-out" />{{ t('account.profile.signOutAll') }}

@@ -59,8 +59,41 @@ export interface PricedLine {
   accessDurationDays: number | null
 }
 
+/**
+ * Why a code that was typed came to nothing.
+ *
+ * Reported rather than thrown: a basket with one bad code in it is still a
+ * basket, and the buyer needs to see the total they would pay beside the
+ * reason the code did not change it.
+ */
+export type CouponProblem =
+  /** No such code, or it has expired, been used up, or been switched off. */
+  | 'unknown'
+  /** A basket coupon, typed against one course. */
+  | 'order_only'
+  /** A course coupon, typed against a different course. */
+  | 'other_course'
+  /** A course coupon, typed into the basket box. */
+  | 'course_only'
+  /** A basket coupon with a minimum this basket does not reach. */
+  | 'below_minimum'
+  /** It applied, and took nothing off. */
+  | 'nothing_off'
+
+export interface CouponNote {
+  /** The course it was typed against, or null for the basket's own box. */
+  lineId: number | null
+  code: string
+  problem: CouponProblem
+}
+
 export interface Quote {
   lines: PricedLine[]
+  /**
+   * The codes that did nothing, and why. A code that worked is not listed —
+   * the discount beside it says so.
+   */
+  couponNotes: CouponNote[]
   subtotal: number
   courseDiscount: number
   orderDiscount: number
@@ -130,6 +163,7 @@ export async function quote(
     : []
 
   const priced: PricedLine[] = []
+  const couponNotes: CouponNote[] = []
 
   for (const line of lines) {
     if (line.kind === 'course') {
@@ -144,7 +178,11 @@ export async function quote(
       let discount = 0
       let couponId: number | null = null
       if (line.couponCode) {
-        const coupon = await findCoupon(line.couponCode)
+        const code = line.couponCode.trim().toUpperCase()
+        const coupon = await findCoupon(code)
+        const note = (problem: CouponProblem) =>
+          couponNotes.push({ lineId: course.id, code, problem })
+
         /**
          * A course coupon, and this course's.
          *
@@ -156,11 +194,23 @@ export async function quote(
          * ฿100 came out as ฿81: ten percent off the line, then ten percent
          * off what was left.
          *
-         * A basket coupon belongs to the basket. It is applied once, below.
+         * A basket coupon belongs to the basket, and is refused here rather
+         * than quietly moved there. It was moved for a while, so a code typed
+         * in the wrong box appeared to work — and then could not be removed,
+         * because the line it sat on showed no discount and so offered
+         * nothing to remove, nor typed into the box it belonged in, because
+         * the discount was already given and the total did not move again.
          */
-        if (coupon && coupon.scope === 'course' && coupon.courseId === course.id) {
+        if (!coupon) {
+          note('unknown')
+        } else if (coupon.scope === 'order') {
+          note('order_only')
+        } else if (coupon.courseId !== course.id) {
+          note('other_course')
+        } else {
           discount = discountFor(course.price, coupon)
           couponId = coupon.id
+          if (discount === 0) note('nothing_off')
         }
       }
 
@@ -219,47 +269,28 @@ export async function quote(
   const subtotal = priced.reduce((sum, l) => sum + l.unitPrice, 0)
   const courseDiscount = priced.reduce((sum, l) => sum + l.discount, 0)
 
-  /**
-   * A basket coupon typed into a course's box still counts.
-   *
-   * The checkout offers two coupon boxes — one on each course, one on the
-   * summary — and nothing on either says which codes belong where, because
-   * only the coupon knows. Typing a basket code into a course box used to
-   * take the discount twice; once that was fixed it did nothing at all, and
-   * said nothing about why, which is worse: a code that is perfectly valid
-   * appeared to be rejected.
-   *
-   * So a code is applied where it belongs rather than where it was typed. It
-   * is still applied once — this only fills the basket slot when it is empty,
-   * and the per-line pass has already refused to count it.
-   */
-  const strayBasketCode = orderCouponCode
-    ? null
-    : (
-        await Promise.all(
-          lines
-            .map((l) => l.couponCode)
-            .filter((c): c is string => Boolean(c))
-            .map(async (code) => ((await findCoupon(code))?.scope === 'order' ? code : null)),
-        )
-      ).find(Boolean) ?? null
-
-  orderCouponCode = orderCouponCode ?? strayBasketCode ?? undefined
-
   // An order-wide coupon applies to what is left after the per-line ones, so
   // the two stack rather than one quietly replacing the other.
   let orderDiscount = 0
   let orderCouponId: number | null = null
   if (orderCouponCode) {
-    const coupon = await findCoupon(orderCouponCode)
-    if (coupon && coupon.scope !== 'course') {
-      const after = subtotal - courseDiscount
-      if (!coupon.minSubtotal || after >= coupon.minSubtotal) {
-        orderDiscount = discountFor(after, coupon)
-        // Only when it actually took something off: a coupon that was typed and
-        // came to nothing has not been used.
-        if (orderDiscount > 0) orderCouponId = coupon.id
-      }
+    const code = orderCouponCode.trim().toUpperCase()
+    const coupon = await findCoupon(code)
+    const note = (problem: CouponProblem) => couponNotes.push({ lineId: null, code, problem })
+    const after = subtotal - courseDiscount
+
+    if (!coupon) {
+      note('unknown')
+    } else if (coupon.scope === 'course') {
+      note('course_only')
+    } else if (coupon.minSubtotal && after < coupon.minSubtotal) {
+      note('below_minimum')
+    } else {
+      orderDiscount = discountFor(after, coupon)
+      // Only when it actually took something off: a coupon that was typed and
+      // came to nothing has not been used.
+      if (orderDiscount > 0) orderCouponId = coupon.id
+      else note('nothing_off')
     }
   }
 
@@ -273,6 +304,7 @@ export async function quote(
 
   return {
     lines: priced,
+    couponNotes,
     subtotal,
     courseDiscount,
     orderDiscount,

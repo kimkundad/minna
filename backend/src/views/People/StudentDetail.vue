@@ -16,7 +16,7 @@ import {
   type MemberSummary,
   type OrderStatus,
 } from '@/lib/api'
-import { formatBaht } from '@/lib/money'
+import { formatBaht, formatMoney } from '@/lib/money'
 import flatPickr from 'vue-flatpickr-component'
 
 /**
@@ -786,7 +786,7 @@ onMounted(async () => {
                   <td
                     class="whitespace-nowrap px-5 py-3.5 text-sm font-medium text-gray-800 dark:text-white/90"
                   >
-                    {{ formatBaht(o.total) }}
+                    {{ formatMoney(o.total, o.currency) }}
                   </td>
                   <td class="px-5 py-3.5 text-xs">
                     <router-link

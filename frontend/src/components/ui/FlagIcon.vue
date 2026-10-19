@@ -82,22 +82,68 @@ defineProps<{ locale: AppLocale; size?: number }>()
         <path d="M16.4 17.2 17 19.05 18.95 19.05 17.37 20.19 17.98 22.04 16.4 20.9 14.82 22.04 15.43 20.19 13.85 19.05 15.8 19.05Z" fill="#FFDE00" />
       </template>
 
-      <!-- South Korea: the taegeuk, and the four trigrams around it. -->
+      <!--
+        South Korea: the taegeuk, and the four trigrams around it.
+
+        The two halves are drawn over the same S-curve, each naming the three
+        arcs in the same direction, so they meet exactly. Drawn as two
+        independent swirls they did not: the small arcs curved the wrong way
+        against each other, which left a white lens uncovered in the middle of
+        the circle and had the red and blue overlap either side of it.
+
+        Rotated 33.69°, the angle of the flag's own diagonal, because that is
+        what the dividing line is parallel to. Red sits above it, so the red
+        head falls under the upper-left trigram — heaven, three unbroken
+        lines, beside the full yang.
+      -->
       <template v-else-if="locale === 'ko'">
         <rect width="32" height="32" fill="#FFF" />
-        <path d="M16 9.2a6.8 6.8 0 0 1 0 13.6 3.4 3.4 0 0 0 0-6.8 3.4 3.4 0 0 1 0-6.8Z" fill="#CD2E3A" />
-        <path d="M16 9.2a6.8 6.8 0 0 0 0 13.6 3.4 3.4 0 0 1 0-6.8 3.4 3.4 0 0 0 0-6.8Z" fill="#0047A0" />
-        <g fill="#000" transform="rotate(-56 16 16)">
-          <rect x="3.1" y="14.6" width="5.6" height="1" />
-          <rect x="3.1" y="16.4" width="5.6" height="1" />
-          <rect x="23.3" y="14.6" width="5.6" height="1" />
-          <rect x="23.3" y="16.4" width="5.6" height="1" />
+        <g transform="rotate(-33.69 16 16)">
+          <path
+            d="M9.2 16A6.8 6.8 0 0 1 22.8 16A3.4 3.4 0 0 0 16 16A3.4 3.4 0 0 1 9.2 16Z"
+            fill="#CD2E3A"
+          />
+          <path
+            d="M9.2 16A6.8 6.8 0 0 0 22.8 16A3.4 3.4 0 0 0 16 16A3.4 3.4 0 0 1 9.2 16Z"
+            fill="#0047A0"
+          />
         </g>
-        <g fill="#000" transform="rotate(34 16 16)">
-          <rect x="3.1" y="14.6" width="5.6" height="1" />
-          <rect x="3.1" y="16.4" width="5.6" height="1" />
-          <rect x="23.3" y="14.6" width="5.6" height="1" />
-          <rect x="23.3" y="16.4" width="5.6" height="1" />
+        <!--
+          The four trigrams, each drawn on the right and turned to its corner.
+          All four patterns read the same upside down, so turning one past the
+          vertical cannot put its lines in the wrong order.
+        -->
+        <g fill="#000">
+          <!-- ☰ geon, heaven: upper left. -->
+          <g transform="rotate(-146.31 16 16)">
+            <rect x="23.3" y="13.65" width="5.6" height="1.2" />
+            <rect x="23.3" y="15.4" width="5.6" height="1.2" />
+            <rect x="23.3" y="17.15" width="5.6" height="1.2" />
+          </g>
+          <!-- ☵ gam, water: upper right. -->
+          <g transform="rotate(-33.69 16 16)">
+            <rect x="23.3" y="13.65" width="2.4" height="1.2" />
+            <rect x="26.5" y="13.65" width="2.4" height="1.2" />
+            <rect x="23.3" y="15.4" width="5.6" height="1.2" />
+            <rect x="23.3" y="17.15" width="2.4" height="1.2" />
+            <rect x="26.5" y="17.15" width="2.4" height="1.2" />
+          </g>
+          <!-- ☲ ri, fire: lower left. -->
+          <g transform="rotate(146.31 16 16)">
+            <rect x="23.3" y="13.65" width="5.6" height="1.2" />
+            <rect x="23.3" y="15.4" width="2.4" height="1.2" />
+            <rect x="26.5" y="15.4" width="2.4" height="1.2" />
+            <rect x="23.3" y="17.15" width="5.6" height="1.2" />
+          </g>
+          <!-- ☷ gon, earth: lower right. -->
+          <g transform="rotate(33.69 16 16)">
+            <rect x="23.3" y="13.65" width="2.4" height="1.2" />
+            <rect x="26.5" y="13.65" width="2.4" height="1.2" />
+            <rect x="23.3" y="15.4" width="2.4" height="1.2" />
+            <rect x="26.5" y="15.4" width="2.4" height="1.2" />
+            <rect x="23.3" y="17.15" width="2.4" height="1.2" />
+            <rect x="26.5" y="17.15" width="2.4" height="1.2" />
+          </g>
         </g>
       </template>
 

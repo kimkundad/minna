@@ -112,6 +112,24 @@ release runs against a newer database without noticing. That is deliberate:
 it means code can be rolled back at the speed of a `docker pull`, without
 anyone having to reason about data.
 
+### Old images on the server
+
+`deploy.sh` keeps the five newest `minna-api` and `minna-web` tags on the disk
+and removes the rest, plus whatever layers that leaves unreferenced. A tag
+still in use by a running container is kept and said so. Everything stays in
+the registry either way, so rolling back further than five is a `docker pull`,
+not a lost release.
+
+```bash
+KEEP=10 bash deploy.sh 2026-10-19-01   # keep more
+KEEP=0  bash deploy.sh 2026-10-19-01   # remove nothing
+```
+
+It touches those two repositories by exact tag and nothing else. Do **not**
+reach for `docker image prune -a` on this server: jaga, plusexploration, the
+PHP site and redis keep their own rollback tags here, and that command would
+take all of them.
+
 ---
 
 ## First time on a server

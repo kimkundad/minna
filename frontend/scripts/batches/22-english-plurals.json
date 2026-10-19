@@ -1,0 +1,83 @@
+{
+  "en": {
+    "course": {
+      "instructorsSub": "{count} instructor | {count} instructors"
+    },
+    "header": {
+      "cartItems": "Cart, {count} item | Cart, {count} items",
+      "categoryCount": "{count} category | {count} categories"
+    },
+    "catalog": {
+      "lead": "Japanese, English, Chinese and Vietnamese, taught by native speakers and Thai teachers. {count} category to choose from, on any device, at your own pace. | Japanese, English, Chinese and Vietnamese, taught by native speakers and Thai teachers. {count} categories to choose from, on any device, at your own pace.",
+      "countFound": "{count} course | {count} courses",
+      "emptyText": "Try fewer filters, a different search, or browse everything across {count} category. | Try fewer filters, a different search, or browse everything across {count} categories."
+    },
+    "account": {
+      "days": "{n} day | {n} days",
+      "learning": {
+        "showing": "Showing {count} course | Showing {count} courses"
+      },
+      "orders": {
+        "showing": "Showing {count} order | Showing {count} orders",
+        "itemCount": "{count} course | {count} courses"
+      },
+      "pkg": {
+        "benefitCourses": "Study every course marked “included in package” right away ({count} course) | Study every course marked “included in package” right away ({count} courses)",
+        "plansCount": "Showing {count} plan for {type} | Showing {count} plans for {type}",
+        "includedSub": "Open right away for as long as {plan} runs, with nothing more to buy · {count} course | Open right away for as long as {plan} runs, with nothing more to buy · {count} courses"
+      },
+      "profile": {
+        "signOutAllText": "Signs out the {count} other device and leaves the one you are using now. | Signs out all {count} other devices and leaves the one you are using now."
+      }
+    },
+    "commerce": {
+      "courseCount": "{n} course | {n} courses",
+      "cart": {
+        "itemCount": "{n} item in your cart | {n} items in your cart",
+        "blockedTitle": "{n} item does not need buying | {n} items do not need buying",
+        "barSelected": "{n} course selected · total | {n} courses selected · total"
+      },
+      "coupon": {
+        "wholeOrder": "the whole order ({n} course) | the whole order ({n} courses)"
+      },
+      "checkout": {
+        "subtitle": "Check your {n} course, apply a coupon and choose how to pay | Check your {n} courses, apply a coupon and choose how to pay",
+        "subtitleFree": "Check your {n} course, then confirm to claim it | Check your {n} courses, then confirm to claim them",
+        "removedTitle": "{n} item taken off this order | {n} items taken off this order",
+        "itemsSub": "Check {n} course before confirming | Check {n} courses before confirming"
+      }
+    },
+    "learning": {
+      "info": {
+        "currStatic": "{n} lesson · {duration} | {n} lessons · {duration}"
+      },
+      "overview": {
+        "quizPoint1": "Review the whole course with {n} choice question | Review the whole course with {n} choice questions"
+      },
+      "docs": {
+        "fileCount": "{n} file | {n} files"
+      },
+      "qa": {
+        "itemCount": "{n} item | {n} items",
+        "cooldown": "You can post again in {n} second | You can post again in {n} seconds",
+        "removeWithReplies": "Delete this question? Its {n} answer goes with it | Delete this question? Its {n} answers go with it"
+      },
+      "side": {
+        "lessonCount": "{n} lesson | {n} lessons"
+      },
+      "quiz": {
+        "questionCount": "{n} question | {n} questions",
+        "ruleTimer": "Timed at {n} minute; your answers are submitted automatically when the time is up. | Timed at {n} minutes; your answers are submitted automatically when the time is up.",
+        "submitSomeMissing": "{n} question is still unanswered ({list}). An unanswered question counts as wrong. | {n} questions are still unanswered ({list}). An unanswered question counts as wrong.",
+        "submitAllDone": "You have answered the one question. | You have answered all {n} questions."
+      }
+    },
+    "home": {
+      "catsCount": "{count} course | {count} courses",
+      "mineSub": "Pick up where you left off · {n} course | Pick up where you left off · {n} courses"
+    },
+    "blog": {
+      "countFound": "{count} article | {count} articles"
+    }
+  }
+}

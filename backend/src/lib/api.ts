@@ -223,7 +223,16 @@ export const api = {
 
   deleteCategory: (id: number) => send<void>(`/categories/${id}`, { method: 'DELETE' }),
 
-  courses: (query: CourseListQuery) => send<Paged<CourseRow>>('/courses', { query }),
+  /**
+   * Every course the person may manage, drafts included — a teacher's own,
+   * an admin's everything.
+   *
+   * `scope` is sent here rather than left to the server to guess, so that the
+   * same endpoint can serve the public catalogue without the reader's role
+   * quietly changing what it returns.
+   */
+  courses: (query: CourseListQuery) =>
+    send<Paged<CourseRow>>('/courses', { query: { ...query, scope: 'manage' } }),
 
   course: (id: number) => send<{ data: CourseDetail }>(`/courses/${id}`),
 
@@ -541,7 +550,7 @@ export interface PayoutDetails {
   resumePath: string | null
   /** Sent with the record so the form never keeps its own copy of these lists
    *  and drifts from what the server will accept. */
-  currencies: { code: string; name: { en: string; th: string } }[]
+  currencies: { code: string; name: string }[]
   countries: { code: string; name: { en: string; th: string } }[]
   thaiBanks: { swift: string; name: { en: string; th: string } }[]
 }
@@ -604,7 +613,7 @@ export interface AdminPayoutDetails {
   /** Sent with the record so the form cannot offer what the API refuses. */
   countries: { code: string; name: { en: string; th: string } }[]
   thaiBanks: { swift: string; name: { en: string; th: string } }[]
-  currencies: { code: string; name: { en: string; th: string } }[]
+  currencies: { code: string; name: string }[]
 }
 
 export interface AdminPayoutDetailsInput {
@@ -1219,6 +1228,8 @@ export interface InvoiceRow {
   orderStatus: OrderStatus
   orderTotal: number
   orderVat: number
+  /** What those two are in. The order was charged in it; it is not baht. */
+  currency: string
   paidAt: string | null
   type: 'corporate' | 'individual'
   /** The registered company name, or the person's full name. */
@@ -1527,6 +1538,8 @@ export interface DashboardData {
     id: number
     orderNo: string
     total: number
+    /** What the total is in; an order is charged in its own currency. */
+    currency: string
     status: OrderStatus
     createdAt: string
     firstName: string

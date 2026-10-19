@@ -214,6 +214,25 @@ export const courseListQuery = listQuery.extend({
    * requests can land either side of a course being published and disagree.
    */
   facets: queryBool,
+  /**
+   * Which list this is: the shop, or the desk behind it.
+   *
+   * 'public' is the catalogue, and it is the same catalogue for everybody —
+   * the signed-out visitor, the student, the teacher and the admin all see
+   * what is published and on sale.
+   *
+   * 'manage' is the admin's own list: drafts included, and narrowed to a
+   * teacher's own courses when a teacher asks.
+   *
+   * It is asked for rather than worked out from the token. It used to be
+   * inferred — staff got drafts and a teacher got only their own courses — and
+   * the public catalogue carries the reader's token, so signing in as a
+   * teacher turned the shop into a list of that teacher's own courses and
+   * nothing else could be bought. An admin, meanwhile, was shown unpublished
+   * courses on the public site. Who you are decides what you may ask for; it
+   * must not silently decide what you asked.
+   */
+  scope: z.enum(['public', 'manage']).default('public'),
 })
 
 /* ---------------- curriculum ---------------- */

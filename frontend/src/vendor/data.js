@@ -45,24 +45,24 @@
 
   /* ---------------- Instructors (ข้อมูลจำลอง) ---------------- */
   var instructors = {
-    'INS-01': { name: 'สพ.ญ. ดร. ชลธิชา พรหมรักษ์', short: 'ชลธิชา พรหมรักษ์', initials: 'ชพ', color: 0, specialty: 'Clinical Pathology', photo: 'assets/img/doctor-female-01-square.png' },
-    'INS-02': { name: 'น.สพ. ดร. ภาคิน อมรวิทย์', short: 'ภาคิน อมรวิทย์', initials: 'ภอ', color: 4, specialty: 'Small Animal Internal Medicine', photo: 'assets/img/doctor-male-01-square.png' },
-    'INS-03': { name: 'น.สพ. ดร. กิตติพงศ์ วัฒนเวช', short: 'กิตติพงศ์ วัฒนเวช', initials: 'กว', color: 5, specialty: 'Emergency & Critical Care', photo: 'assets/img/doctor-male-02-square.png' },
-    'INS-04': { name: 'สพ.ญ. พิมพ์ชนก วัฒนศิริ', short: 'พิมพ์ชนก วัฒนศิริ', initials: 'พว', color: 3, specialty: 'Small Animal Practice', photo: 'assets/img/doctor-female-02-square.png' },
-    'INS-05': { name: 'รศ. สพ.ญ. ดร. นลินี ศรีสุข', short: 'นลินี ศรีสุข', initials: 'นศ', color: 1, specialty: 'Feline Medicine', photo: 'assets/img/doctor-female-03-square.png' },
-    'INS-06': { name: 'สพ.ญ. ดร. สิริกานต์ อภิรักษ์', short: 'สิริกานต์ อภิรักษ์', initials: 'สอ', color: 2, specialty: 'Internal Medicine', photo: 'assets/img/doctor-female-01-square.png' },
-    'INS-07': { name: 'สพ.ญ. ดร. พราวพรรณ จิตมั่น', short: 'พราวพรรณ จิตมั่น', initials: 'พจ', color: 5, specialty: 'Veterinary Dermatology', photo: 'assets/img/doctor-female-02-square.png' },
-    'INS-08': { name: 'สพ.ญ. ดร. รวิสรา ชัยเวช', short: 'รวิสรา ชัยเวช', initials: 'รช', color: 1, specialty: 'Veterinary Anesthesia', photo: 'assets/img/doctor-female-03-square.png' },
-    'INS-09': { name: 'น.สพ. ดร. ธนกร พัฒนกิจ', short: 'ธนกร พัฒนกิจ', initials: 'ธพ', color: 4, specialty: 'Surgery & Anesthesia', photo: 'assets/img/doctor-male-01-square.png' },
-    'INS-10': { name: 'สพ.ญ. ณัฐณิชา วัฒนกุล', short: 'ณัฐณิชา วัฒนกุล', initials: 'ณว', color: 3, specialty: 'Cat-friendly Practice', photo: 'assets/img/doctor-female-02-square.png' },
-    'INS-11': { name: 'สพ.ญ. กมลวรรณ ศรีประเสริฐ', short: 'กมลวรรณ ศรีประเสริฐ', initials: 'กศ', color: 3, specialty: 'Clinical Nutrition', photo: 'assets/img/doctor-female-01-square.png' },
-    'INS-12': { name: 'น.สพ. ดร. วรเมธ ศักดิ์สกุล', short: 'วรเมธ ศักดิ์สกุล', initials: 'วศ', color: 0, specialty: 'Small Animal Internal Medicine', photo: 'assets/img/doctor-male-02-square.png' },
-    'INS-13': { name: 'Dr. Sarah Mitchell, DVM', short: 'Sarah Mitchell', initials: 'SM', color: 1, specialty: 'Veterinary Cardiology', photo: 'assets/img/doctor-female-03-square.png' },
-    'INS-14': { name: 'น.สพ. ดร. อัครพล เกียรติวงศ์', short: 'อัครพล เกียรติวงศ์', initials: 'อก', color: 4, specialty: 'Echocardiography', photo: 'assets/img/doctor-male-01-square.png' },
-    'INS-15': { name: 'สพ.ญ. ดร. ปวีณา แสงทอง', short: 'ปวีณา แสงทอง', initials: 'ปส', color: 5, specialty: 'Small Animal Cardiology', photo: 'assets/img/doctor-female-01-square.png' },
-    'INS-16': { name: 'น.สพ. ดร. ธีรวัฒน์ บุญญาศิริ', short: 'ธีรวัฒน์ บุญญาศิริ', initials: 'ธบ', color: 2, specialty: 'Orthopedic Surgery', photo: 'assets/img/doctor-male-02-square.png' },
-    'INS-17': { name: 'สพ.ญ. ดร. ศศิธร วงศ์ใหญ่', short: 'ศศิธร วงศ์ใหญ่', initials: 'ศว', color: 3, specialty: 'Veterinary Rehabilitation', photo: 'assets/img/doctor-female-02-square.png' },
-    'INS-18': { name: 'สพ.ญ. ดร. อรุณี ทองประเสริฐ', short: 'อรุณี ทองประเสริฐ', initials: 'อท', color: 0, specialty: 'Exotic Animal Medicine', photo: 'assets/img/doctor-female-03-square.png' }
+    'INS-01': { name: 'สพ.ญ. ดร. ชลธิชา พรหมรักษ์', short: 'ชลธิชา พรหมรักษ์', initials: 'ชพ', color: 0, specialty: 'Clinical Pathology', photo: null },
+    'INS-02': { name: 'น.สพ. ดร. ภาคิน อมรวิทย์', short: 'ภาคิน อมรวิทย์', initials: 'ภอ', color: 4, specialty: 'Small Animal Internal Medicine', photo: null },
+    'INS-03': { name: 'น.สพ. ดร. กิตติพงศ์ วัฒนเวช', short: 'กิตติพงศ์ วัฒนเวช', initials: 'กว', color: 5, specialty: 'Emergency & Critical Care', photo: null },
+    'INS-04': { name: 'สพ.ญ. พิมพ์ชนก วัฒนศิริ', short: 'พิมพ์ชนก วัฒนศิริ', initials: 'พว', color: 3, specialty: 'Small Animal Practice', photo: null },
+    'INS-05': { name: 'รศ. สพ.ญ. ดร. นลินี ศรีสุข', short: 'นลินี ศรีสุข', initials: 'นศ', color: 1, specialty: 'Feline Medicine', photo: null },
+    'INS-06': { name: 'สพ.ญ. ดร. สิริกานต์ อภิรักษ์', short: 'สิริกานต์ อภิรักษ์', initials: 'สอ', color: 2, specialty: 'Internal Medicine', photo: null },
+    'INS-07': { name: 'สพ.ญ. ดร. พราวพรรณ จิตมั่น', short: 'พราวพรรณ จิตมั่น', initials: 'พจ', color: 5, specialty: 'Veterinary Dermatology', photo: null },
+    'INS-08': { name: 'สพ.ญ. ดร. รวิสรา ชัยเวช', short: 'รวิสรา ชัยเวช', initials: 'รช', color: 1, specialty: 'Veterinary Anesthesia', photo: null },
+    'INS-09': { name: 'น.สพ. ดร. ธนกร พัฒนกิจ', short: 'ธนกร พัฒนกิจ', initials: 'ธพ', color: 4, specialty: 'Surgery & Anesthesia', photo: null },
+    'INS-10': { name: 'สพ.ญ. ณัฐณิชา วัฒนกุล', short: 'ณัฐณิชา วัฒนกุล', initials: 'ณว', color: 3, specialty: 'Cat-friendly Practice', photo: null },
+    'INS-11': { name: 'สพ.ญ. กมลวรรณ ศรีประเสริฐ', short: 'กมลวรรณ ศรีประเสริฐ', initials: 'กศ', color: 3, specialty: 'Clinical Nutrition', photo: null },
+    'INS-12': { name: 'น.สพ. ดร. วรเมธ ศักดิ์สกุล', short: 'วรเมธ ศักดิ์สกุล', initials: 'วศ', color: 0, specialty: 'Small Animal Internal Medicine', photo: null },
+    'INS-13': { name: 'Dr. Sarah Mitchell, DVM', short: 'Sarah Mitchell', initials: 'SM', color: 1, specialty: 'Veterinary Cardiology', photo: null },
+    'INS-14': { name: 'น.สพ. ดร. อัครพล เกียรติวงศ์', short: 'อัครพล เกียรติวงศ์', initials: 'อก', color: 4, specialty: 'Echocardiography', photo: null },
+    'INS-15': { name: 'สพ.ญ. ดร. ปวีณา แสงทอง', short: 'ปวีณา แสงทอง', initials: 'ปส', color: 5, specialty: 'Small Animal Cardiology', photo: null },
+    'INS-16': { name: 'น.สพ. ดร. ธีรวัฒน์ บุญญาศิริ', short: 'ธีรวัฒน์ บุญญาศิริ', initials: 'ธบ', color: 2, specialty: 'Orthopedic Surgery', photo: null },
+    'INS-17': { name: 'สพ.ญ. ดร. ศศิธร วงศ์ใหญ่', short: 'ศศิธร วงศ์ใหญ่', initials: 'ศว', color: 3, specialty: 'Veterinary Rehabilitation', photo: null },
+    'INS-18': { name: 'สพ.ญ. ดร. อรุณี ทองประเสริฐ', short: 'อรุณี ทองประเสริฐ', initials: 'อท', color: 0, specialty: 'Exotic Animal Medicine', photo: null }
   };
   Object.keys(instructors).forEach(function (k) {
     var i = instructors[k]; i.id = k; i.isMock = true;
@@ -539,7 +539,7 @@
   var provinces = ['กรุงเทพมหานคร', 'กระบี่', 'กาญจนบุรี', 'กาฬสินธุ์', 'กำแพงเพชร', 'ขอนแก่น', 'จันทบุรี', 'ฉะเชิงเทรา', 'ชลบุรี', 'ชัยนาท', 'ชัยภูมิ', 'ชุมพร', 'เชียงราย', 'เชียงใหม่', 'ตรัง', 'ตราด', 'ตาก', 'นครนายก', 'นครปฐม', 'นครพนม', 'นครราชสีมา', 'นครศรีธรรมราช', 'นครสวรรค์', 'นนทบุรี', 'นราธิวาส', 'น่าน', 'บึงกาฬ', 'บุรีรัมย์', 'ปทุมธานี', 'ประจวบคีรีขันธ์', 'ปราจีนบุรี', 'ปัตตานี', 'พระนครศรีอยุธยา', 'พะเยา', 'พังงา', 'พัทลุง', 'พิจิตร', 'พิษณุโลก', 'เพชรบุรี', 'เพชรบูรณ์', 'แพร่', 'ภูเก็ต', 'มหาสารคาม', 'มุกดาหาร', 'แม่ฮ่องสอน', 'ยโสธร', 'ยะลา', 'ร้อยเอ็ด', 'ระนอง', 'ระยอง', 'ราชบุรี', 'ลพบุรี', 'ลำปาง', 'ลำพูน', 'เลย', 'ศรีสะเกษ', 'สกลนคร', 'สงขลา', 'สตูล', 'สมุทรปราการ', 'สมุทรสงคราม', 'สมุทรสาคร', 'สระแก้ว', 'สระบุรี', 'สิงห์บุรี', 'สุโขทัย', 'สุพรรณบุรี', 'สุราษฎร์ธานี', 'สุรินทร์', 'หนองคาย', 'หนองบัวลำภู', 'อ่างทอง', 'อำนาจเจริญ', 'อุดรธานี', 'อุตรดิตถ์', 'อุทัยธานี', 'อุบลราชธานี'];
 
   /* รูปโปรไฟล์ของสมาชิกที่ล็อกอิน (คนเดียวกับผู้สอน INS-04) — เก็บแยกจาก profile ที่บันทึกลง localStorage */
-  var memberPhoto = 'assets/img/doctor-female-02-square.png';
+  var memberPhoto = null;
 
   /* ---------------- Seeds (materialised by store.js; dates relative to today where noted) ---------------- */
   var seeds = {

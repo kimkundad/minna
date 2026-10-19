@@ -5,8 +5,9 @@ import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppAvatar from '@/components/ui/AppAvatar.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import { data, store } from '@/vendor'
 import BrandLogo from '@/components/layout/BrandLogo.vue'
+import { mediaUrl } from '@/lib/api'
+import { useAuthStore } from '@/stores/auth'
 import { useHeaderHeight } from './learning'
 
 /**
@@ -38,12 +39,21 @@ const { t } = useI18n()
 const route = useRoute()
 const locale = computed(() => String(route.params.locale ?? 'th'))
 
-const s = store as unknown as {
-  isLoggedIn: () => boolean
-  user: () => { loggedIn: boolean; name?: string; initials?: string }
-}
-
-const user = computed(() => s.user())
+/**
+ * Who is signed in, from the session — not from `vendor/store`.
+ *
+ * It used to read the reference store the designer shipped with the markup,
+ * which answers with an invented veterinary surgeon and her photograph. So
+ * the learning room showed a stranger's face where the student's own avatar
+ * belongs, under a name that was not theirs either.
+ */
+const auth = useAuthStore()
+const user = computed(() => ({
+  loggedIn: auth.isLoggedIn,
+  name: auth.displayName,
+  initials: `${auth.user?.firstName?.[0] ?? ''}${auth.user?.lastName?.[0] ?? ''}`.trim(),
+  photo: auth.user?.avatarPath ? mediaUrl(auth.user.avatarPath) : null,
+}))
 
 const root = ref<HTMLElement | null>(null)
 useHeaderHeight(props.heightVar, root)
@@ -84,7 +94,7 @@ useHeaderHeight(props.heightVar, root)
               size="md"
               :name="user.name"
               :initials="user.initials"
-              :photo="data.memberPhoto"
+              :photo="user.photo"
             />
           </RouterLink>
         </div>

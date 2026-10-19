@@ -4,6 +4,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import TablePager from '@/components/common/TablePager.vue'
 import { ApiError, api, type Category, type CategoryInput, type CategoryNames } from '@/lib/api'
+import { TRANSLATION_LOCALES } from '@/lib/locales'
 import { useConfirm } from '@/composables/useConfirm'
 
 /**
@@ -39,15 +40,7 @@ const PER_PAGE = 10
  * falls back to it wherever one of these is blank, so leaving them empty is a
  * valid state rather than an unfinished one.
  */
-const TRANSLATIONS = [
-  { locale: 'en' as const, label: 'English' },
-  { locale: 'jp' as const, label: 'Japanese' },
-  { locale: 'vn' as const, label: 'Vietnamese' },
-  { locale: 'id' as const, label: 'Indonesian' },
-  { locale: 'zh' as const, label: 'Chinese (Simplified)' },
-  { locale: 'ko' as const, label: 'Korean' },
-  { locale: 'tw' as const, label: 'Taiwan' },
-]
+const TRANSLATIONS = TRANSLATION_LOCALES.map((l) => ({ locale: l.value, label: l.label }))
 
 /** The row being edited, or 'new'. Null means nothing is open. */
 const editing = ref<number | 'new' | null>(null)

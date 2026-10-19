@@ -597,7 +597,16 @@
       "checking": "正在核對…",
       "applied": "優惠券 {code} 已使用 — 減 {amount}",
       "removed": "已移除優惠券 {code}",
-      "notValid": "這張優惠券不適用。請檢查代碼與使用條件。"
+      "notValid": "這張優惠券不適用。請檢查代碼與使用條件。",
+      "clear": "清除",
+      "problem": {
+        "unknown": "找不到此優惠碼，或已過期、已用完。",
+        "orderOnly": "此優惠碼適用於整個購物車 — 請填入下方總計處的優惠碼欄。",
+        "otherCourse": "此優惠碼適用於其他課程。",
+        "courseOnly": "此優惠碼只適用於某一門課程 — 請填入該課程的優惠碼欄。",
+        "belowMinimum": "金額未達到此優惠碼的最低消費。",
+        "nothingOff": "此優惠碼對該金額沒有折扣。"
+      }
     },
     "totals": {
       "courses": "課程價格",

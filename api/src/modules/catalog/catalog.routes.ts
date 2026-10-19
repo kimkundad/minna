@@ -133,14 +133,16 @@ export default async function catalogRoutes(app: FastifyInstance) {
   /* ---------------- courses ---------------- */
 
   app.get('/courses', { preHandler: app.optionalAuth }, async (req) => {
-    const { facets, ...query } = schemas.courseListQuery.parse(req.query)
-    const canSeeDrafts = staff(req)
+    const { facets, scope, ...query } = schemas.courseListQuery.parse(req.query)
+    // Staff may ask to manage; everybody else gets the catalogue whatever
+    // they asked for, which is also what the catalogue asks for.
+    const managing = scope === 'manage' && staff(req)
 
     const opts = {
       ...query,
-      includeUnpublished: canSeeDrafts,
+      includeUnpublished: managing,
       // A teacher's list is their own courses. An admin's is everything.
-      instructorId: canSeeDrafts && !isAdmin(req) ? req.user.sub : undefined,
+      instructorId: managing && !isAdmin(req) ? req.user.sub : undefined,
     }
 
     const page = await service.listCourses(opts)

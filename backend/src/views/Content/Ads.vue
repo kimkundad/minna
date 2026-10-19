@@ -14,6 +14,7 @@ import {
   type AdInput,
   type AdPlacement,
 } from '@/lib/api'
+import { withEvery } from '@/lib/locales'
 
 /**
  * Advertising.
@@ -42,17 +43,7 @@ const PLACEMENTS: { value: AdPlacement; label: string; where: string }[] = [
   { value: 'learn', label: 'Lesson player', where: 'Beside the lesson a student is taking' },
 ]
 
-const LOCALES = [
-  { value: 'all', label: 'ทุกภาษา · every language' },
-  { value: 'th', label: 'ไทย' },
-  { value: 'en', label: 'English' },
-  { value: 'jp', label: '日本語' },
-  { value: 'vn', label: 'Tiếng Việt' },
-  { value: 'id', label: 'Bahasa Indonesia' },
-  { value: 'zh', label: '简体中文' },
-  { value: 'ko', label: '한국어' },
-  { value: 'tw', label: '繁體中文' },
-] as const
+const LOCALES = withEvery('ทุกภาษา · every language')
 
 /** The sizes the artwork has to be, stated where it is uploaded rather than
  *  in an email somebody has to find again. */

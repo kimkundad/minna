@@ -27,14 +27,65 @@ export function toSatang(baht: string | number | null | undefined): number | nul
   return Math.round(n * 100)
 }
 
-/** 169000 → "฿1,690.00". For reading, never for editing. */
+/**
+ * The symbols a narrowed "$" or "¥" would not tell apart.
+ *
+ * The same list the public site keeps, for the same reason: six of the seven
+ * dollars this school prices in narrow down to a bare "$", so an order paid in
+ * Hong Kong dollars and one paid in US dollars read identically on a page
+ * somebody is about to refund from.
+ */
+const UNAMBIGUOUS_SYMBOL: Record<string, string> = {
+  USD: 'US$',
+  HKD: 'HK$',
+  SGD: 'S$',
+  TWD: 'NT$',
+  AUD: 'A$',
+  NZD: 'NZ$',
+  CAD: 'C$',
+  CNY: 'CN¥',
+}
+
+/**
+ * 169000 and 'JPY' → "¥1,690". For reading, never for editing.
+ *
+ * The currency is not optional in practice, only in the type: an order, an
+ * invoice and a course each carry their own, and a figure printed in baht
+ * because nobody passed one is a wrong number, not a missing one. It defaults
+ * to baht for the few places that really are school-wide sums — earnings and
+ * payouts are kept in baht whatever the sale was charged in.
+ */
+export function formatMoney(
+  minor: number | null | undefined,
+  currency: string = 'THB',
+): string {
+  if (minor == null) return '—'
+  const code = (currency || 'THB').toUpperCase()
+  try {
+    const parts = new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: code,
+      currencyDisplay: 'narrowSymbol',
+      // Not forced to two. Baht and dollars take two and Intl gives them two;
+      // yen and won take none, and "¥2,241.00" is not an amount of yen.
+    }).formatToParts(minor / 100)
+    const ours = UNAMBIGUOUS_SYMBOL[code]
+    return parts.map((p) => (ours && p.type === 'currency' ? ours : p.value)).join('')
+  } catch {
+    // An unknown code must not blank out the amount somebody is checking.
+    return `${(minor / 100).toFixed(2)} ${code}`
+  }
+}
+
+/**
+ * 169000 → "฿1,690.00".
+ *
+ * Only for sums that really are in baht: what a teacher has earned, what a
+ * payout is worth, what the school took. Anything carrying a currency of its
+ * own belongs in `formatMoney`.
+ */
 export function formatBaht(satang: number | null | undefined): string {
-  if (satang == null) return '—'
-  return new Intl.NumberFormat('th-TH', {
-    style: 'currency',
-    currency: 'THB',
-    minimumFractionDigits: 2,
-  }).format(satang / 100)
+  return formatMoney(satang, 'THB')
 }
 
 /** 12600 seconds → "3h 30m". Lesson lengths add up to hours. */

@@ -26,11 +26,30 @@ if (!existsSync(from)) {
 
 mkdirSync(to, { recursive: true })
 
+/**
+ * The portraits are not copied.
+ *
+ * They are photographs of veterinary surgeons, and one of them reached a
+ * student: the learning room drew `data.memberPhoto` in place of the signed-in
+ * member's own avatar, so everybody studying Japanese was shown the same
+ * stranger's face. The fixture data no longer carries a path to any of them,
+ * and copying them back would only wait for somebody to use one again.
+ */
+const PORTRAITS = /^doctor-(female|male)-\d+-square\.(png|jpe?g|webp)$/i
+
 let copied = 0
+let skipped = 0
 for (const name of readdirSync(from)) {
   if (!/\.(png|jpe?g|svg|webp)$/i.test(name)) continue
+  if (PORTRAITS.test(name)) {
+    skipped++
+    continue
+  }
   cpSync(join(from, name), join(to, name))
   copied++
 }
 
-console.log(`Copied ${copied} fixture images into public/assets/img.`)
+console.log(
+  `Copied ${copied} fixture images into public/assets/img` +
+    (skipped ? `, leaving ${skipped} portraits behind.` : '.'),
+)

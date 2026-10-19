@@ -597,7 +597,16 @@
       "checking": "正在核对…",
       "applied": "优惠券 {code} 已使用 — 减 {amount}",
       "removed": "已移除优惠券 {code}",
-      "notValid": "这张优惠券不适用。请检查代码与使用条件。"
+      "notValid": "这张优惠券不适用。请检查代码与使用条件。",
+      "clear": "清除",
+      "problem": {
+        "unknown": "找不到此优惠码，或已过期、已用完。",
+        "orderOnly": "此优惠码适用于整个购物车 — 请填入下方总计处的优惠码栏。",
+        "otherCourse": "此优惠码适用于其他课程。",
+        "courseOnly": "此优惠码只适用于某一门课程 — 请填入该课程的优惠码栏。",
+        "belowMinimum": "金额未达到此优惠码的最低消费。",
+        "nothingOff": "此优惠码对该金额没有折扣。"
+      }
     },
     "totals": {
       "courses": "课程价格",

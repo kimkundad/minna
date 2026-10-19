@@ -13,7 +13,7 @@ import {
   type OrderStatus,
   type PaymentMethod,
 } from '@/lib/api'
-import { formatBaht } from '@/lib/money'
+import { formatMoney } from '@/lib/money'
 import { useAuthStore } from '@/stores/auth'
 
 /**
@@ -104,7 +104,7 @@ async function markPaid(order: OrderDetail) {
   const { ok, reason } = await ask({
     title: `Mark ${order.orderNo} as paid?`,
     message: [
-      `This records ${formatBaht(order.total)} as received and opens the course to the student straight away.`,
+      `This records ${formatMoney(order.total, order.currency)} as received and opens the course to the student straight away.`,
       'Only do this when the money has actually arrived. Nothing here checks that it has.',
     ].join('\n'),
     confirmLabel: 'Mark as paid',
@@ -132,7 +132,7 @@ async function refund(order: OrderDetail) {
   const { ok, reason } = await ask({
     title: `Refund ${order.orderNo}?`,
     message: [
-      `${formatBaht(order.total)} goes back to the card, and the access this order granted is revoked.`,
+      `${formatMoney(order.total, order.currency)} goes back to the card, and the access this order granted is revoked.`,
       'What the student watched and was marked on is kept. This cannot be undone from here.',
     ].join('\n'),
     confirmLabel: 'Refund',
@@ -347,7 +347,7 @@ onMounted(load)
                 <span class="line-clamp-2">{{ row.itemSummary ?? '—' }}</span>
               </td>
               <td class="whitespace-nowrap px-5 py-3.5 text-sm font-medium text-gray-800 dark:text-white/90">
-                {{ formatBaht(row.total) }}
+                {{ formatMoney(row.total, row.currency) }}
               </td>
               <td class="px-5 py-3.5 text-sm text-gray-500 dark:text-gray-400">
                 {{ row.paymentMethod ? METHOD_LABEL[row.paymentMethod] : '—' }}
@@ -501,11 +501,11 @@ onMounted(load)
             <dl class="space-y-1 text-sm">
               <div class="flex justify-between gap-4">
                 <dt class="text-gray-500 dark:text-gray-400">Subtotal</dt>
-                <dd class="text-gray-800 dark:text-white/90">{{ formatBaht(open.subtotal) }}</dd>
+                <dd class="text-gray-800 dark:text-white/90">{{ formatMoney(open.subtotal, open.currency) }}</dd>
               </div>
               <div v-if="open.courseDiscount" class="flex justify-between gap-4">
                 <dt class="text-gray-500 dark:text-gray-400">Course coupons</dt>
-                <dd class="text-gray-800 dark:text-white/90">−{{ formatBaht(open.courseDiscount) }}</dd>
+                <dd class="text-gray-800 dark:text-white/90">−{{ formatMoney(open.courseDiscount, open.currency) }}</dd>
               </div>
               <div v-if="open.orderDiscount" class="flex justify-between gap-4">
                 <dt class="text-gray-500 dark:text-gray-400">
@@ -514,15 +514,15 @@ onMounted(load)
                     {{ open.orderCouponCode }}
                   </span>
                 </dt>
-                <dd class="text-gray-800 dark:text-white/90">−{{ formatBaht(open.orderDiscount) }}</dd>
+                <dd class="text-gray-800 dark:text-white/90">−{{ formatMoney(open.orderDiscount, open.currency) }}</dd>
               </div>
               <div v-if="open.vatAmount" class="flex justify-between gap-4">
                 <dt class="text-gray-500 dark:text-gray-400">VAT included</dt>
-                <dd class="text-gray-800 dark:text-white/90">{{ formatBaht(open.vatAmount) }}</dd>
+                <dd class="text-gray-800 dark:text-white/90">{{ formatMoney(open.vatAmount, open.currency) }}</dd>
               </div>
               <div class="flex justify-between gap-4 border-t border-gray-100 pt-1 font-medium dark:border-gray-800">
                 <dt class="text-gray-800 dark:text-white/90">Total</dt>
-                <dd class="text-gray-800 dark:text-white/90">{{ formatBaht(open.total) }}</dd>
+                <dd class="text-gray-800 dark:text-white/90">{{ formatMoney(open.total, open.currency) }}</dd>
               </div>
             </dl>
           </div>
@@ -560,10 +560,10 @@ onMounted(load)
                   {{ item.couponCode ?? '—' }}
                 </td>
                 <td class="px-5 py-3.5 text-sm text-gray-800 dark:text-white/90">
-                  {{ formatBaht(item.unitPrice) }}
+                  {{ formatMoney(item.unitPrice, open.currency) }}
                 </td>
                 <td class="px-5 py-3.5 text-sm text-gray-500 dark:text-gray-400 sm:px-6">
-                  {{ item.discount ? `−${formatBaht(item.discount)}` : '—' }}
+                  {{ item.discount ? `−${formatMoney(item.discount, open.currency)}` : '—' }}
                 </td>
               </tr>
             </tbody>

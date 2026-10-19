@@ -13,7 +13,7 @@ import {
   type InvoiceStatus,
   type OrderStatus,
 } from '@/lib/api'
-import { formatBaht } from '@/lib/money'
+import { formatMoney } from '@/lib/money'
 
 /**
  * Full tax invoices (ใบกำกับภาษีเต็มรูปแบบ).
@@ -355,7 +355,7 @@ onMounted(load)
                 {{ row.orderNo }}
               </td>
               <td class="whitespace-nowrap px-5 py-3.5 text-sm text-gray-800 dark:text-white/90">
-                {{ formatBaht(row.orderTotal) }}
+                {{ formatMoney(row.orderTotal, row.currency) }}
               </td>
               <td class="whitespace-nowrap px-5 py-3.5 text-xs text-gray-500 dark:text-gray-400 sm:px-6">
                 {{ when(row.issuedAt) }}
@@ -474,11 +474,11 @@ onMounted(load)
                      been, and a figure labelled paid against a pending order is
                      the kind of thing that gets repeated down a phone line. -->
                 <dt class="text-gray-500 dark:text-gray-400">Order total</dt>
-                <dd class="text-gray-800 dark:text-white/90">{{ formatBaht(open.orderTotal) }}</dd>
+                <dd class="text-gray-800 dark:text-white/90">{{ formatMoney(open.orderTotal, open.currency) }}</dd>
               </div>
               <div class="flex justify-between gap-4">
                 <dt class="text-gray-500 dark:text-gray-400">VAT inside</dt>
-                <dd class="text-gray-800 dark:text-white/90">{{ formatBaht(open.orderVat) }}</dd>
+                <dd class="text-gray-800 dark:text-white/90">{{ formatMoney(open.orderVat, open.currency) }}</dd>
               </div>
               <div v-if="open.paidAt" class="flex justify-between gap-4">
                 <dt class="text-gray-500 dark:text-gray-400">Paid on</dt>

@@ -1,0 +1,122 @@
+{
+  "th": {
+    "commerce": {
+      "coupon": {
+        "clear": "ล้างรหัส",
+        "problem": {
+          "unknown": "ไม่พบคูปองนี้ หรือหมดอายุ/ถูกใช้ครบแล้ว",
+          "orderOnly": "คูปองนี้ใช้กับทั้งตะกร้า — ใส่ในช่องคูปองท้ายรายการ",
+          "otherCourse": "คูปองนี้ใช้กับคอร์สอื่น",
+          "courseOnly": "คูปองนี้ใช้กับคอร์สเดียว — ใส่ในช่องคูปองของคอร์สนั้น",
+          "belowMinimum": "ยอดยังไม่ถึงขั้นต่ำของคูปองนี้",
+          "nothingOff": "คูปองนี้ลดจากยอดนี้ไม่ได้"
+        }
+      }
+    }
+  },
+  "en": {
+    "commerce": {
+      "coupon": {
+        "clear": "Clear",
+        "problem": {
+          "unknown": "No such coupon, or it has expired or been used up.",
+          "orderOnly": "That coupon is for the whole basket — enter it in the box under the summary.",
+          "otherCourse": "That coupon is for a different course.",
+          "courseOnly": "That coupon is for one course — enter it in that course's own box.",
+          "belowMinimum": "Your total has not reached this coupon's minimum.",
+          "nothingOff": "That coupon takes nothing off this total."
+        }
+      }
+    }
+  },
+  "jp": {
+    "commerce": {
+      "coupon": {
+        "clear": "クリア",
+        "problem": {
+          "unknown": "このクーポンは見つかりません。期限切れか、使用上限に達しています。",
+          "orderOnly": "このクーポンはカート全体用です — 明細下のクーポン欄に入力してください。",
+          "otherCourse": "このクーポンは別のコース用です。",
+          "courseOnly": "このクーポンは特定のコース用です — そのコースの欄に入力してください。",
+          "belowMinimum": "合計金額がこのクーポンの最低金額に達していません。",
+          "nothingOff": "このクーポンはこの合計には割引が適用されません。"
+        }
+      }
+    }
+  },
+  "vn": {
+    "commerce": {
+      "coupon": {
+        "clear": "Xoá",
+        "problem": {
+          "unknown": "Không tìm thấy mã này, hoặc mã đã hết hạn hoặc hết lượt.",
+          "orderOnly": "Mã này dùng cho cả giỏ hàng — hãy nhập vào ô bên dưới phần tổng.",
+          "otherCourse": "Mã này dành cho khoá học khác.",
+          "courseOnly": "Mã này dành cho một khoá học — hãy nhập vào ô của khoá đó.",
+          "belowMinimum": "Tổng tiền chưa đạt mức tối thiểu của mã này.",
+          "nothingOff": "Mã này không giảm được gì cho tổng tiền này."
+        }
+      }
+    }
+  },
+  "id": {
+    "commerce": {
+      "coupon": {
+        "clear": "Hapus",
+        "problem": {
+          "unknown": "Kupon tidak ditemukan, atau sudah kedaluwarsa atau habis terpakai.",
+          "orderOnly": "Kupon ini untuk seluruh keranjang — masukkan di kotak di bawah ringkasan.",
+          "otherCourse": "Kupon ini untuk kursus lain.",
+          "courseOnly": "Kupon ini untuk satu kursus — masukkan di kotak kursus tersebut.",
+          "belowMinimum": "Total belum mencapai minimum kupon ini.",
+          "nothingOff": "Kupon ini tidak mengurangi total ini."
+        }
+      }
+    }
+  },
+  "zh": {
+    "commerce": {
+      "coupon": {
+        "clear": "清除",
+        "problem": {
+          "unknown": "找不到此优惠码，或已过期、已用完。",
+          "orderOnly": "此优惠码适用于整个购物车 — 请填入下方总计处的优惠码栏。",
+          "otherCourse": "此优惠码适用于其他课程。",
+          "courseOnly": "此优惠码只适用于某一门课程 — 请填入该课程的优惠码栏。",
+          "belowMinimum": "金额未达到此优惠码的最低消费。",
+          "nothingOff": "此优惠码对该金额没有折扣。"
+        }
+      }
+    }
+  },
+  "ko": {
+    "commerce": {
+      "coupon": {
+        "clear": "지우기",
+        "problem": {
+          "unknown": "해당 쿠폰을 찾을 수 없거나, 기간이 지났거나 모두 사용되었습니다.",
+          "orderOnly": "장바구니 전체에 쓰는 쿠폰입니다 — 합계 아래 칸에 입력하세요.",
+          "otherCourse": "다른 강좌용 쿠폰입니다.",
+          "courseOnly": "한 강좌에만 쓰는 쿠폰입니다 — 해당 강좌 칸에 입력하세요.",
+          "belowMinimum": "결제 금액이 이 쿠폰의 최소 금액에 미치지 않습니다.",
+          "nothingOff": "이 쿠폰으로는 이 금액에서 할인되지 않습니다."
+        }
+      }
+    }
+  },
+  "tw": {
+    "commerce": {
+      "coupon": {
+        "clear": "清除",
+        "problem": {
+          "unknown": "找不到此優惠碼，或已過期、已用完。",
+          "orderOnly": "此優惠碼適用於整個購物車 — 請填入下方總計處的優惠碼欄。",
+          "otherCourse": "此優惠碼適用於其他課程。",
+          "courseOnly": "此優惠碼只適用於某一門課程 — 請填入該課程的優惠碼欄。",
+          "belowMinimum": "金額未達到此優惠碼的最低消費。",
+          "nothingOff": "此優惠碼對該金額沒有折扣。"
+        }
+      }
+    }
+  }
+}

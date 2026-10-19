@@ -38,7 +38,9 @@
     "add:notifications-table": "tsx scripts/add-notifications-table.mts",
     "add:earnings-table": "tsx scripts/add-earnings-table.mts",
     "mature:earnings": "tsx scripts/mature-earnings.mts",
-    "add:consents-table": "tsx scripts/add-consents-table.mts"
+    "add:consents-table": "tsx scripts/add-consents-table.mts",
+    "smoke:catalog-scope": "tsx scripts/smoke-catalog-scope.mts",
+    "smoke:coupon-scope": "tsx scripts/smoke-coupon-scope.mts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

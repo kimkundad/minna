@@ -4,7 +4,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { useAuthStore } from '@/stores/auth'
 import { ApiError, dashboard as dashboardApi, type DashboardData, type OrderStatus } from '@/lib/api'
-import { formatBaht } from '@/lib/money'
+import { formatBaht, formatMoney } from '@/lib/money'
 
 /**
  * The dashboard.
@@ -374,7 +374,7 @@ onMounted(load)
               </div>
               <div class="shrink-0 text-right">
                 <p class="text-sm font-medium text-gray-800 dark:text-white/90">
-                  {{ formatBaht(o.total) }}
+                  {{ formatMoney(o.total, o.currency) }}
                 </p>
                 <span
                   class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"

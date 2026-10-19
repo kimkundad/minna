@@ -14,6 +14,7 @@ import {
   type HomeBand,
   type UiLocale,
 } from '@/lib/api'
+import { UI_LOCALES } from '@/lib/locales'
 
 /**
  * The "how learning works here" band on the home page.
@@ -44,16 +45,7 @@ const itemWords = computed(() => (band.value === 'cta' ? 'chips' : 'steps'))
 
 /** No "every language" here. Each field is a sentence; one shared across eight
  *  languages is a Thai paragraph under a Korean heading. */
-const LOCALES: { value: UiLocale; label: string }[] = [
-  { value: 'th', label: 'ไทย' },
-  { value: 'en', label: 'English' },
-  { value: 'jp', label: '日本語' },
-  { value: 'vn', label: 'Tiếng Việt' },
-  { value: 'id', label: 'Bahasa Indonesia' },
-  { value: 'zh', label: '简体中文' },
-  { value: 'ko', label: '한국어' },
-  { value: 'tw', label: '繁體中文' },
-]
+const LOCALES = UI_LOCALES
 
 const locale = ref<UiLocale>('th')
 const loading = ref(true)

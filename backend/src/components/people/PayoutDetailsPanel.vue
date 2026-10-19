@@ -58,8 +58,53 @@ async function load() {
   }
 }
 
+/**
+ * The share, edited on its own.
+ *
+ * Not part of the bank form: an admin changing an agreed rate is not
+ * correcting a bank account, and the bank form is not open most of the time.
+ * Empty means the school's usual figure, which only the server can resolve —
+ * so it is sent as null, never as nought percent.
+ */
+const shareDraft = ref('')
+const savingShare = ref(false)
+const shareSaved = ref(false)
+
+/** What is on file, so Save can be disabled until something has changed. */
+const shareOnFile = computed(() =>
+  data.value?.revenueSharePct == null ? '' : String(data.value.revenueSharePct),
+)
+
+async function saveShare() {
+  const d = data.value
+  if (!d) return
+  savingShare.value = true
+  error.value = ''
+  shareSaved.value = false
+  try {
+    await people.savePayoutDetails(props.userId, {
+      bankCountry: d.bankCountry,
+      bankName: d.bankName,
+      accountName: d.accountName,
+      accountNumber: d.accountNumber,
+      branch: d.branch,
+      swift: d.swift,
+      payoutCurrency: d.payoutCurrency,
+      revenueSharePct: shareDraft.value.trim() === '' ? null : Number(shareDraft.value),
+    })
+    await load()
+    shareSaved.value = true
+  } catch (err) {
+    error.value = err instanceof ApiError ? err.message : 'Could not save the share.'
+  } finally {
+    savingShare.value = false
+  }
+}
+
 function fillForm() {
   const d = data.value
+  shareDraft.value = d?.revenueSharePct == null ? '' : String(d.revenueSharePct)
+  shareSaved.value = false
   form.value = {
     idDocumentPath: d?.idDocumentPath ?? null,
     resumePath: d?.resumePath ?? null,
@@ -155,7 +200,7 @@ const countryName = computed(
             <dd class="text-gray-800 dark:text-white/90">{{ data.accountName || '—' }}</dd>
           </div>
           <div>
-            <dt class="text-gray-400">Account number</dt>
+            <dt class="text-gray-400">Account Number / IBAN</dt>
             <dd class="font-medium tabular-nums text-gray-800 dark:text-white/90">
               {{ data.accountNumber }}
             </dd>
@@ -175,24 +220,53 @@ const countryName = computed(
               <span class="text-xs text-gray-400">— earnings are kept in baht</span>
             </dd>
           </div>
-          <div>
-            <dt class="text-gray-400">Share of a sale</dt>
-            <dd class="text-gray-800 dark:text-white/90">
-              <template v-if="data.revenueSharePct !== null">
-                {{ data.revenueSharePct }}%
-              </template>
-              <template v-else>
-                {{ data.houseSharePct }}%
-                <span class="text-xs text-gray-400">— the school's usual rate</span>
-              </template>
-            </dd>
-          </div>
         </dl>
 
         <p v-else class="text-sm text-gray-500 dark:text-gray-400">
           Nothing filled in yet. Teachers enter this themselves under My account, or you can
           fill it in for them.
         </p>
+
+        <!--
+          The share stands on its own, outside the bank details above.
+
+          It sat inside them, under the same `v-if` — so until a teacher had
+          typed an account number, the rate the school had agreed with them
+          was not on the page at all and could not be set. The two have
+          nothing to do with each other: one is where the money goes, the
+          other is how much of it is theirs.
+        -->
+        <div class="mt-5 border-t border-gray-100 pt-4 dark:border-gray-800">
+          <p class="text-xs font-medium uppercase tracking-wide text-gray-400">Share of a sale</p>
+          <div class="mt-2 flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-2">
+              <input
+                v-model="shareDraft"
+                inputmode="numeric"
+                maxlength="3"
+                :placeholder="String(data.houseSharePct)"
+                class="h-10 w-20 rounded-lg border border-gray-300 bg-transparent px-3 text-sm tabular-nums text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+              <span class="text-sm text-gray-500 dark:text-gray-400">%</span>
+            </div>
+            <button
+              type="button"
+              :disabled="savingShare || shareDraft === shareOnFile"
+              class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
+              @click="saveShare"
+            >
+              {{ savingShare ? 'Saving…' : 'Save the share' }}
+            </button>
+            <p v-if="shareSaved" class="text-sm text-success-600 dark:text-success-400">Saved.</p>
+          </div>
+          <p class="mt-2 text-xs text-gray-400">
+            What this teacher keeps of what the school receives, after any discount. Empty puts
+            them on the school's usual {{ data.houseSharePct }}%. Agreed with the person, so it
+            applies to every course of theirs — and only the school sets it: a teacher sees this
+            figure on their own account and cannot change it. Changing it does not move earnings
+            already recorded.
+          </p>
+        </div>
       </template>
 
       <!-- Correcting -->
@@ -229,7 +303,7 @@ const countryName = computed(
           <input v-model="form.accountName" maxlength="150" :class="inputClass" />
         </div>
         <div>
-          <label :class="labelClass">Account number</label>
+          <label :class="labelClass">Account Number / IBAN</label>
           <input v-model="form.accountNumber" maxlength="64" :class="inputClass" />
         </div>
         <div>
@@ -245,23 +319,9 @@ const countryName = computed(
           <select v-model="form.payoutCurrency" :class="inputClass">
             <option value="">No preference</option>
             <option v-for="c in data.currencies" :key="c.code" :value="c.code">
-              {{ c.code }} — {{ c.name.en }}
+              {{ c.code }} — {{ c.name }}
             </option>
           </select>
-        </div>
-        <div>
-          <label :class="labelClass">Share of a sale (%)</label>
-          <input
-            v-model="form.revenueSharePct"
-            inputmode="numeric"
-            :placeholder="`Leave empty for ${data.houseSharePct}%`"
-            :class="inputClass"
-          />
-          <p class="mt-1 text-xs text-gray-400">
-            What this teacher keeps of what the school receives, after any discount. Agreed with
-            the person, so it applies to every course of theirs. Changing it does not move
-            earnings already recorded.
-          </p>
         </div>
       </div>
 

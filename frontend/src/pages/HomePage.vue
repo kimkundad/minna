@@ -20,7 +20,6 @@ import type {
 import { articleView } from '@/lib/article'
 import { categoryLabel, categoryNameIn, courseView } from '@/lib/course'
 import { useLearningStore } from '@/stores/learning'
-import { data } from '@/vendor'
 import { date } from '@/lib/format'
 
 /**

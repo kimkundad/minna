@@ -208,6 +208,9 @@ export async function get(id: number) {
       orderStatus: orders.status,
       orderTotal: orders.total,
       orderVat: orders.vatAmount,
+      // What that total is in. An invoice listed without it reads as baht,
+      // and a yen order is then wrong by a factor of a few hundred.
+      currency: orders.currency,
       paidAt: orders.paidAt,
       type: invoices.type,
       name: invoices.name,
@@ -271,6 +274,9 @@ export async function list(opts: {
       orderStatus: orders.status,
       orderTotal: orders.total,
       orderVat: orders.vatAmount,
+      // What that total is in. An invoice listed without it reads as baht,
+      // and a yen order is then wrong by a factor of a few hundred.
+      currency: orders.currency,
       paidAt: orders.paidAt,
       type: invoices.type,
       name: invoices.name,

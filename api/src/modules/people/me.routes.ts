@@ -7,8 +7,14 @@ import { LOCALES } from '../../db/schema/auth'
 import { birthdate } from '../auth/auth.schemas'
 import { teacherApplications, teacherPayoutDetails, teacherProfiles, users } from '../../db/schema/index'
 import { audit, diff } from '../../lib/audit'
-import { PAYOUT_COUNTRIES, THAI_BANKS, isPayoutCountry, isSwift } from '../../lib/banks'
-import { isCurrencyCode, CURRENCIES } from '../../lib/currencies'
+import {
+  PAYOUT_COUNTRIES,
+  PAYOUT_CURRENCIES,
+  THAI_BANKS,
+  isPayoutCountry,
+  isPayoutCurrency,
+  isSwift,
+} from '../../lib/banks'
 import { getDefaultRevenueSharePct } from '../../lib/settings'
 import { conflict, forbidden, notFound } from '../../lib/errors'
 import { signedUrl, storageRoot } from '../../lib/storage'
@@ -139,7 +145,7 @@ const payoutDetailsBody = z.object({
     .string()
     .trim()
     .toUpperCase()
-    .refine((c) => isCurrencyCode(c), 'That is not a currency we pay in.')
+    .refine((c) => isPayoutCurrency(c), 'That is not a currency we pay in.')
     .nullish(),
 })
 
@@ -486,7 +492,7 @@ export default async function meRoutes(app: FastifyInstance) {
         /** Read-only here. Only an administrator sets it, through the member
          *  route — this one has no field for it, so a save cannot carry one. */
         revenueSharePct: row?.revenueSharePct ?? null,
-        currencies: CURRENCIES.map((c) => ({ code: c.code, name: c.name })),
+        currencies: PAYOUT_CURRENCIES,
         /** What an empty share falls back to, so the form can say so rather than
          *  leaving the reader to guess what blank means. */
         houseSharePct: await getDefaultRevenueSharePct(),
@@ -631,7 +637,7 @@ export default async function meRoutes(app: FastifyInstance) {
         /** Read-only here. Only an administrator sets it, through the member
          *  route — this one has no field for it, so a save cannot carry one. */
         revenueSharePct: after?.revenueSharePct ?? null,
-        currencies: CURRENCIES.map((c) => ({ code: c.code, name: c.name })),
+        currencies: PAYOUT_CURRENCIES,
         /** What an empty share falls back to, so the form can say so rather than
          *  leaving the reader to guess what blank means. */
         houseSharePct: await getDefaultRevenueSharePct(),

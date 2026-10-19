@@ -1679,7 +1679,16 @@
       "checking": "Đang kiểm tra…",
       "applied": "Đã áp mã {code} — giảm {amount}",
       "removed": "Đã bỏ mã {code}",
-      "notValid": "Mã này không áp dụng được. Kiểm tra lại mã và điều kiện."
+      "notValid": "Mã này không áp dụng được. Kiểm tra lại mã và điều kiện.",
+      "clear": "Xoá",
+      "problem": {
+        "unknown": "Không tìm thấy mã này, hoặc mã đã hết hạn hoặc hết lượt.",
+        "orderOnly": "Mã này dùng cho cả giỏ hàng — hãy nhập vào ô bên dưới phần tổng.",
+        "otherCourse": "Mã này dành cho khoá học khác.",
+        "courseOnly": "Mã này dành cho một khoá học — hãy nhập vào ô của khoá đó.",
+        "belowMinimum": "Tổng tiền chưa đạt mức tối thiểu của mã này.",
+        "nothingOff": "Mã này không giảm được gì cho tổng tiền này."
+      }
     },
     "totals": {
       "courses": "Giá khoá học",

@@ -45,7 +45,15 @@ export interface RvData {
   heroSlides: Record<string, unknown>[]
   journey: Record<string, unknown>[]
   levels: Record<string, string>
-  memberPhoto: string
+  /**
+   * Null, and it stays null.
+   *
+   * It used to be a photograph of a veterinary surgeon — one of the fixtures
+   * the designer's prototype shipped with — and the learning room drew it in
+   * place of the student's own avatar. The files are gone; the field is kept
+   * so the shape of this object still matches the prototype's.
+   */
+  memberPhoto: string | null
   [key: string]: unknown
 }
 

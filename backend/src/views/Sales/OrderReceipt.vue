@@ -8,7 +8,7 @@ import {
   type OrderDetail,
   type Seller,
 } from '@/lib/api'
-import { formatBaht } from '@/lib/money'
+import { formatMoney } from '@/lib/money'
 
 /**
  * One order, on paper.
@@ -178,11 +178,11 @@ const METHOD: Record<string, string> = {
               {{ line.titleSnapshot }}
               <small v-if="line.couponCode">Coupon {{ line.couponCode }}</small>
             </td>
-            <td class="rcp-num rcp-mono">{{ formatBaht(line.unitPrice) }}</td>
+            <td class="rcp-num rcp-mono">{{ formatMoney(line.unitPrice, order.currency) }}</td>
             <td class="rcp-num rcp-mono">
-              {{ line.discount ? `−${formatBaht(line.discount)}` : '—' }}
+              {{ line.discount ? `−${formatMoney(line.discount, order.currency)}` : '—' }}
             </td>
-            <td class="rcp-num rcp-mono">{{ formatBaht(net(line)) }}</td>
+            <td class="rcp-num rcp-mono">{{ formatMoney(net(line), order.currency) }}</td>
           </tr>
         </tbody>
       </table>
@@ -190,26 +190,26 @@ const METHOD: Record<string, string> = {
       <dl class="rcp-sums">
         <div>
           <dt>Subtotal</dt>
-          <dd class="rcp-mono">{{ formatBaht(order.subtotal) }}</dd>
+          <dd class="rcp-mono">{{ formatMoney(order.subtotal, order.currency) }}</dd>
         </div>
         <div v-if="order.courseDiscount">
           <dt>Course discounts</dt>
-          <dd class="rcp-mono">−{{ formatBaht(order.courseDiscount) }}</dd>
+          <dd class="rcp-mono">−{{ formatMoney(order.courseDiscount, order.currency) }}</dd>
         </div>
         <div v-if="order.orderDiscount">
           <dt>
             Order discount
             <small v-if="order.orderCouponCode">{{ order.orderCouponCode }}</small>
           </dt>
-          <dd class="rcp-mono">−{{ formatBaht(order.orderDiscount) }}</dd>
+          <dd class="rcp-mono">−{{ formatMoney(order.orderDiscount, order.currency) }}</dd>
         </div>
         <div v-if="order.vatAmount">
           <dt>VAT</dt>
-          <dd class="rcp-mono">{{ formatBaht(order.vatAmount) }}</dd>
+          <dd class="rcp-mono">{{ formatMoney(order.vatAmount, order.currency) }}</dd>
         </div>
         <div class="rcp-grand">
           <dt>Total</dt>
-          <dd class="rcp-mono">{{ formatBaht(order.total) }}</dd>
+          <dd class="rcp-mono">{{ formatMoney(order.total, order.currency) }}</dd>
         </div>
       </dl>
 

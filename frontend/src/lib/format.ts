@@ -142,6 +142,33 @@ export function num(n: number | string | null | undefined): string {
 }
 
 /**
+ * The symbols a bare "$" or "¥" would not tell apart.
+ *
+ * Seven of the currencies this school prices in are called dollars and two are
+ * called yuan or yen, and `narrowSymbol` writes six of those seven as "$" —
+ * so a Hong Kong price, a Singapore price and a US price were the same figure
+ * with the same mark in front of it, three different amounts of money. The
+ * prefixed forms are the ones those countries write themselves: HK$, S$, NT$,
+ * A$, NZ$, C$.
+ *
+ * Only the ambiguous ones are listed. ฿, €, £, ₩, ₹ and the rest belong to one
+ * currency each, and spelling those out would make every Thai price shout its
+ * country at a Thai reader.
+ */
+const UNAMBIGUOUS_SYMBOL: Record<string, string> = {
+  USD: 'US$',
+  HKD: 'HK$',
+  SGD: 'S$',
+  TWD: 'NT$',
+  AUD: 'A$',
+  NZD: 'NZ$',
+  CAD: 'C$',
+  // Yen and yuan share ¥ the same way, and a Japanese course beside a Chinese
+  // one is a real basket here.
+  CNY: 'CN¥',
+}
+
+/**
  * Whole units of a currency, written the way that currency is written.
  *
  * Courses are priced in eighteen currencies and the price is never converted —
@@ -161,7 +188,7 @@ export function num(n: number | string | null | undefined): string {
 export function money(amount: number, currency: string, locale?: string): string {
   const code = (currency || 'THB').toUpperCase()
   try {
-    return new Intl.NumberFormat(tag(locale), {
+    const parts = new Intl.NumberFormat(tag(locale), {
       style: 'currency',
       currency: code,
       /**
@@ -173,12 +200,24 @@ export function money(amount: number, currency: string, locale?: string): string
        * not how a shop writes a price. Only one currency is ever on screen at a
        * time here, because a course is charged in the one it is priced in, so
        * there is nothing for the longer form to disambiguate from.
+       *
+       * `symbol` is not the answer for the ambiguous ones either: it gives
+       * "HK$" but also "SGD 1,234" and "THB 1,234", and in Taiwanese it writes
+       * TWD as a bare "$". So the list above overrides those few by hand and
+       * every other currency keeps the mark Intl chose.
        */
       currencyDisplay: 'narrowSymbol',
       // Trailing zeros on a price read as a form field rather than a price;
       // Intl still gives yen none and euros two when they are needed.
       minimumFractionDigits: Number.isInteger(amount) ? 0 : undefined,
-    }).format(amount)
+    }).formatToParts(amount)
+
+    const ours = UNAMBIGUOUS_SYMBOL[code]
+    return parts
+      // Substituted in place rather than concatenated, so the symbol keeps the
+      // side of the number its language puts it on: Vietnamese writes it after.
+      .map((p) => (ours && p.type === 'currency' ? ours : p.value))
+      .join('')
   } catch {
     // An unknown code must not take the page down. Better a bare number with
     // its code than a blank where the price should be.

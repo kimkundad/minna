@@ -11,7 +11,7 @@ import {
   type CourseRow,
   type CourseStatus,
 } from '@/lib/api'
-import { formatBaht, formatDuration } from '@/lib/money'
+import { formatDuration, formatMoney } from '@/lib/money'
 import { useAuthStore } from '@/stores/auth'
 
 /**
@@ -218,11 +218,11 @@ onMounted(async () => {
                 </span>
               </td>
               <td class="px-5 py-3.5 text-sm text-gray-800 dark:text-white/90">
-                {{ formatBaht(row.price) }}
+                {{ formatMoney(row.price, row.currency) }}
                 <span
                   v-if="row.normalPrice"
                   class="ml-1 text-xs text-gray-400 line-through"
-                >{{ formatBaht(row.normalPrice) }}</span>
+                >{{ formatMoney(row.normalPrice, row.currency) }}</span>
               </td>
               <td class="px-5 py-3.5 text-sm text-gray-500 dark:text-gray-400">
                 {{ formatDuration(row.durationSeconds) }}

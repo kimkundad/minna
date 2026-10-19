@@ -221,6 +221,9 @@ export default async function dashboardRoutes(app: FastifyInstance) {
             id: orders.id,
             orderNo: orders.orderNo,
             total: orders.total,
+            // What that total is in. Without it the dashboard writes every
+            // order in baht, and a ¥9,800 sale reads as ฿9,800.
+            currency: orders.currency,
             status: orders.status,
             createdAt: orders.createdAt,
             firstName: users.firstName,

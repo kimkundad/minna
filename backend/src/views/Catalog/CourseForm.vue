@@ -17,6 +17,7 @@ import {
   type Currency,
 } from '@/lib/api'
 import { toBahtInput, toSatang } from '@/lib/money'
+import { UI_LOCALES } from '@/lib/locales'
 import { useConfirm } from '@/composables/useConfirm'
 import type { CourseDocument } from '@/lib/api'
 import { UploadError, uploadFile } from '@/lib/upload'
@@ -503,14 +504,7 @@ onMounted(async () => {
           <div>
             <label :class="labelClass">Content language</label>
             <select v-model="form.contentLocale" :class="inputClass">
-              <option value="th">Thai</option>
-              <option value="en">English</option>
-              <option value="jp">Japanese</option>
-              <option value="vn">Vietnamese</option>
-              <option value="id">Indonesian</option>
-              <option value="zh">Chinese (Simplified)</option>
-              <option value="ko">Korean</option>
-              <option value="tw">Taiwan</option>
+              <option v-for="l in UI_LOCALES" :key="l.value" :value="l.value">{{ l.label }}</option>
               <option value="all">All languages</option>
             </select>
             <p class="mt-1 text-xs text-gray-400">
