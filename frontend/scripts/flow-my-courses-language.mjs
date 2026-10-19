@@ -1,19 +1,24 @@
 /**
- * The "carry on" rail on the home page follows the language of the page.
+ * Two rules on one home page, and the line between them.
  *
  *   node scripts/flow-my-courses-language.mjs [baseUrl]
  *
- * Every list on the home page is narrowed to the language the site is being
- * read in — except this one, which came from the member rather than from the
- * catalogue and arrived unfiltered. So signing in on the Indonesian home page
- * added a row of Thai courses to a page that had been entirely Indonesian a
- * moment before: the courses a visitor is not shown, appearing because
- * somebody signed in. "คอร์สมั่วไปหมด", as the school put it.
+ * What is on sale follows the language the site is being read in — the new
+ * courses rail, the recommended rail, and the catalogue — because the school
+ * sells a course in the language it is taught in, and a visitor to the
+ * Indonesian site is not shopping for Thai lessons.
  *
- * Hiding somebody's own purchase would be the worse bug of the two, so what
- * the page leaves out it says out loud, with the way through to all of it.
+ * What the member already owns does not. A course does not stop being theirs
+ * because they switched the site to another language, and a Thai course they
+ * are halfway through has to be reachable from wherever they are standing. So
+ * "คอร์สของฉัน" carries all of them, in every language, on every language's
+ * home page.
  *
- * Makes two free courses of its own — one Thai, one Indonesian — so the
+ * The two rules sit next to each other on one page and each is easy to apply
+ * to the other by mistake — it has been got wrong in both directions already —
+ * so this holds both at once.
+ *
+ * Makes two free courses of its own, one Thai and one Indonesian, so the
  * expected answer is known rather than read back out of the catalogue. Deletes
  * them, and its account, at the end.
  */
@@ -94,6 +99,12 @@ async function makeFreeCourse(title, contentLocale) {
       contentLocale,
       status: 'approved',
       sellable: true,
+      // Featured, so the recommended rail puts them first and a check for
+      // them there is not really a check on how many courses the school
+      // happens to have. The Thai catalogue has fourteen and the rail holds
+      // eight, which is how the positive check on /th failed while the rule
+      // it was testing was working perfectly.
+      featured: true,
       instructorIds: teacherId ? [teacherId] : [],
     }),
   })
@@ -124,16 +135,25 @@ try {
   check('and the Indonesian one', (await claim(indo.id)).ok)
 
   const page = await browser.newPage()
-  await page.setViewport({ width: 1440, height: 1400 })
+  await page.setViewport({ width: 1440, height: 1600 })
   const errors = []
   page.on('pageerror', (e) => errors.push(String(e.message)))
+
+  /** The card titles inside one section of the home page. */
+  const titlesIn = (id) =>
+    page.evaluate(
+      (sel) =>
+        [...document.querySelectorAll(`#${sel} .cc`)].map((c) =>
+          (c.querySelector('h3, .cc-title')?.textContent ?? '').trim(),
+        ),
+      id,
+    )
 
   /** Signs in through the modal, which is how a member actually arrives. */
   async function signIn(locale) {
     await page.goto(`${BASE}/${locale}`, { waitUntil: 'networkidle2', timeout: 45000 })
     await wait(1200)
-    const already = await page.evaluate(() => document.querySelector('.hdr-auth') === null)
-    if (already) return
+    if (await page.evaluate(() => document.querySelector('.hdr-auth') === null)) return
     await page.evaluate(() => document.querySelector('.hdr-auth button')?.click())
     await page.waitForSelector('input[type="email"]', { timeout: 10000 })
     await page.type('input[type="email"]', member.email, { delay: 8 })
@@ -142,62 +162,67 @@ try {
     await wait(3500)
   }
 
-  /** The rail's cards, and the footnote under it. */
-  const rail = () =>
-    page.evaluate(() => ({
-      titles: [...document.querySelectorAll('#my-courses .cc')].map((c) =>
+  await signIn('id')
+
+  /* -------- the member's own courses: every language, both pages -------- */
+
+  for (const locale of ['id', 'th']) {
+    await page.goto(`${BASE}/${locale}`, { waitUntil: 'networkidle2', timeout: 45000 })
+    await wait(2500)
+    const mine = await titlesIn('my-courses')
+    check(
+      `/${locale}: "my courses" carries both of them`,
+      mine.includes(thai.title) && mine.includes(indo.title),
+      mine.join(' | ') || '(no rail)',
+    )
+  }
+
+  /* -------- and what is on sale: this language only -------- */
+
+  for (const [locale, here, away] of [
+    ['id', indo, thai],
+    ['th', thai, indo],
+  ]) {
+    await page.goto(`${BASE}/${locale}`, { waitUntil: 'networkidle2', timeout: 45000 })
+    await wait(2500)
+    const rec = await titlesIn('rec-courses')
+    check(
+      `/${locale}: the recommended rail has this language's course`,
+      rec.includes(here.title),
+      rec.join(' | ') || '(empty)',
+    )
+    check(`/${locale}:   and not the other language's`, !rec.includes(away.title), rec.join(' | '))
+    // The new courses rail holds eight, and the Thai catalogue has more than
+    // that, so only the absence is worth asserting on both languages.
+    const fresh = await titlesIn('new-courses')
+    check(
+      `/${locale}: the new courses rail leaves out the other language's`,
+      !fresh.includes(away.title),
+      fresh.join(' | '),
+    )
+  }
+
+  /* -------- and the catalogue, which is the same rule -------- */
+
+  const catalogue = async (locale) => {
+    await page.goto(`${BASE}/${locale}/courses`, { waitUntil: 'networkidle2', timeout: 45000 })
+    await wait(2500)
+    return page.evaluate(() =>
+      [...document.querySelectorAll('.cat-grid .cc')].map((c) =>
         (c.querySelector('h3, .cc-title')?.textContent ?? '').trim(),
       ),
-      note: document.querySelector('#my-courses .home-mine-elsewhere')?.innerText.trim() ?? '',
-    }))
+    )
+  }
 
-  /* ---------------- the Indonesian home page ---------------- */
+  const catId = await catalogue('id')
+  check('/id/courses lists the Indonesian course', catId.includes(indo.title), String(catId.length))
+  check('/id/courses:   and not the Thai one', !catId.includes(thai.title), String(catId.length))
 
-  await signIn('id')
-  await page.goto(`${BASE}/id`, { waitUntil: 'networkidle2', timeout: 45000 })
-  await wait(2500)
-  const onId = await rail()
-  check(
-    'the Indonesian home page carries the Indonesian course',
-    onId.titles.includes(indo.title),
-    onId.titles.join(' | ') || '(no rail)',
-  )
-  check(
-    '  and not the Thai one — which is the bug',
-    !onId.titles.includes(thai.title),
-    onId.titles.join(' | '),
-  )
-  check(
-    '  and says how many it is not showing',
-    /1/.test(onId.note),
-    onId.note || '(nothing said)',
-  )
+  const catTh = await catalogue('th')
+  check('/th/courses lists the Thai course', catTh.includes(thai.title), String(catTh.length))
+  check('/th/courses:   and not the Indonesian one', !catTh.includes(indo.title), String(catTh.length))
 
-  /* ---------------- and the Thai one ---------------- */
-
-  await page.goto(`${BASE}/th`, { waitUntil: 'networkidle2', timeout: 45000 })
-  await wait(2500)
-  const onTh = await rail()
-  check(
-    'the Thai home page carries the Thai course',
-    onTh.titles.includes(thai.title),
-    onTh.titles.join(' | ') || '(no rail)',
-  )
-  check('  and not the Indonesian one', !onTh.titles.includes(indo.title), onTh.titles.join(' | '))
-
-  /* ---------------- a language they own nothing in ---------------- */
-
-  await page.goto(`${BASE}/jp`, { waitUntil: 'networkidle2', timeout: 45000 })
-  await wait(2500)
-  const onJp = await rail()
-  check('a language they own nothing in has no rail', onJp.titles.length === 0, onJp.titles.join(' | '))
-  check(
-    '  but still says their courses are elsewhere',
-    /2/.test(onJp.note),
-    onJp.note || '(nothing said)',
-  )
-
-  /* ---------------- nothing is lost ---------------- */
+  /* -------- and the shelf, which is all of them -------- */
 
   await page.goto(`${BASE}/id/account/learning`, { waitUntil: 'networkidle2', timeout: 45000 })
   await wait(2000)
@@ -205,7 +230,7 @@ try {
     [...document.querySelectorAll('[data-mc] h3')].map((h) => h.textContent.trim()),
   )
   check(
-    'both are still on the shelf, whatever language the site is in',
+    'the shelf holds both, whatever language the site is in',
     shelf.includes(thai.title) && shelf.includes(indo.title),
     shelf.join(' | '),
   )

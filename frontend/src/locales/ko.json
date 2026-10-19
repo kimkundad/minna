@@ -157,9 +157,7 @@
     "catsEmpty": "일치하는 카테고리가 없습니다. 회화나 시험 같은 다른 단어로 찾아보세요.",
     "mineTitle": "내 강좌",
     "mineSub": "중단한 곳부터 이어서 · 강좌 {n}개",
-    "mineMore": "전체 보기",
-    "mineElsewhere": "다른 언어로 배우는 강좌가 {n}개 더 있습니다",
-    "mineNoneHere": "보유한 강좌 {n}개는 다른 언어로 배우는 강좌입니다"
+    "mineMore": "전체 보기"
   },
   "minutes": "{n}분",
   "hours": "{n}시간",

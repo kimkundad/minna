@@ -157,9 +157,7 @@
     "catsEmpty": "Tidak ada kategori yang cocok. Coba kata lain, seperti percakapan atau ujian.",
     "mineTitle": "Kursus saya",
     "mineSub": "Lanjutkan dari tempat Anda berhenti · {n} kursus",
-    "mineMore": "Lihat semua",
-    "mineElsewhere": "Anda punya {n} kursus lagi dalam bahasa lain",
-    "mineNoneHere": "{n} kursus yang Anda miliki diajarkan dalam bahasa lain"
+    "mineMore": "Lihat semua"
   },
   "minutes": "{n} mnt",
   "hours": "{n} jam",

@@ -157,9 +157,7 @@
     "catsEmpty": "没有相符的分类。换个词试试，例如会话或考试。",
     "mineTitle": "我的课程",
     "mineSub": "从上次中断的地方继续 · {n} 门课程",
-    "mineMore": "查看全部",
-    "mineElsewhere": "您还有 {n} 门以其他语言授课的课程",
-    "mineNoneHere": "您拥有的 {n} 门课程以其他语言授课"
+    "mineMore": "查看全部"
   },
   "minutes": "{n} 分钟",
   "hours": "{n} 小时",

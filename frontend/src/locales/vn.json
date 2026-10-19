@@ -2566,9 +2566,7 @@
     "catsEmpty": "Không có danh mục nào khớp. Thử từ khác, ví dụ giao tiếp hoặc luyện thi.",
     "mineTitle": "Khoá học của tôi",
     "mineSub": "Tiếp tục từ chỗ đang dở · {n} khoá học",
-    "mineMore": "Xem tất cả",
-    "mineElsewhere": "Bạn còn {n} khoá học bằng ngôn ngữ khác",
-    "mineNoneHere": "{n} khoá học bạn đã có đều bằng ngôn ngữ khác"
+    "mineMore": "Xem tất cả"
   },
   "blog": {
     "title": "Bài viết",

@@ -2566,9 +2566,7 @@
     "catsEmpty": "No category matches that. Try another word, such as conversation or exam.",
     "mineTitle": "My courses",
     "mineSub": "Pick up where you left off · {n} course | Pick up where you left off · {n} courses",
-    "mineMore": "See all",
-    "mineElsewhere": "You have {n} more course taught in another language. | You have {n} more courses taught in other languages.",
-    "mineNoneHere": "The {n} course you have is taught in another language. | The {n} courses you have are taught in other languages."
+    "mineMore": "See all"
   },
   "blog": {
     "title": "Articles",
