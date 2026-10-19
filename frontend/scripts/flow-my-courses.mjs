@@ -123,9 +123,18 @@ try {
 
   /* ---------------- 3. the free course arrives ---------------- */
 
-  const list = await (await fetch(`${API}/courses?perPage=50`)).json()
+  /**
+   * A free course the Thai catalogue actually lists.
+   *
+   * This asked the catalogue without a language and took the first free
+   * course it found, which is now a Taiwanese one — so the checks further
+   * down, which open `/th/courses` and look for its card, were waiting for a
+   * course the Thai catalogue is right not to show. The site is read in one
+   * language at a time; a test of it has to pick a language too.
+   */
+  const list = await (await fetch(`${API}/courses?perPage=50&locales=th`)).json()
   const free = list.data.find((c) => c.price === 0)
-  if (!free) throw new Error('no free course to enrol in')
+  if (!free) throw new Error('no free course on the Thai catalogue to enrol in')
 
   const placed = await fetch(`${API}/checkout`, {
     method: 'POST',

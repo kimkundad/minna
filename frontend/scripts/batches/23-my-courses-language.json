@@ -1,0 +1,50 @@
+{
+  "th": {
+    "home": {
+      "mineElsewhere": "คุณมีอีก {n} คอร์สที่เรียนด้วยภาษาอื่น",
+      "mineNoneHere": "คอร์สที่คุณซื้อไว้ {n} คอร์ส เรียนด้วยภาษาอื่น"
+    }
+  },
+  "en": {
+    "home": {
+      "mineElsewhere": "You have {n} more course taught in another language. | You have {n} more courses taught in other languages.",
+      "mineNoneHere": "The {n} course you have is taught in another language. | The {n} courses you have are taught in other languages."
+    }
+  },
+  "jp": {
+    "home": {
+      "mineElsewhere": "ほかの言語で学ぶコースが {n} 件あります",
+      "mineNoneHere": "お持ちのコース {n} 件は、ほかの言語で学ぶコースです"
+    }
+  },
+  "vn": {
+    "home": {
+      "mineElsewhere": "Bạn còn {n} khoá học bằng ngôn ngữ khác",
+      "mineNoneHere": "{n} khoá học bạn đã có đều bằng ngôn ngữ khác"
+    }
+  },
+  "id": {
+    "home": {
+      "mineElsewhere": "Anda punya {n} kursus lagi dalam bahasa lain",
+      "mineNoneHere": "{n} kursus yang Anda miliki diajarkan dalam bahasa lain"
+    }
+  },
+  "zh": {
+    "home": {
+      "mineElsewhere": "您还有 {n} 门以其他语言授课的课程",
+      "mineNoneHere": "您拥有的 {n} 门课程以其他语言授课"
+    }
+  },
+  "ko": {
+    "home": {
+      "mineElsewhere": "다른 언어로 배우는 강좌가 {n}개 더 있습니다",
+      "mineNoneHere": "보유한 강좌 {n}개는 다른 언어로 배우는 강좌입니다"
+    }
+  },
+  "tw": {
+    "home": {
+      "mineElsewhere": "您還有 {n} 門以其他語言授課的課程",
+      "mineNoneHere": "您擁有的 {n} 門課程以其他語言授課"
+    }
+  }
+}

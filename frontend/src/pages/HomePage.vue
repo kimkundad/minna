@@ -119,19 +119,47 @@ const asCards = (list: PublicCourse[]) =>
  * still shows those, with the reason.
  */
 const learning = useLearningStore()
+
+/** The member's courses that can be carried on, before the language rule. */
+const mineOpen = computed(() => learning.items.filter((i) => i.blocked === null))
+
+/**
+ * And the ones taught in the language this page is written in.
+ *
+ * The rest of the home page follows the site's language, and this rail did
+ * not: it is the only list on the page that comes from the member rather than
+ * from the catalogue, and it arrived unfiltered. So signing in on the
+ * Indonesian home page added a row of Thai courses to a page that had been
+ * entirely Indonesian a moment before — the same courses a visitor is not
+ * shown, appearing because somebody signed in.
+ *
+ * A course marked for every language belongs here as much as anywhere.
+ */
+const mineHere = computed(() =>
+  mineOpen.value.filter(
+    (i) => i.course.contentLocale === locale.value || i.course.contentLocale === 'all',
+  ),
+)
+
+/**
+ * How many of their courses this page is not showing.
+ *
+ * Said out loud rather than left to be noticed. Hiding somebody's own purchase
+ * because they switched language would be the worse bug of the two, so the
+ * count is shown with the way through to all of them.
+ */
+const mineElsewhere = computed(() => mineOpen.value.length - mineHere.value.length)
+
 const mineCards = computed(() =>
-  learning.items
-    .filter((i) => i.blocked === null)
-    .slice(0, RAIL)
-    .map((i) => ({
-      ...courseView(i.course, { locale: locale.value, t, categories: allCategories.value }),
-      // What turns a catalog tile into a "carry on" one: the bar, how far along
-      // it is, and the lesson it stopped at.
-      showProgress: true,
-      progressPct: i.progress.pct,
-      resumeTitle: i.progress.resume?.title ?? '',
-      showPrice: false,
-    })),
+  mineHere.value.slice(0, RAIL).map((i) => ({
+    ...courseView(i.course, { locale: locale.value, t, categories: allCategories.value }),
+    // What turns a catalog tile into a "carry on" one: the bar, how far along
+    // it is, and the lesson it stopped at.
+    showProgress: true,
+    progressPct: i.progress.pct,
+    resumeTitle: i.progress.resume?.title ?? '',
+    showPrice: false,
+  })),
 )
 
 const newCards = computed(() => asCards(newCourses.value))
@@ -192,7 +220,7 @@ const articleCards = computed(() =>
   <!-- 1. Hero -->
   <HeroCarousel />
 
-  <!-- 1b. The member's own courses, when there are any -->
+  <!-- 1b. The member's own courses in this language, when there are any -->
   <section v-if="mineCards.length" class="home-rail" id="my-courses">
     <div class="container">
       <CourseRail
@@ -206,6 +234,25 @@ const articleCards = computed(() =>
       >
         <CourseCard v-for="c in mineCards" :key="c.id" :view="c" variant="continue" />
       </CourseRail>
+      <!-- What this page is not showing them, and the way to it. -->
+      <p v-if="mineElsewhere" class="home-mine-elsewhere">
+        {{ t('home.mineElsewhere', { n: mineElsewhere }) }}
+        <RouterLink :to="path('/account/learning')">{{ t('home.mineMore') }}</RouterLink>
+      </p>
+    </div>
+  </section>
+
+  <!--
+    Or none in this language at all, while they do have courses: a line rather
+    than nothing, so somebody who signed in to carry on is not left looking at
+    a page that behaves as though they had not.
+  -->
+  <section v-else-if="mineElsewhere" class="home-rail" id="my-courses">
+    <div class="container">
+      <p class="home-mine-elsewhere">
+        {{ t('home.mineNoneHere', { n: mineElsewhere }) }}
+        <RouterLink :to="path('/account/learning')">{{ t('home.mineMore') }}</RouterLink>
+      </p>
     </div>
   </section>
 
