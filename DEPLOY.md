@@ -19,7 +19,7 @@ release to be live while the other is not.
 | --- | --- |
 | public site | https://minna.learnsbuy.com |
 | admin | https://minna-admin.learnsbuy.com |
-| registry | `ghcr.io/ideavivat` |
+| registry | `ghcr.io/kimkundad` |
 | server path | `/srv/minna` |
 | nginx listens on | `127.0.0.1:8096` |
 
@@ -201,7 +201,7 @@ curl -s -H 'Host: minna.learnsbuy.com' http://127.0.0.1:8096/health
 **Which commit is running**
 
 ```bash
-docker image inspect ghcr.io/ideavivat/minna-api:"$(cat .deployed-tag)" \
+docker image inspect ghcr.io/kimkundad/minna-api:"$(cat .deployed-tag)" \
   --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}'
 ```
 

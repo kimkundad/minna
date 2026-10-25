@@ -18,7 +18,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-export REGISTRY="${REGISTRY:-ghcr.io/ideavivat}"
+export REGISTRY="${REGISTRY:-ghcr.io/kimkundad}"
 export API_IMAGE="$REGISTRY/minna-api"
 export WEB_IMAGE="$REGISTRY/minna-web"
 

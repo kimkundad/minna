@@ -12,7 +12,7 @@
 
 param(
     [string]$Tag = (Get-Date -Format 'yyyy-MM-dd-01'),
-    [string]$Registry = 'ghcr.io/ideavivat',
+    [string]$Registry = 'ghcr.io/kimkundad',
     # Public by design — it names the site to Google and is readable in the
     # page source. Taken from frontend/.env when not given.
     [string]$RecaptchaSiteKey = $env:VITE_RECAPTCHA_SITE_KEY,
