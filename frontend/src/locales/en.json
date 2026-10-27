@@ -1806,7 +1806,8 @@
       "errTaxId": "A tax ID is 13 digits",
       "errAddress": "Please give the address for the invoice",
       "errTaxIdCheck": "That tax ID is not valid — check the digits",
-      "errIdCardCheck": "That national ID is not valid — check the digits"
+      "errIdCardCheck": "That national ID is not valid — check the digits",
+      "errIdCard": "A national ID is 13 digits"
     },
     "pay": {
       "heading": "How you will pay",

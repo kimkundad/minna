@@ -410,6 +410,26 @@ async function rememberPhone(): Promise<void> {
 
 const isFree = computed(() => totals.value?.allFree ?? false)
 
+/**
+ * The thirteen digits on the invoice, from whichever box the panel showed.
+ *
+ * A company gives its tax ID and a person gives their national ID, and the
+ * panel renders one box or the other — never both. Read once, here, because
+ * the check and the payload both need it and they had drifted: the check asked
+ * for `taxId` whatever was on screen, so a person who filled the panel in
+ * correctly was refused on a box that was not there. The message said to look
+ * at the marked field, and no field was marked.
+ */
+function taxNumber(): string {
+  const f = form.value
+  return (f.taxType === 'corporate' ? f.taxId : f.idCard || f.taxId).replace(/\D/g, '')
+}
+
+/** And the box it came from, so a complaint lands where it can be seen. */
+function taxNumberField(): 'taxId' | 'idCard' {
+  return form.value.taxType === 'corporate' ? 'taxId' : 'idCard'
+}
+
 function validate(): boolean {
   const e: CheckoutErrors = {}
   const f = form.value
@@ -432,7 +452,10 @@ function validate(): boolean {
     }
     // Shape only. Whether the check digit adds up is the server's answer, and
     // it gives a better one than a copy of the rule kept in two places.
-    if (f.taxId.replace(/\D/g, '').length !== 13) e.taxId = t('commerce.tax.errTaxId')
+    if (taxNumber().length !== 13) {
+      e[taxNumberField()] =
+        f.taxType === 'corporate' ? t('commerce.tax.errTaxId') : t('commerce.tax.errIdCard')
+    }
     if (!f.address.trim()) e.address = t('commerce.tax.errAddress')
   }
 
@@ -453,7 +476,7 @@ function invoicePayload(): InvoiceRequest | null {
       f.taxType === 'corporate'
         ? f.company.trim()
         : `${f.taxFirstName.trim()} ${f.taxLastName.trim()}`.trim(),
-    taxId: (f.taxType === 'corporate' ? f.taxId : f.idCard || f.taxId).replace(/\D/g, ''),
+    taxId: taxNumber(),
     branchType: f.taxType === 'corporate' ? f.branchType : null,
     // The head office is 00000 by law, not a number somebody chooses.
     branchCode:
@@ -477,11 +500,21 @@ async function confirmOrder(): Promise<void> {
   ctaMessage.value = ''
 
   if (!validate()) {
-    ctaMessage.value = t('commerce.checkout.errSomething')
     // Take them to what is wrong rather than leaving them to find it.
-    document
-      .querySelector('.field.has-error, .co-block [aria-invalid="true"]')
-      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const marked = document.querySelector('.field.has-error, .co-block [aria-invalid="true"]')
+    marked?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    /**
+     * "Look at the marked fields" is only true when a field is marked.
+     *
+     * A complaint about a box the panel is not showing marks nothing, and the
+     * buyer is then told to look for something that is not there — which is
+     * exactly how this page refused an order and gave no way to fix it. The
+     * message is only worth printing when there is something to point at; when
+     * there is not, say what is actually wrong.
+     */
+    ctaMessage.value = marked
+      ? t('commerce.checkout.errSomething')
+      : Object.values(errors.value)[0] ?? t('commerce.checkout.errSomething')
     return
   }
 
@@ -509,6 +542,27 @@ async function confirmOrder(): Promise<void> {
     await router.push({ path: path('/checkout/success'), query: { order: data.order.orderNo } })
   } catch (err) {
     ctaMessage.value = err instanceof ApiError ? err.message : t('commerce.checkout.errPlacing')
+    /**
+     * And put the server's complaints under the boxes they are about.
+     *
+     * The server checks the tax number's check digit, which this page
+     * deliberately does not — one copy of that rule is enough. But its answer
+     * only ever reached the line under the button, so a buyer with a
+     * thirteen-digit number that does not add up was told something was wrong
+     * and not which box. The field names match the form's, except that a
+     * person's number is typed in `idCard`.
+     */
+    if (err instanceof ApiError && Object.keys(err.fields).length) {
+      const next: CheckoutErrors = { ...errors.value }
+      for (const [field, message] of Object.entries(err.fields)) {
+        const key = field === 'taxId' ? taxNumberField() : (field as keyof CheckoutErrors)
+        if (key in form.value) next[key] = message
+      }
+      errors.value = next
+      document
+        .querySelector('.field.has-error, .co-block [aria-invalid="true"]')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
     placing.value = false
   }
 }

@@ -724,7 +724,8 @@
       "errAddress": "請填寫發票地址",
       "errTaxIdCheck": "該稅號無效 — 請檢查數字",
       "errIdCardCheck": "該身分證號無效 — 請檢查數字",
-      "question": "你需要完整稅務發票嗎？"
+      "question": "你需要完整稅務發票嗎？",
+      "errIdCard": "身分證號碼為 13 位數字"
     },
     "pay": {
       "heading": "付款方式",

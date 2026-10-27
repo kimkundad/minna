@@ -1,0 +1,10 @@
+{
+  "th": { "commerce": { "tax": { "errIdCard": "เลขบัตรประชาชนมี 13 หลัก" } } },
+  "en": { "commerce": { "tax": { "errIdCard": "A national ID is 13 digits" } } },
+  "jp": { "commerce": { "tax": { "errIdCard": "国民IDは13桁です" } } },
+  "vn": { "commerce": { "tax": { "errIdCard": "Số CCCD gồm 13 chữ số" } } },
+  "id": { "commerce": { "tax": { "errIdCard": "Nomor identitas terdiri dari 13 digit" } } },
+  "zh": { "commerce": { "tax": { "errIdCard": "身份证号码为 13 位数字" } } },
+  "ko": { "commerce": { "tax": { "errIdCard": "주민등록번호는 13자리입니다" } } },
+  "tw": { "commerce": { "tax": { "errIdCard": "身分證號碼為 13 位數字" } } }
+}

@@ -1806,7 +1806,8 @@
       "errTaxId": "納税者番号は13桁です",
       "errAddress": "請求書の住所をご入力ください",
       "errTaxIdCheck": "この納税者番号は正しくありません — 数字をご確認ください",
-      "errIdCardCheck": "この国民 ID 番号は正しくありません — 数字をご確認ください"
+      "errIdCardCheck": "この国民 ID 番号は正しくありません — 数字をご確認ください",
+      "errIdCard": "国民IDは13桁です"
     },
     "pay": {
       "heading": "お支払い方法",

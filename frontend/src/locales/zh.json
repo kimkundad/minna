@@ -724,7 +724,8 @@
       "errAddress": "请填写发票地址",
       "errTaxIdCheck": "该税号无效 — 请检查数字",
       "errIdCardCheck": "该身份证号无效 — 请检查数字",
-      "question": "你需要完整税务发票吗？"
+      "question": "你需要完整税务发票吗？",
+      "errIdCard": "身份证号码为 13 位数字"
     },
     "pay": {
       "heading": "付款方式",

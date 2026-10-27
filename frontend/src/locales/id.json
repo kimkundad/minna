@@ -724,7 +724,8 @@
       "errAddress": "Mohon isi alamat untuk faktur",
       "errTaxIdCheck": "Nomor pajak itu tidak valid — periksa angkanya",
       "errIdCardCheck": "Nomor identitas itu tidak valid — periksa angkanya",
-      "question": "Apakah Anda perlu faktur pajak lengkap?"
+      "question": "Apakah Anda perlu faktur pajak lengkap?",
+      "errIdCard": "Nomor identitas terdiri dari 13 digit"
     },
     "pay": {
       "heading": "Cara Anda membayar",

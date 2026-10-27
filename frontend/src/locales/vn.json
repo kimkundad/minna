@@ -1806,7 +1806,8 @@
       "errTaxId": "Mã số thuế gồm 13 chữ số",
       "errAddress": "Vui lòng nhập địa chỉ xuất hoá đơn",
       "errTaxIdCheck": "Mã số thuế không hợp lệ — hãy kiểm tra lại các chữ số",
-      "errIdCardCheck": "Số CCCD không hợp lệ — hãy kiểm tra lại các chữ số"
+      "errIdCardCheck": "Số CCCD không hợp lệ — hãy kiểm tra lại các chữ số",
+      "errIdCard": "Số CCCD gồm 13 chữ số"
     },
     "pay": {
       "heading": "Cách bạn sẽ thanh toán",
