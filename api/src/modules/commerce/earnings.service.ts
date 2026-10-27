@@ -298,25 +298,102 @@ export async function matureDue(): Promise<number> {
 
 /* ---------------- reading it back ---------------- */
 
+/**
+ * One figure, said twice.
+ *
+ * The ledger is kept in baht — a share has to be one number however many
+ * currencies the school sells in — but a teacher whose course is priced in
+ * yen recognises the yen, not the baht it became at a rate from three weeks
+ * ago. So both are carried: the currencies the money was actually taken in,
+ * and the baht the ledger adds up.
+ *
+ * `parts` leaves out anything that comes to nothing. A teacher who has never
+ * sold a yen course should not read "¥0" on their own earnings.
+ */
+export interface MoneyTotal {
+  /** Satang. What the ledger holds and what a payout is made in. */
+  baht: number
+  /** The same money, in what it was charged in. Largest first. */
+  parts: { currency: string; amount: number }[]
+}
+
 export interface EarningsSummary {
-  pending: number
-  payable: number
-  paidAllTime: number
-  /** Satang earned this calendar month, whatever its status. */
-  thisMonth: number
+  /** Earned this calendar month, whatever its status. */
+  thisMonth: MoneyTotal
+  /** Settled and waiting for a transfer. */
+  payable: MoneyTotal
+  /** Transfers that have gone out, over all time. */
+  paidAllTime: MoneyTotal
+  /** Everything ever earned bar what was cancelled: pending, payable and paid
+   *  together, which is the number a teacher means by "how much have I made". */
+  lifetime: MoneyTotal
   sharePctRange: { min: number; max: number } | null
 }
 
+/**
+ * What a baht figure was before it was converted.
+ *
+ * The inverse of the `inBaht` the ledger was written with, read back off the
+ * rate the sale was recorded at. That round trip can land a unit either side
+ * of what the card was actually charged — ฿100 at 4.72585100 is ¥472.585,
+ * and nothing can get the lost fraction back — so this is a figure to show a
+ * teacher, never one to pay them. Every payout is made from `baht`.
+ */
+function inOriginal(baht: number, currency: string, fxRate: string | null): number {
+  const rate = currency === 'THB' ? 1 : Number(fxRate ?? 0)
+  if (!rate) return baht
+  return Math.round(baht * rate)
+}
+
 export async function summaryFor(userId: number): Promise<EarningsSummary> {
-  const [row] = await db
+  /**
+   * One row per currency, so the same money can be said both ways.
+   *
+   * Grouped by what the order was charged in rather than summed flat: a
+   * teacher with a yen course and a baht one is owed two amounts, and adding
+   * them into one number would be adding yen to baht.
+   */
+  const byCurrency = await db
     .select({
-      pending: sql<number>`COALESCE(SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END), 0)`,
-      payable: sql<number>`COALESCE(SUM(CASE WHEN status = 'payable' THEN amount ELSE 0 END), 0)`,
-      paidAllTime: sql<number>`COALESCE(SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END), 0)`,
-      thisMonth: sql<number>`COALESCE(SUM(CASE WHEN created_at >= ${monthStart()} AND status <> 'cancelled' THEN amount ELSE 0 END), 0)`,
+      currency: orders.currency,
+      fxRate: orders.fxRate,
+      payable: sql<number>`COALESCE(SUM(CASE WHEN ${teacherEarnings.status} = 'payable' THEN ${teacherEarnings.amount} ELSE 0 END), 0)`,
+      paidAllTime: sql<number>`COALESCE(SUM(CASE WHEN ${teacherEarnings.status} = 'paid' THEN ${teacherEarnings.amount} ELSE 0 END), 0)`,
+      thisMonth: sql<number>`COALESCE(SUM(CASE WHEN ${teacherEarnings.createdAt} >= ${monthStart()} AND ${teacherEarnings.status} <> 'cancelled' THEN ${teacherEarnings.amount} ELSE 0 END), 0)`,
+      lifetime: sql<number>`COALESCE(SUM(CASE WHEN ${teacherEarnings.status} <> 'cancelled' THEN ${teacherEarnings.amount} ELSE 0 END), 0)`,
     })
     .from(teacherEarnings)
+    .innerJoin(orders, eq(orders.id, teacherEarnings.orderId))
     .where(eq(teacherEarnings.userId, userId))
+    .groupBy(orders.currency, orders.fxRate)
+
+  /**
+   * One card's worth.
+   *
+   * A currency is left out when it comes to nothing, because "¥0" beside a
+   * real number reads as a currency this teacher deals in and happens to be
+   * owed nothing in, which is a different thing from never having sold one.
+   * Several rows can share a currency — a rate is stored per order — so they
+   * are added together before anything is shown.
+   */
+  const total = (pick: (r: (typeof byCurrency)[number]) => number): MoneyTotal => {
+    const parts = new Map<string, number>()
+    let baht = 0
+    for (const row of byCurrency) {
+      const value = Number(pick(row))
+      if (!value) continue
+      baht += value
+      const inTheirs = inOriginal(value, row.currency, row.fxRate)
+      parts.set(row.currency, (parts.get(row.currency) ?? 0) + inTheirs)
+    }
+    return {
+      baht,
+      parts: [...parts]
+        .filter(([, amount]) => amount !== 0)
+        .map(([currency, amount]) => ({ currency, amount }))
+        .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)),
+    }
+  }
 
   const rates = await db
     .select({
@@ -331,10 +408,10 @@ export async function summaryFor(userId: number): Promise<EarningsSummary> {
   const max = rates[0]?.max == null ? null : Number(rates[0].max)
 
   return {
-    pending: Number(row?.pending ?? 0),
-    payable: Number(row?.payable ?? 0),
-    paidAllTime: Number(row?.paidAllTime ?? 0),
-    thisMonth: Number(row?.thisMonth ?? 0),
+    thisMonth: total((r) => r.thisMonth),
+    payable: total((r) => r.payable),
+    paidAllTime: total((r) => r.paidAllTime),
+    lifetime: total((r) => r.lifetime),
     sharePctRange: min === null || max === null ? null : { min, max },
   }
 }
@@ -346,11 +423,27 @@ export interface EarningRow {
   courseId: number | null
   courseTitle: string | null
   orderNo: string
+  /** Satang. The ledger's figures, and what a payout is made from. */
   gross: number
   vat: number
   base: number
   sharePct: number
   amount: number
+  /**
+   * What the buyer was actually charged in, and the same three figures in it.
+   *
+   * A teacher whose course is priced in yen recognises the yen; the baht
+   * beside it is a conversion at a rate from the day of the sale. Worked back
+   * from that stored rate, so it can land a unit either side of the charge —
+   * it is a figure to read, never one to pay from.
+   *
+   * `currency` is 'THB' and the two agree on most rows, which is why they are
+   * separate fields rather than one: the screen shows both lines either way.
+   */
+  currency: string
+  grossOriginal: number
+  baseOriginal: number
+  amountOriginal: number
   maturesAt: string | null
   paidAt: string | null
   createdAt: string
@@ -404,6 +497,8 @@ export async function listFor(
       courseId: teacherEarnings.courseId,
       courseTitle: courses.title,
       orderNo: orders.orderNo,
+      currency: orders.currency,
+      fxRate: orders.fxRate,
       gross: teacherEarnings.gross,
       vat: teacherEarnings.vat,
       base: teacherEarnings.base,
@@ -421,8 +516,11 @@ export async function listFor(
     .orderBy(desc(teacherEarnings.id))
     .limit(limit)
 
-  return rows.map((r) => ({
+  return rows.map(({ fxRate, ...r }) => ({
     ...r,
+    grossOriginal: inOriginal(r.gross, r.currency, fxRate),
+    baseOriginal: inOriginal(r.base, r.currency, fxRate),
+    amountOriginal: inOriginal(r.amount, r.currency, fxRate),
     maturesAt: instant(r.maturesAt),
     paidAt: instant(r.paidAt),
     createdAt: instant(r.createdAt) ?? '',

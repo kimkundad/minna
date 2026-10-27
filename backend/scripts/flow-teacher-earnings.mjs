@@ -233,7 +233,7 @@ try {
   )
   check(
     '  with the two-line cells split into columns',
-    head.includes('"Order"') && head.includes('"Date"') && head.includes('"Status date"'),
+    head.includes('"Order"') && head.includes('"Date"') && head.includes('"Status date"') && head.includes('"Yours (THB)"'),
     head,
   )
   check(

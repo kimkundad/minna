@@ -2138,13 +2138,28 @@ export const advertising = {
 
 /* ---------------- what a teacher has earned ---------------- */
 
+/**
+ * One figure, said twice: in baht, which is what the ledger holds and what a
+ * payout is made in, and in the currencies the money was actually taken in.
+ *
+ * `parts` leaves out anything that comes to nothing — "¥0" beside a real
+ * number reads as a currency this teacher deals in, which is not the same as
+ * never having sold one.
+ */
+export interface MoneyTotal {
+  baht: number
+  parts: { currency: string; amount: number }[]
+}
+
 export interface EarningsSummary {
-  /** Satang still inside the refund window. */
-  pending: number
-  /** Satang past it, waiting for a payout. */
-  payable: number
-  paidAllTime: number
-  thisMonth: number
+  /** Earned this calendar month, whatever its status. */
+  thisMonth: MoneyTotal
+  /** Settled and waiting for a transfer. */
+  payable: MoneyTotal
+  /** Transfers that have gone out, over all time. */
+  paidAllTime: MoneyTotal
+  /** Everything ever earned bar what was cancelled. */
+  lifetime: MoneyTotal
   /** The rates across their courses. Null when they teach none. */
   sharePctRange: { min: number; max: number } | null
 }
@@ -2168,6 +2183,16 @@ export interface EarningRow {
   sharePct: number
   /** Satang owed. Negative on a refund. */
   amount: number
+  /**
+   * What the buyer was charged in, and the same three figures in it.
+   *
+   * Worked back from the rate the sale was recorded at, so it can land a unit
+   * either side of the charge. A figure to read, never one to pay from.
+   */
+  currency: string
+  grossOriginal: number
+  baseOriginal: number
+  amountOriginal: number
   maturesAt: string | null
   paidAt: string | null
   createdAt: string

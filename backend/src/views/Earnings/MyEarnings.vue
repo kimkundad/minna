@@ -9,9 +9,10 @@ import {
   earnings,
   type EarningRow,
   type EarningStatus,
+  type MoneyTotal,
   type EarningsSummary,
 } from '@/lib/api'
-import { formatBaht } from '@/lib/money'
+import { formatBaht, formatMoney } from '@/lib/money'
 import { useConfirm } from '@/composables/useConfirm'
 import { useAuthStore } from '@/stores/auth'
 
@@ -167,23 +168,46 @@ function exportCsv() {
   const lines = chosen.value.length ? chosen.value : rows.value
   if (!lines.length) return
 
+  // Both ways round, as the screen shows them: the currency the sale was
+  // charged in and the figures in it, then the same three in baht. A
+  // spreadsheet cannot total a column that mixes yen with baht, so they are
+  // never in the same one.
   const header = [
     'Course',
     'Kind',
     'Note',
     'Order',
     'Date',
+    'Currency',
     'Received',
     'Less VAT',
     'Share %',
     'Yours',
+    'Received (THB)',
+    'Less VAT (THB)',
+    'Yours (THB)',
     'Status',
     'Status date',
   ]
 
-  // Money as a plain number, not "฿1,690.00": a spreadsheet cannot add up a
-  // string with a currency sign and a comma in it.
-  const money = (satang: number) => (satang / 100).toFixed(2)
+  /**
+   * Money as a plain number, not "฿1,690.00": a spreadsheet cannot add up a
+   * string with a currency sign and a comma in it.
+   *
+   * To the places that currency has. Everything is stored in hundredths here,
+   * whatever it is — but won and yen have no hundredths, so "180000.01" is
+   * not an amount of either. Asked of `Intl` rather than kept in a table,
+   * which is one more list to get out of step.
+   */
+  const places = (code: string) => {
+    try {
+      return new Intl.NumberFormat('en', { style: 'currency', currency: code }).resolvedOptions()
+        .maximumFractionDigits
+    } catch {
+      return 2
+    }
+  }
+  const money = (minor: number, code = 'THB') => (minor / 100).toFixed(places(code))
 
   const body = lines.map((r) => [
     r.courseTitle ?? '',
@@ -191,9 +215,13 @@ function exportCsv() {
     r.note ?? '',
     r.orderNo,
     isoDay(r.createdAt),
+    r.currency,
+    money(r.grossOriginal, r.currency),
+    money(r.baseOriginal, r.currency),
+    String(r.sharePct),
+    money(r.amountOriginal, r.currency),
     money(r.gross),
     money(r.base),
-    String(r.sharePct),
     money(r.amount),
     STATUS_WORD[r.status] ?? r.status,
     isoDay(r.status === 'pending' ? r.maturesAt : r.paidAt),
@@ -220,6 +248,33 @@ function isoDay(value: string | null): string {
   const d = new Date(value)
   return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10)
 }
+
+/**
+ * A total in the currencies it was taken in: `¥3,000 + ฿500`.
+ *
+ * Joined with a plus rather than added up, because they cannot be added. A
+ * teacher owed money in two currencies is owed two amounts, and one number
+ * would be yen added to baht.
+ */
+function inCurrencies(total: MoneyTotal): string {
+  if (!total.parts.length) return formatMoney(0, 'THB')
+  return total.parts.map((p) => formatMoney(p.amount, p.currency)).join(' + ')
+}
+
+const cards = computed(() => {
+  const s = summary.value
+  if (!s) return []
+  return [
+    { title: 'This month', total: s.thisMonth, note: 'earned since the 1st' },
+    { title: 'Ready to pay', total: s.payable, note: 'in the next payout' },
+    { title: 'Paid to you', total: s.paidAllTime, note: 'transfers that have gone out' },
+    {
+      title: 'Lifetime earnings',
+      total: s.lifetime,
+      note: rate.value ? `your share is ${rate.value}` : 'everything bar what was cancelled',
+    },
+  ]
+})
 
 const rate = computed(() => {
   const r = summary.value?.sharePctRange
@@ -249,7 +304,14 @@ const STATUS_WORD: Record<string, string> = {
 
 function day(value: string | null) {
   if (!value) return '—'
-  return new Date(value).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+  // English, and the Common Era: a payout screen is read by people who do
+  // not all count years the same way, and '2569' beside an English month is
+  // neither one convention nor the other.
+  return new Date(value).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
 }
 </script>
 
@@ -287,39 +349,28 @@ function day(value: string | null) {
       {{ error }}
     </p>
 
+    <!--
+      Four cards, each said twice: the currencies the money was taken in, and
+      the baht underneath in brackets. A teacher whose course is priced in yen
+      recognises the yen; the baht beside it is a conversion at a rate from the
+      day of the sale, and it is also the only figure a payout can be made
+      from — so neither can be the only one on screen.
+    -->
     <div v-if="summary" class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-      <div :class="cardClass">
-        <p class="text-xs uppercase tracking-wide text-gray-400">Ready to pay</p>
+      <div v-for="card in cards" :key="card.title" :class="cardClass">
+        <p class="text-xs uppercase tracking-wide text-gray-400">{{ card.title }}</p>
         <p class="mt-1 text-2xl font-semibold text-gray-800 dark:text-white/90">
-          {{ formatBaht(summary.payable) }}
+          {{ inCurrencies(card.total) }}
         </p>
-        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">in the next payout</p>
-      </div>
-      <div :class="cardClass">
-        <p class="text-xs uppercase tracking-wide text-gray-400">Still settling</p>
-        <p class="mt-1 text-2xl font-semibold text-gray-800 dark:text-white/90">
-          {{ formatBaht(summary.pending) }}
+        <!-- Only when it says something the line above did not: a teacher who
+             only ever sells in baht would otherwise read it twice. -->
+        <p
+          v-if="card.total.parts.length !== 1 || card.total.parts[0]?.currency !== 'THB'"
+          class="mt-0.5 text-sm text-gray-500 tabular-nums dark:text-gray-400"
+        >
+          ({{ formatBaht(card.total.baht) }})
         </p>
-        <!-- Said plainly, because a number that can go down needs a reason. -->
-        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-          inside the 7-day refund window
-        </p>
-      </div>
-      <div :class="cardClass">
-        <p class="text-xs uppercase tracking-wide text-gray-400">This month</p>
-        <p class="mt-1 text-2xl font-semibold text-gray-800 dark:text-white/90">
-          {{ formatBaht(summary.thisMonth) }}
-        </p>
-        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">earned since the 1st</p>
-      </div>
-      <div :class="cardClass">
-        <p class="text-xs uppercase tracking-wide text-gray-400">Paid in all</p>
-        <p class="mt-1 text-2xl font-semibold text-gray-800 dark:text-white/90">
-          {{ formatBaht(summary.paidAllTime) }}
-        </p>
-        <p v-if="rate" class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-          your share is {{ rate }}
-        </p>
+        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ card.note }}</p>
       </div>
     </div>
 
@@ -461,10 +512,16 @@ function day(value: string | null) {
                 <p class="mt-0.5 font-sans">{{ day(row.createdAt) }}</p>
               </td>
               <td class="px-5 py-3.5 text-right text-sm tabular-nums text-gray-500 dark:text-gray-400">
-                {{ formatBaht(row.gross) }}
+                {{ formatMoney(row.grossOriginal, row.currency) }}
+                <p v-if="row.currency !== 'THB'" class="mt-0.5 text-xs text-gray-400">
+                  ({{ formatBaht(row.gross) }})
+                </p>
               </td>
               <td class="px-5 py-3.5 text-right text-sm tabular-nums text-gray-500 dark:text-gray-400">
-                {{ formatBaht(row.base) }}
+                {{ formatMoney(row.baseOriginal, row.currency) }}
+                <p v-if="row.currency !== 'THB'" class="mt-0.5 text-xs text-gray-400">
+                  ({{ formatBaht(row.base) }})
+                </p>
               </td>
               <td class="px-5 py-3.5 text-right text-sm tabular-nums text-gray-500 dark:text-gray-400">
                 {{ row.sharePct }}%
@@ -473,7 +530,10 @@ function day(value: string | null) {
                 class="px-5 py-3.5 text-right text-sm font-semibold tabular-nums"
                 :class="row.amount < 0 ? 'text-error-500' : 'text-gray-800 dark:text-white/90'"
               >
-                {{ formatBaht(row.amount) }}
+                {{ formatMoney(row.amountOriginal, row.currency) }}
+                <p v-if="row.currency !== 'THB'" class="mt-0.5 text-xs font-normal text-gray-400">
+                  ({{ formatBaht(row.amount) }})
+                </p>
               </td>
               <td class="px-5 py-3.5 sm:px-6">
                 <span
