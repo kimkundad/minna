@@ -575,8 +575,26 @@ const COPY: Record<MailLocale, Copy> = {
   },
 }
 
-/** Anything unknown reads as Thai, which is what most of this school reads. */
+/**
+ * The language every message goes out in.
+ *
+ * English, for everybody, by the school's decision: the people who sign up
+ * here come from several countries, and an address is all that is known about
+ * most of them when the first message is sent. A Thai letter to somebody who
+ * does not read Thai is a letter that was not sent.
+ *
+ * The other seven are kept below rather than deleted. They are written and
+ * checked, and nothing about them is wrong — only that the school would
+ * rather one language than seven for now. Setting this back to `false` sends
+ * each person the language they chose again, and `copyFor` already receives
+ * it from every caller that knows one.
+ */
+const ENGLISH_ONLY = true
+
 function copyFor(locale: string | null | undefined): { c: Copy; lang: MailLocale } {
+  if (ENGLISH_ONLY) return { c: COPY.en, lang: 'en' }
+  // Thai is the fallback for an unknown language because it is what most of
+  // this school reads; it is only reached when nobody passed one.
   const key = (locale ?? 'th') as MailLocale
   return key in COPY ? { c: COPY[key], lang: key } : { c: COPY.th, lang: 'th' }
 }

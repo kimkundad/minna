@@ -13,6 +13,7 @@ import { openAuth } from '@/components/auth/authChannel'
 import { useCartStore } from '@/stores/cart'
 import { useCategoriesStore } from '@/stores/categories'
 import { useNotificationsStore } from '@/stores/notifications'
+import { useChatDockStore } from '@/stores/chatDock'
 import { relative } from '@/lib/format'
 import BrandLogo from './BrandLogo.vue'
 
@@ -65,6 +66,9 @@ async function signOut() {
 
 const notifs = useNotificationsStore()
 const unread = computed(() => notifs.unread)
+
+const dock = useChatDockStore()
+const chatUnread = computed(() => dock.unread)
 const bellOpen = ref(false)
 
 /** Opening it is when the list is worth having, so that is when it is asked for. */
@@ -156,10 +160,20 @@ watch(() => route.fullPath, () => {
   bellOpen.value = false
 })
 
-// The badge is worth having before the bell is opened; the list is not.
+// The badge is worth having before the bell is opened; the list is not. The
+// same goes for the chat button beside it: the count is the reason to press
+// it, so it cannot wait until the panel has been raised once.
 watch(
   () => auth.isLoggedIn,
-  (now) => (now ? void notifs.load() : notifs.clear()),
+  (now) => {
+    if (now) {
+      void notifs.load()
+      void dock.refreshUnread()
+    } else {
+      notifs.clear()
+      dock.clearUnread()
+    }
+  },
   { immediate: true },
 )
 
@@ -259,6 +273,33 @@ onBeforeUnmount(() => {
                  and "the count badge" is two different numbers. -->
             <span v-if="cartCount" class="count-badge" data-cart-count>{{ cartCount }}</span>
           </RouterLink>
+
+          <!--
+            Writing to the school, from wherever they are.
+
+            Beside the bell because that is where somebody looks for "things
+            between me and this school". It was four levels in, under My
+            account › Messages, which is a long way to go to ask a question
+            and a place people did not find.
+
+            It raises the panel rather than opening the page: the panel is
+            mounted in the shell and floats over whatever they were reading,
+            so asking does not cost them their place.
+          -->
+          <button
+            v-if="isLoggedIn"
+            type="button"
+            class="icon-btn hdr-chat"
+            :aria-label="
+              chatUnread
+                ? t('header.messagesUnread', { count: chatUnread })
+                : t('header.messages')
+            "
+            @click="dock.open()"
+          >
+            <AppIcon name="message-square" />
+            <span v-if="chatUnread" class="count-badge" data-chat-count>{{ chatUnread }}</span>
+          </button>
 
           <!-- Signed in: a notification bell and the member's own menu. Signed
                out: the two auth buttons. Never both. -->

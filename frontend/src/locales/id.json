@@ -31,7 +31,9 @@
     "categoriesTitle": "Kategori kursus",
     "categoryCount": "{count} kategori",
     "notificationsUnread": "Notifikasi, {count} baru",
-    "myAccount": "Akun saya"
+    "myAccount": "Akun saya",
+    "messages": "Pesan",
+    "messagesUnread": "Pesan, {count} belum dibaca"
   },
   "footer": {
     "about": "Minna adalah sekolah bahasa online: kursus, artikel, dan latihan dalam satu tempat, di perangkat apa pun.",

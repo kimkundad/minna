@@ -166,7 +166,9 @@
     "categoriesTitle": "หมวดหมู่คอร์ส",
     "categoryCount": "{count} หมวดหมู่",
     "notificationsUnread": "การแจ้งเตือน {count} รายการใหม่",
-    "myAccount": "บัญชีของฉัน"
+    "myAccount": "บัญชีของฉัน",
+    "messages": "ข้อความ",
+    "messagesUnread": "ข้อความ, ใหม่ {count} ข้อความ"
   },
   "search": {
     "label": "ค้นหาคอร์ส หมวดหมู่ หรือผู้สอน",

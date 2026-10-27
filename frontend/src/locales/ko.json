@@ -31,7 +31,9 @@
     "categoriesTitle": "강좌 카테고리",
     "categoryCount": "카테고리 {count}개",
     "notificationsUnread": "알림, 새 알림 {count}개",
-    "myAccount": "내 계정"
+    "myAccount": "내 계정",
+    "messages": "메시지",
+    "messagesUnread": "메시지, 읽지 않음 {count}개"
   },
   "footer": {
     "about": "Minna는 온라인 어학원입니다. 강좌와 아티클, 연습을 한곳에서, 어떤 기기에서나.",

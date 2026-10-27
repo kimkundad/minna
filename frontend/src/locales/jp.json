@@ -166,7 +166,9 @@
     "categoriesTitle": "コースカテゴリー",
     "categoryCount": "{count} カテゴリー",
     "notificationsUnread": "お知らせ、新着 {count} 件",
-    "myAccount": "マイアカウント"
+    "myAccount": "マイアカウント",
+    "messages": "メッセージ",
+    "messagesUnread": "メッセージ、未読 {count} 件"
   },
   "search": {
     "label": "コース・カテゴリー・講師を検索",

@@ -166,7 +166,9 @@
     "categoriesTitle": "Course categories",
     "categoryCount": "{count} category | {count} categories",
     "notificationsUnread": "Notifications, {count} new",
-    "myAccount": "My account"
+    "myAccount": "My account",
+    "messages": "Messages",
+    "messagesUnread": "Messages, {count} unread"
   },
   "search": {
     "label": "Search courses, categories or instructors",

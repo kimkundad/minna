@@ -31,7 +31,9 @@
     "categoriesTitle": "課程分類",
     "categoryCount": "{count} 個分類",
     "notificationsUnread": "通知，{count} 則新訊息",
-    "myAccount": "我的帳戶"
+    "myAccount": "我的帳戶",
+    "messages": "訊息",
+    "messagesUnread": "訊息，{count} 則未讀"
   },
   "footer": {
     "about": "Minna 是一所線上語言學校：課程、文章與練習集中在同一處，任何裝置都能使用。",

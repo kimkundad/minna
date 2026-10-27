@@ -1,0 +1,50 @@
+{
+  "th": {
+    "header": {
+      "messages": "ข้อความ",
+      "messagesUnread": "ข้อความ, ใหม่ {count} ข้อความ"
+    }
+  },
+  "en": {
+    "header": {
+      "messages": "Messages",
+      "messagesUnread": "Messages, {count} unread"
+    }
+  },
+  "jp": {
+    "header": {
+      "messages": "メッセージ",
+      "messagesUnread": "メッセージ、未読 {count} 件"
+    }
+  },
+  "vn": {
+    "header": {
+      "messages": "Tin nhắn",
+      "messagesUnread": "Tin nhắn, {count} chưa đọc"
+    }
+  },
+  "id": {
+    "header": {
+      "messages": "Pesan",
+      "messagesUnread": "Pesan, {count} belum dibaca"
+    }
+  },
+  "zh": {
+    "header": {
+      "messages": "消息",
+      "messagesUnread": "消息，{count} 条未读"
+    }
+  },
+  "ko": {
+    "header": {
+      "messages": "메시지",
+      "messagesUnread": "메시지, 읽지 않음 {count}개"
+    }
+  },
+  "tw": {
+    "header": {
+      "messages": "訊息",
+      "messagesUnread": "訊息，{count} 則未讀"
+    }
+  }
+}

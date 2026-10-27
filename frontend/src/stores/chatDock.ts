@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { chat } from '@/lib/api'
 
 /**
  * The floating conversation, raised from wherever somebody got stuck.
@@ -19,10 +20,34 @@ export const useChatDockStore = defineStore('chatDock', () => {
   /** Said on open, once. The panel clears it as soon as it has it. */
   const pending = ref('')
 
+  /**
+   * Messages waiting, for the badge on the header's chat button.
+   *
+   * Kept here rather than in the panel because the badge has to be right
+   * before the panel has ever been opened — that is the whole point of it.
+   */
+  const unread = ref(0)
+
+  async function refreshUnread(): Promise<void> {
+    try {
+      unread.value = (await chat.unreadCount()).data.unread
+    } catch {
+      // A badge is not worth an error on the page. Leave the last number.
+    }
+  }
+
+  /** Nothing is waiting once they are looking at it. */
+  function clearUnread(): void {
+    unread.value = 0
+  }
+
   function open(context = ''): void {
     if (context) pending.value = context
     isMinimised.value = false
     isOpen.value = true
+    // Reading them is what the panel does next, so the badge goes now rather
+    // than a request later.
+    clearUnread()
   }
 
   function takePending(): string {
@@ -48,5 +73,16 @@ export const useChatDockStore = defineStore('chatDock', () => {
     pending.value = ''
   }
 
-  return { isOpen, isMinimised, pending, open, takePending, toggleMinimised, close }
+  return {
+    isOpen,
+    isMinimised,
+    pending,
+    unread,
+    open,
+    takePending,
+    toggleMinimised,
+    close,
+    refreshUnread,
+    clearUnread,
+  }
 })

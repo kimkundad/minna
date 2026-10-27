@@ -31,7 +31,9 @@
     "categoriesTitle": "课程分类",
     "categoryCount": "{count} 个分类",
     "notificationsUnread": "通知，{count} 条新消息",
-    "myAccount": "我的账户"
+    "myAccount": "我的账户",
+    "messages": "消息",
+    "messagesUnread": "消息，{count} 条未读"
   },
   "footer": {
     "about": "Minna 是一所在线语言学校：课程、文章与练习集中在一处，任何设备都能使用。",

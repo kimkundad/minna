@@ -166,7 +166,9 @@
     "categoriesTitle": "Danh mục khoá học",
     "categoryCount": "{count} danh mục",
     "notificationsUnread": "Thông báo, {count} mới",
-    "myAccount": "Tài khoản của tôi"
+    "myAccount": "Tài khoản của tôi",
+    "messages": "Tin nhắn",
+    "messagesUnread": "Tin nhắn, {count} chưa đọc"
   },
   "search": {
     "label": "Tìm khóa học, danh mục hoặc giảng viên",
