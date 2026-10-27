@@ -45,6 +45,17 @@ const q = ref(typeof route.query.q === 'string' ? route.query.q : '')
 const status = ref<'' | OrderStatus>('')
 const method = ref<'' | PaymentMethod>('')
 
+/**
+ * The window the list is read through: a day to start and a day to end,
+ * both inclusive, both optional.
+ *
+ * By when the order was placed rather than when it was paid. An order
+ * placed on the 31st and paid on the 1st belongs to the month somebody was
+ * looking at when they went looking for it.
+ */
+const from = ref('')
+const to = ref('')
+
 async function load() {
   loading.value = true
   error.value = ''
@@ -55,6 +66,8 @@ async function load() {
       ...(q.value ? { q: q.value } : {}),
       ...(status.value ? { status: status.value } : {}),
       ...(method.value ? { method: method.value } : {}),
+      ...(from.value ? { from: from.value } : {}),
+      ...(to.value ? { to: to.value } : {}),
     })
     rows.value = res.data
     total.value = res.meta.total
@@ -246,7 +259,7 @@ watch(q, (value) => {
     void load()
   }, 300)
 })
-watch([status, method], () => {
+watch([status, method, from, to], () => {
   page.value = 1
   void load()
 })
@@ -278,7 +291,7 @@ onMounted(load)
       </p>
 
       <div
-        class="grid grid-cols-1 gap-3 border-y border-gray-100 px-5 py-4 dark:border-gray-800 sm:grid-cols-3 sm:px-6"
+        class="grid grid-cols-1 gap-3 border-y border-gray-100 px-5 py-4 dark:border-gray-800 sm:grid-cols-3 lg:grid-cols-5 sm:px-6"
       >
         <input
           v-model="q"
@@ -306,6 +319,20 @@ onMounted(load)
           <option value="promptpay">PromptPay</option>
           <option value="free">Free</option>
         </select>
+        <!--
+          Labelled, unlike the three beside them. An empty date box shows
+          the browser's own placeholder and nothing else, so without these
+          two words "mm/dd/yyyy" twice in a row says nothing about which
+          end of the range it is.
+        -->
+        <label class="flex items-center gap-2">
+          <span class="shrink-0 text-sm text-gray-500 dark:text-gray-400">From</span>
+          <input v-model="from" type="date" class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
+        </label>
+        <label class="flex items-center gap-2">
+          <span class="shrink-0 text-sm text-gray-500 dark:text-gray-400">To</span>
+          <input v-model="to" type="date" class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
+        </label>
       </div>
 
       <div class="overflow-x-auto">

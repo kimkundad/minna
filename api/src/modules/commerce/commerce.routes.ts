@@ -426,6 +426,11 @@ export default async function commerceRoutes(app: FastifyInstance) {
         status: z.enum(['pending', 'paid', 'failed', 'cancelled', 'refunded']).optional(),
         method: z.enum(['card', 'promptpay', 'free']).optional(),
         q: z.string().max(100).optional(),
+        // A day to start and a day to end, both inclusive, both optional.
+        // Dates rather than timestamps: the question behind the box is what a
+        // month came to, and nobody asks it to the second.
+        from: z.coerce.date().optional(),
+        to: z.coerce.date().optional(),
       })
       .parse(req.query)
     return service.listOrders(query)

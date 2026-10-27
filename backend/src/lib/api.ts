@@ -1103,6 +1103,9 @@ export interface OrderListQuery extends Record<string, string | number | boolean
   status?: OrderStatus
   method?: PaymentMethod
   q?: string
+  /** A day to start and a day to end, both inclusive. When it was placed. */
+  from?: string
+  to?: string
 }
 
 export const orders = {

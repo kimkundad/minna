@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm'
 import { env } from '../../config/env'
 import { db } from '../../db/client'
 import {
@@ -862,11 +862,29 @@ export async function listOrders(opts: {
   status?: (typeof orders.status.enumValues)[number] | undefined
   method?: 'card' | 'promptpay' | 'free' | undefined
   q?: string | undefined
+  /** Inclusive, as a day. When the order was placed. */
+  from?: Date | undefined
+  /** Inclusive too: the caller passes the day, and the whole of it is in. */
+  to?: Date | undefined
 }) {
   const term = `%${opts.q ?? ''}%`
+  /**
+   * The end of the chosen day, not the start of it.
+   *
+   * `to` arrives as a date with no time, so comparing against it directly
+   * would drop every order placed on the last day of the range — the one
+   * mistake a "from … to" box makes that nobody notices until a month's
+   * figures are short.
+   */
+  const until = opts.to ? new Date(opts.to.getTime() + 24 * 60 * 60 * 1000 - 1) : undefined
   const where = [
     opts.status ? eq(orders.status, opts.status) : undefined,
     opts.method ? eq(orders.paymentMethod, opts.method) : undefined,
+    // By when the order was placed rather than when it was paid: an order
+    // placed on the 31st and paid on the 1st belongs to the month somebody
+    // was looking at when they went looking for it.
+    opts.from ? gte(orders.createdAt, opts.from) : undefined,
+    until ? lte(orders.createdAt, until) : undefined,
     opts.q
       ? or(
           sql`${orders.orderNo} LIKE ${term}`,
