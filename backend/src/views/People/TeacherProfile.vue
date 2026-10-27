@@ -316,12 +316,27 @@ onMounted(load)
       <div
         class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6"
       >
-        <h3 class="text-base font-medium text-gray-800 dark:text-white/90">Bank details</h3>
-        <p class="mt-1 mb-5 text-sm text-gray-500 dark:text-gray-400">
-          Where this teacher's earnings are sent. They fill this in themselves under My account;
-          correct it here only when they cannot.
-        </p>
-        <PayoutDetailsPanel :user-id="userId" />
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 class="text-base font-medium text-gray-800 dark:text-white/90">Bank details</h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Where this teacher's earnings are sent. They fill this in themselves under My
+              account; correct it here only when they cannot.
+            </p>
+          </div>
+          <!-- Beside the account the money goes to, because that is the order
+               the two are used in: check what is owed, then check where it
+               goes. The same screen the teacher sees. -->
+          <RouterLink
+            :to="`/teachers/${userId}/earnings`"
+            class="shrink-0 rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+          >
+            What they have earned
+          </RouterLink>
+        </div>
+        <div class="mt-5">
+          <PayoutDetailsPanel :user-id="userId" />
+        </div>
       </div>
 
       <div class="flex items-center gap-3">

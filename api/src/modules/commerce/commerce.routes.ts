@@ -18,6 +18,24 @@ import * as service from './commerce.service'
 import * as invoices from './invoices.service'
 import * as earnings from './earnings.service'
 import { myOrders } from './myorders.service'
+import { eq } from 'drizzle-orm'
+import { db } from '../../db/client'
+import { EARNING_STATUSES, users } from '../../db/schema/index'
+import { notFound } from '../../lib/errors'
+
+/**
+ * The window a ledger is read through: a day to start and a day to end, both
+ * inclusive, both optional.
+ *
+ * Dates rather than timestamps, because the question behind the box is
+ * "what did March come to" and nobody asks it to the second. The service
+ * takes the end of the chosen day, so the last day of a range is in it.
+ */
+const earningsRange = z.object({
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
+  limit: z.coerce.number().int().min(1).max(1000).optional(),
+})
 
 /**
  * Checkout, and what happens after it.
@@ -269,12 +287,91 @@ export default async function commerceRoutes(app: FastifyInstance) {
    * different name, so neither can be mistaken for the other.
    */
   app.get('/me/earnings', { preHandler: app.requireRole('teacher') }, async (req) => {
+    const range = earningsRange.parse(req.query)
     return {
       data: {
         summary: await earnings.summaryFor(req.user.sub),
-        lines: await earnings.listFor(req.user.sub),
+        lines: await earnings.listFor(req.user.sub, range),
       },
     }
+  })
+
+  /**
+   * One teacher's earnings, read by an administrator.
+   *
+   * The same figures the teacher sees, from the same two functions — the
+   * screen that settles a transfer and the screen the teacher checks it
+   * against must not be able to disagree. It is a separate route from
+   * `/me/earnings` rather than a parameter on it, so that neither can be
+   * mistaken for the other and no request can turn one into the other.
+   *
+   * Reading it is recorded: this is a person's pay.
+   */
+  app.get('/earnings/teacher/:userId', adminOnly, async (req) => {
+    const { userId } = z.object({ userId: z.coerce.number().int().positive() }).parse(req.params)
+    const range = earningsRange.parse(req.query)
+
+    const [person] = await db
+      .select({
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+    if (!person) throw notFound('No such teacher.')
+
+    audit(req, {
+      action: 'earnings.viewed',
+      subjectType: 'user',
+      subjectId: userId,
+      summary: person.email,
+    })
+
+    return {
+      data: {
+        teacher: {
+          id: userId,
+          name: `${person.firstName} ${person.lastName}`.trim(),
+          email: person.email,
+        },
+        summary: await earnings.summaryFor(userId),
+        lines: await earnings.listFor(userId, range),
+      },
+    }
+  })
+
+  /**
+   * Sets the status on rows an administrator ticked.
+   *
+   * Beside the payout run rather than instead of it: that settles everything
+   * a teacher is owed in one movement, which is the usual way round, and this
+   * is for the rows somebody picked out — a transfer that covered some of
+   * them, or a line that has to go back.
+   *
+   * Recorded with the ids, because this moves money somebody is owed.
+   */
+  app.post('/earnings/status', adminOnly, async (req) => {
+    const body = z
+      .object({
+        ids: z.array(z.coerce.number().int().positive()).min(1).max(500),
+        status: z.enum(EARNING_STATUSES),
+        reference: z.string().trim().max(64).optional(),
+      })
+      .parse(req.body)
+
+    const result = await earnings.setStatus(body.ids, body.status, body.reference)
+
+    audit(req, {
+      action: 'earnings.status_changed',
+      subjectType: 'earning',
+      subjectId: body.ids[0]!,
+      summary: `${result.changed} of ${result.asked} → ${body.status}`,
+      changes: { ids: [null, body.ids] as never },
+    })
+
+    return { data: result }
   })
 
   /** Who is owed what. The payout run reads this. */

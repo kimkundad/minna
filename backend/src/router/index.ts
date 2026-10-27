@@ -63,6 +63,20 @@ const router = createRouter({
       meta: { title: 'My earnings', roles: ['teacher'] },
     },
     {
+      /**
+       * The same screen, read by an administrator about one teacher.
+       *
+       * One component for both: the page somebody settles a transfer from and
+       * the page the teacher checks it against must not be able to disagree,
+       * and two copies of a money screen is two places to get it wrong. What
+       * differs is who may tick a row, which the component asks the session.
+       */
+      path: '/teachers/:userId/earnings',
+      name: 'TeacherEarnings',
+      component: () => import('@/views/Earnings/MyEarnings.vue'),
+      meta: { title: 'Teacher earnings', roles: ['superadmin', 'admin'] },
+    },
+    {
       path: '/payouts',
       name: 'Payouts',
       component: () => import('@/views/Earnings/Payouts.vue'),

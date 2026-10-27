@@ -2149,6 +2149,10 @@ export interface EarningsSummary {
   sharePctRange: { min: number; max: number } | null
 }
 
+/** The four a row can be in. Only an administrator may move one. */
+export const EARNING_STATUSES = ['pending', 'payable', 'paid', 'cancelled'] as const
+export type EarningStatus = (typeof EARNING_STATUSES)[number]
+
 export interface EarningRow {
   id: number
   kind: 'royalty' | 'refund' | 'adjustment' | string
@@ -2179,10 +2183,43 @@ export interface PayoutRow {
   lines: number
 }
 
+/** A day to start and a day to end, both inclusive, both optional. */
+export interface EarningsRange extends Record<string, string | number | undefined> {
+  from?: string
+  to?: string
+  limit?: number
+}
+
 export const earnings = {
   /** Only ever the signed-in teacher's own. There is no id to pass. */
-  mine: () =>
-    send<{ data: { summary: EarningsSummary; lines: EarningRow[] } }>('/me/earnings'),
+  mine: (range: EarningsRange = {}) =>
+    send<{ data: { summary: EarningsSummary; lines: EarningRow[] } }>('/me/earnings', {
+      query: range,
+    }),
+
+  /**
+   * One teacher's, read by an administrator.
+   *
+   * Its own call rather than an id on `mine`, because the server keeps them
+   * apart for the same reason: nothing should be able to turn a request for
+   * your own pay into a request for somebody else's. The server records each
+   * read of it.
+   */
+  forTeacher: (userId: number, range: EarningsRange = {}) =>
+    send<{
+      data: {
+        teacher: { id: number; name: string; email: string }
+        summary: EarningsSummary
+        lines: EarningRow[]
+      }
+    }>(`/earnings/teacher/${userId}`, { query: range }),
+
+  /** Sets the status on the rows an administrator ticked. */
+  setStatus: (ids: number[], status: EarningStatus, reference?: string) =>
+    send<{ data: { asked: number; found: number; changed: number; amount: number } }>(
+      '/earnings/status',
+      { method: 'POST', body: { ids, status, ...(reference ? { reference } : {}) } },
+    ),
 
   payouts: () => send<{ data: PayoutRow[] }>('/earnings/payouts'),
 

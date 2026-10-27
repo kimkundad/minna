@@ -1,6 +1,7 @@
-import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm'
 import { db } from '../../db/client'
 import {
+  EARNING_STATUSES,
   courseInstructors,
   courses,
   orderItems,
@@ -356,9 +357,45 @@ export interface EarningRow {
   note: string | null
 }
 
-/** The ledger itself, newest first. Cancelled rows are kept: a line that was
- *  refunded before it ever matured is still something that happened. */
-export async function listFor(userId: number, limit = 100): Promise<EarningRow[]> {
+export interface EarningsRange {
+  /** Inclusive, as a date. Anything earned on this day counts. */
+  from?: Date | undefined
+  /** Inclusive too — the caller passes the day, and the whole of it is in. */
+  to?: Date | undefined
+  limit?: number | undefined
+}
+
+/**
+ * The ledger itself, newest first.
+ *
+ * Cancelled rows are kept: a line that was refunded before it ever matured is
+ * still something that happened.
+ *
+ * A date range narrows it by when the money came in, not by when it was paid
+ * out — that is the question somebody closing off a month is asking, and a
+ * row earned in March and settled in April belongs to March either way.
+ */
+export async function listFor(
+  userId: number,
+  opts: EarningsRange = {},
+): Promise<EarningRow[]> {
+  const limit = opts.limit ?? 100
+  /**
+   * The end of the chosen day, not the start of it.
+   *
+   * `to` arrives as a date with no time, so comparing against it directly
+   * would drop everything earned on the last day of the range — the one
+   * mistake a "from … to" box makes that nobody notices until a month's
+   * figures are short.
+   */
+  const until = opts.to ? new Date(opts.to.getTime() + 24 * 60 * 60 * 1000 - 1) : undefined
+
+  const where = and(
+    eq(teacherEarnings.userId, userId),
+    opts.from ? gte(teacherEarnings.createdAt, opts.from) : undefined,
+    until ? lte(teacherEarnings.createdAt, until) : undefined,
+  )
+
   const rows = await db
     .select({
       id: teacherEarnings.id,
@@ -380,7 +417,7 @@ export async function listFor(userId: number, limit = 100): Promise<EarningRow[]
     .from(teacherEarnings)
     .leftJoin(courses, eq(courses.id, teacherEarnings.courseId))
     .innerJoin(orders, eq(orders.id, teacherEarnings.orderId))
-    .where(eq(teacherEarnings.userId, userId))
+    .where(where)
     .orderBy(desc(teacherEarnings.id))
     .limit(limit)
 
@@ -500,4 +537,61 @@ export async function markPaid(
     .where(inArray(teacherEarnings.id, rows.map((r) => r.id)))
 
   return { lines: rows.length, amount }
+}
+
+/**
+ * Sets the status on rows an administrator picked out by hand.
+ *
+ * The payout run above settles everything a teacher is owed in one movement,
+ * which is the usual way round. This is the other one: the rows somebody
+ * ticked, because a transfer went out for some of them and not the rest, or
+ * because a line has to be put back.
+ *
+ * `paidAt` follows the status rather than being set separately. A row that is
+ * paid has a date and a row that is not has none; letting those two disagree
+ * would leave the ledger saying a line was settled on a day it was not.
+ *
+ * It reports what it found as well as what it changed: ids that are not
+ * there, or already say this, are not an error — two administrators ticking
+ * the same rows is an ordinary thing — but a caller that asked about twelve
+ * rows and changed nine should be able to say so.
+ */
+export async function setStatus(
+  ids: number[],
+  status: (typeof EARNING_STATUSES)[number],
+  payoutRef?: string,
+): Promise<{ asked: number; found: number; changed: number; amount: number }> {
+  if (!ids.length) return { asked: 0, found: 0, changed: 0, amount: 0 }
+
+  const rows = await db
+    .select({
+      id: teacherEarnings.id,
+      amount: teacherEarnings.amount,
+      status: teacherEarnings.status,
+    })
+    .from(teacherEarnings)
+    .where(inArray(teacherEarnings.id, ids))
+
+  const moving = rows.filter((r) => r.status !== status)
+  if (!moving.length) {
+    return { asked: ids.length, found: rows.length, changed: 0, amount: 0 }
+  }
+
+  await db
+    .update(teacherEarnings)
+    .set({
+      status,
+      paidAt: status === 'paid' ? new Date() : null,
+      // Only a real payout carries a reference. Moving a row back to payable
+      // must not leave it pointing at the run that no longer settled it.
+      payoutRef: status === 'paid' ? (payoutRef ?? null) : null,
+    })
+    .where(inArray(teacherEarnings.id, moving.map((r) => r.id)))
+
+  return {
+    asked: ids.length,
+    found: rows.length,
+    changed: moving.length,
+    amount: moving.reduce((sum, r) => sum + r.amount, 0),
+  }
 }
