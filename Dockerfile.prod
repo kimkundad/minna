@@ -14,10 +14,27 @@
 # the reCAPTCHA *site* key is public by design, and the admin URL is a link.
 # Secrets belong in the API's environment, which is read at run time.
 
+# ------------------------------------------
+# The runtime, pinned to a version rather than to a line.
+#
+# `node:20-alpine` was a moving tag on a line that reached end of life on
+# 30 April 2026, so the image quietly stopped receiving security fixes while
+# still looking current: Node 20 is absent from every advisory since, not
+# because it is unaffected but because it will never be patched. The October
+# 2026 release alone carried ten, among them an out-of-bounds write in the
+# bundled Brotli decoder at CVSS 9.2 and two TLS hostname bypasses — and this
+# API makes outbound HTTPS calls to Stripe and to the file store.
+#
+# 24.22.1 is Active LTS, supported to April 2028, and carries those fixes.
+# Written out rather than left as `24-alpine` so that what is running is a
+# fact in the repository, and moving it is a commit somebody can see — the
+# same reason the images themselves have no `latest`.
+# ------------------------------------------
+
 # ==========================================
 # Stage 1: the public site (frontend/)
 # ==========================================
-FROM node:20-alpine AS site-builder
+FROM node:24.22.1-alpine AS site-builder
 
 # Where staff sign in. Baked in because the site renders a link to it, and
 # there is no API call that would tell the browser where the admin lives.
@@ -38,7 +55,7 @@ RUN npm run build
 # ==========================================
 # Stage 2: the admin (backend/)
 # ==========================================
-FROM node:20-alpine AS admin-builder
+FROM node:24.22.1-alpine AS admin-builder
 
 WORKDIR /app
 COPY backend/package*.json ./
@@ -49,7 +66,7 @@ RUN npm run build
 # ==========================================
 # Stage 3: the API, compiled (api/)
 # ==========================================
-FROM node:20-alpine AS api-builder
+FROM node:24.22.1-alpine AS api-builder
 
 WORKDIR /app
 COPY api/package*.json ./
@@ -62,7 +79,7 @@ RUN npm run build
 # ==========================================
 # Stage 4: API runtime
 # ==========================================
-FROM node:20-alpine AS api-runtime
+FROM node:24.22.1-alpine AS api-runtime
 
 # The database stores UTC and the code converts to Asia/Bangkok where it has
 # to (api/src/lib/time.ts). This is for log timestamps and for anything that
