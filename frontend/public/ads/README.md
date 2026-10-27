@@ -10,7 +10,7 @@ nothing on the site reads them from here.
 
 ## What is in here
 
-Supplied by learnsbuy.com. The teacher's photographs, the Learnsbuy mark, and
+Supplied by learnotive.com. The teacher's photographs, the Learnotive mark, and
 one finished banner of theirs which the crops of the teacher and of the
 broadcaster marks are taken from.
 

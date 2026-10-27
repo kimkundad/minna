@@ -151,5 +151,5 @@ fi
 
 echo
 echo "Deployed $TAG"
-echo "  https://minna.learnsbuy.com"
-echo "  https://minna-admin.learnsbuy.com"
+echo "  https://learnotive.com"
+echo "  https://admin.learnotive.com"

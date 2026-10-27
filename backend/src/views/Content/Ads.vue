@@ -394,7 +394,7 @@ const labelClass = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
 
           <div>
             <label :class="labelClass">Advertiser</label>
-            <input v-model="form.advertiser" maxlength="150" :class="inputClass" placeholder="learnsbuy.com" />
+            <input v-model="form.advertiser" maxlength="150" :class="inputClass" placeholder="learnotive.com" />
           </div>
 
           <div>

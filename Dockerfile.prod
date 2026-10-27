@@ -38,7 +38,7 @@ FROM node:24.22.1-alpine AS site-builder
 
 # Where staff sign in. Baked in because the site renders a link to it, and
 # there is no API call that would tell the browser where the admin lives.
-ARG VITE_ADMIN_URL=https://minna-admin.learnsbuy.com
+ARG VITE_ADMIN_URL=https://admin.learnotive.com
 # Public half of the reCAPTCHA pair. The secret is the API's.
 ARG VITE_RECAPTCHA_SITE_KEY=
 ENV VITE_ADMIN_URL=$VITE_ADMIN_URL

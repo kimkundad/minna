@@ -20,7 +20,7 @@ import { deleteFile, isStorageConfigured, uploadFile } from '../src/lib/storage'
 import type { AdPlacement } from '../src/modules/content/ads.service'
 
 const ART = resolve(import.meta.dirname, '../../frontend/public/ads/out')
-const HREF = 'https://learnsbuy.com'
+const HREF = 'https://learnotive.com'
 
 interface Seed {
   key: string
@@ -109,7 +109,7 @@ for (const seed of SEEDS) {
   const [res] = await db.insert(ads).values({
     name: seed.name,
     placement: seed.placement,
-    advertiser: 'learnsbuy.com',
+    advertiser: 'learnotive.com',
     href: HREF,
     imageAlt: seed.alt,
     locale: 'all',

@@ -205,7 +205,7 @@ const ADS = [
           <p class="sub" style="font-size:19px">เกียรตินิยมอันดับ 1 เหรียญทอง อักษรศาสตร์ จุฬาฯ · สอนมากว่า 24 ปี</p>
           ${MEDIA_STRIP}
           <span class="cta" style="height:56px;font-size:20px;align-self:stretch;justify-content:center">ดูคอร์สติวญี่ปุ่น</span>
-          <span class="site" style="font-size:15px;text-align:center">learnsbuy.com</span>
+          <span class="site" style="font-size:15px;text-align:center">learnotive.com</span>
         </div>
       </div>`,
   },
@@ -221,7 +221,7 @@ const ADS = [
           <p class="sub" style="font-size:17px;max-width:600px">ห้องเรียนจริงของ ZA-SHI ครูพี่โฮม — ปูพื้นจากศูนย์ จนทำข้อสอบ A-Level และ PAT ญี่ปุ่นได้เต็มมือ</p>
           <div style="display:flex;align-items:center;gap:20px;margin-top:4px">
             <span class="cta" style="height:48px;font-size:17px">เริ่มเรียนกับครูพี่โฮม</span>
-            <span class="site" style="font-size:15px">learnsbuy.com</span>
+            <span class="site" style="font-size:15px">learnotive.com</span>
           </div>
         </div>
         <div class="photo feather" style="inset:0 0 0 auto;width:680px;background-image:url('${SRC.classroom}');background-position:center 72%"></div>
@@ -237,7 +237,7 @@ const ADS = [
           <h2 style="font-size:38px">สอนมา <span class="hl">24 ปี</span><br>กับนักเรียนหลายรุ่น</h2>
           <p class="sub" style="font-size:19px">ห้องเรียนจริงของ ZA-SHI ครูพี่โฮม — ปูพื้นจากศูนย์ จนทำข้อสอบ A-Level และ PAT ญี่ปุ่นได้เต็มมือ</p>
           <span class="cta" style="height:56px;font-size:20px;align-self:stretch;justify-content:center">เริ่มเรียนกับครูพี่โฮม</span>
-          <span class="site" style="font-size:15px;text-align:center">learnsbuy.com</span>
+          <span class="site" style="font-size:15px;text-align:center">learnotive.com</span>
         </div>
       </div>`,
   },
@@ -254,7 +254,7 @@ const ADS = [
           <p class="sub" style="font-size:17px;max-width:580px">ไวยากรณ์ คำศัพท์ และเทคนิคทำข้อสอบ อธิบายทีละข้อแบบที่ครูพี่โฮมสอนในห้องจริง</p>
           <div style="display:flex;align-items:center;gap:20px;margin-top:4px">
             <span class="cta" style="height:48px;font-size:17px">ดูตัวอย่างบทเรียน</span>
-            <span class="site" style="font-size:15px">learnsbuy.com</span>
+            <span class="site" style="font-size:15px">learnotive.com</span>
           </div>
         </div>
         <div class="photo feather" style="inset:0 0 0 auto;width:640px;background-image:url('${SRC.lesson}');background-position:center"></div>
@@ -271,7 +271,7 @@ const ADS = [
           <h2 style="font-size:36px">ติว A-Level ญี่ปุ่น<br><span class="hl">ที่ไหนก็ได้</span></h2>
           <p class="sub" style="font-size:19px">ไวยากรณ์ คำศัพท์ และเทคนิคทำข้อสอบ อธิบายทีละข้อแบบที่ครูพี่โฮมสอนในห้องจริง</p>
           <span class="cta" style="height:56px;font-size:20px;align-self:stretch;justify-content:center">ดูตัวอย่างบทเรียน</span>
-          <span class="site" style="font-size:15px;text-align:center">learnsbuy.com</span>
+          <span class="site" style="font-size:15px;text-align:center">learnotive.com</span>
         </div>
       </div>`,
   },
@@ -288,7 +288,7 @@ const ADS = [
           <p class="sub" style="font-size:17px;max-width:600px">ตะลุยโจทย์ A-Level และ PAT ญี่ปุ่นย้อนหลัง พร้อมสรุปไวยากรณ์ที่ออกสอบบ่อยที่สุด</p>
           <div style="display:flex;align-items:center;gap:20px;margin-top:4px">
             <span class="cta" style="height:48px;font-size:17px">ดูตารางติว</span>
-            <span class="site" style="font-size:15px">learnsbuy.com</span>
+            <span class="site" style="font-size:15px">learnotive.com</span>
           </div>
         </div>
         <div class="photo feather" style="inset:0 0 0 auto;width:600px;background-image:url('${SRC.studying}');background-position:center 40%"></div>
@@ -305,7 +305,7 @@ const ADS = [
           <h2 style="font-size:36px">เหลืออีกไม่กี่เดือน<br><span class="hl">ยังทันถ้าเริ่มวันนี้</span></h2>
           <p class="sub" style="font-size:19px">ตะลุยโจทย์ A-Level และ PAT ญี่ปุ่นย้อนหลัง พร้อมสรุปไวยากรณ์ที่ออกสอบบ่อยที่สุด</p>
           <span class="cta" style="height:56px;font-size:20px;align-self:stretch;justify-content:center">ดูตารางติว</span>
-          <span class="site" style="font-size:15px;text-align:center">learnsbuy.com</span>
+          <span class="site" style="font-size:15px;text-align:center">learnotive.com</span>
         </div>
       </div>`,
   },
@@ -329,7 +329,7 @@ const ADS = [
           <p class="sub" style="font-size:17px;max-width:620px">คอร์สสนทนาและติวสอบของครูพี่โฮม ต่อจากพื้นฐานที่คุณกำลังเรียนอยู่ ดูย้อนหลังได้ไม่จำกัด</p>
           <div style="display:flex;align-items:center;gap:20px;margin-top:4px">
             <span class="cta" style="height:46px;font-size:16px">ดูคอร์สระดับถัดไป</span>
-            <span class="site" style="font-size:15px">learnsbuy.com</span>
+            <span class="site" style="font-size:15px">learnotive.com</span>
           </div>
         </div>
         <div class="photo feather" style="inset:0 0 0 auto;width:560px;background-image:url('${SRC.tutor}');background-position:76% 62%"></div>
@@ -346,7 +346,7 @@ const ADS = [
           <h2 style="font-size:35px">อ่านคันจิออกแล้ว<br><span class="hl">ขั้นต่อไปคือพูดให้ได้</span></h2>
           <p class="sub" style="font-size:19px">คอร์สสนทนาและติวสอบของครูพี่โฮม ดูย้อนหลังได้ไม่จำกัด</p>
           <span class="cta" style="height:56px;font-size:20px;align-self:stretch;justify-content:center">ดูคอร์สระดับถัดไป</span>
-          <span class="site" style="font-size:15px;text-align:center">learnsbuy.com</span>
+          <span class="site" style="font-size:15px;text-align:center">learnotive.com</span>
         </div>
       </div>`,
   },

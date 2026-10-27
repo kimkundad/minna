@@ -17,8 +17,8 @@ release to be live while the other is not.
 
 | | |
 | --- | --- |
-| public site | https://minna.learnsbuy.com |
-| admin | https://minna-admin.learnsbuy.com |
+| public site | https://learnotive.com |
+| admin | https://admin.learnotive.com |
 | registry | `ghcr.io/kimkundad` |
 | server path | `/srv/minna` |
 | nginx listens on | `127.0.0.1:8096` |
@@ -157,7 +157,7 @@ Then:
    two sites; without it everything lands on the default block and gets a
    closed connection. TLS is Cloudflare's, not this server's.
 5. **Stripe webhook** — point the endpoint at
-   `https://minna.learnsbuy.com/api/v1/webhooks/stripe` and put the signing
+   `https://learnotive.com/api/v1/webhooks/stripe` and put the signing
    secret it gives you in `STRIPE_WEBHOOK_SECRET`.
 6. **DNS** — both names at the server.
 
@@ -195,7 +195,7 @@ cd /srv/minna
 docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs -f api
 docker inspect --format '{{ .State.Health.Status }}' minna-api
-curl -s -H 'Host: minna.learnsbuy.com' http://127.0.0.1:8096/health
+curl -s -H 'Host: learnotive.com' http://127.0.0.1:8096/health
 ```
 
 **Which commit is running**

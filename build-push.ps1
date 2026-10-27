@@ -16,7 +16,7 @@ param(
     # Public by design — it names the site to Google and is readable in the
     # page source. Taken from frontend/.env when not given.
     [string]$RecaptchaSiteKey = $env:VITE_RECAPTCHA_SITE_KEY,
-    [string]$AdminUrl = 'https://minna-admin.learnsbuy.com',
+    [string]$AdminUrl = 'https://admin.learnotive.com',
     # Builds without pushing, for checking that the images come out at all.
     [switch]$NoPush
 )
